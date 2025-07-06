@@ -11,18 +11,18 @@ import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.features.module.modules.exploit.Disabler
 import net.ccbluex.liquidbounce.features.module.modules.movement.Speed
-import net.ccbluex.liquidbounce.ui.utils.attack.EntityUtils.isLookingOnEntities
-import net.ccbluex.liquidbounce.ui.utils.attack.EntityUtils.isSelected
-import net.ccbluex.liquidbounce.ui.utils.client.*
-import net.ccbluex.liquidbounce.ui.utils.client.PacketUtils.sendPacket
-import net.ccbluex.liquidbounce.ui.utils.client.PacketUtils.sendPackets
-import net.ccbluex.liquidbounce.ui.utils.extensions.*
-import net.ccbluex.liquidbounce.ui.utils.kotlin.RandomUtils.nextInt
-import net.ccbluex.liquidbounce.ui.utils.movement.MovementUtils.isOnGround
-import net.ccbluex.liquidbounce.ui.utils.movement.MovementUtils.speed
-import net.ccbluex.liquidbounce.ui.utils.rotation.RaycastUtils.runWithModifiedRaycastResult
-import net.ccbluex.liquidbounce.ui.utils.rotation.RotationUtils.currentRotation
-import net.ccbluex.liquidbounce.ui.utils.timing.MSTimer
+import net.ccbluex.liquidbounce.utils.attack.EntityUtils.isLookingOnEntities
+import net.ccbluex.liquidbounce.utils.attack.EntityUtils.isSelected
+import net.ccbluex.liquidbounce.utils.client.*
+import net.ccbluex.liquidbounce.utils.client.PacketUtils.sendPacket
+import net.ccbluex.liquidbounce.utils.client.PacketUtils.sendPackets
+import net.ccbluex.liquidbounce.utils.extensions.*
+import net.ccbluex.liquidbounce.utils.kotlin.RandomUtils.nextInt
+import net.ccbluex.liquidbounce.utils.movement.MovementUtils.isOnGround
+import net.ccbluex.liquidbounce.utils.movement.MovementUtils.speed
+import net.ccbluex.liquidbounce.utils.rotation.RaycastUtils.runWithModifiedRaycastResult
+import net.ccbluex.liquidbounce.utils.rotation.RotationUtils.currentRotation
+import net.ccbluex.liquidbounce.utils.timing.MSTimer
 import net.minecraft.block.BlockAir
 import net.minecraft.entity.Entity
 import net.minecraft.network.Packet
@@ -42,6 +42,7 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
 import kotlin.random.Random
+
 object Velocity : Module("Velocity", Category.COMBAT) {
 
     /**
@@ -53,7 +54,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             "Reverse", "SmoothReverse", "Jump", "Glitch", "Legit",
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce",
             "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
-            "Click", "BlocksMC","3FMC","3FMC2"
+            "Click", "BlocksMC", "3FMC", "3FMC2"
         ), "Simple"
     )
 
@@ -71,6 +72,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val maxAngleDifference by float("MaxAngleDifference", 45.0f, 5.0f..90f) {
         onLook && mode in arrayOf("Reverse", "SmoothReverse")
     }
+
     // AAC Push
     private val aacPushXZReducer by float("AACPushXZReducer", 2F, 1F..3F) { mode == "AACPush" }
     private val aacPushYReducer by boolean("AACPushYReducer", true) { mode == "AACPush" }
@@ -87,7 +89,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val enableDelayCancel by boolean("EnableDelayCancel", true) { mode == "3FMC" }
     private val delayCancel by int("DelayCancel", 500, 200..2000) { mode == "3FMC" && enableDelayCancel }
     private val debug3FMC by boolean("Debug3FMC", false) { mode == "3FMC" }
-
+    
     // Jump
     private val jumpCooldownMode by choices("JumpCooldownMode", arrayOf("Ticks", "ReceivedHits"), "Ticks")
     { mode == "Jump" }
@@ -138,11 +140,13 @@ object Velocity : Module("Velocity", Category.COMBAT) {
      */
     private val velocityTimer = MSTimer()
     private var hasReceivedVelocity = false
+    
     //3fmc
     private val delayCancelTimer = MSTimer()
     private var waitingDelayCancel = false
     private var zeroMotionS12Count = 0
     private var fmcStage = 0
+
     // SmoothReverse
     private var reverseHurt = false
 
@@ -186,11 +190,13 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         timerTicks = 0
         reset()
     }
+    
     override fun onEnable() {
         if (mode.equals("3FMC")) {
-            ClientUtils.displayChatMessage("[Velocity] mode 3FMC đang trong quá trình thử nghiệm, vui lòng dùng cẩn thận.")
+            ClientUtils.displayChatMessage("[Velocity] 3FMC chưa hoàn thiện, có thể flag hoặc lỗi, cẩn trọng!")
         }
     }
+
     val onUpdate = handler<UpdateEvent> {
         val thePlayer = mc.thePlayer ?: return@handler
 
@@ -224,6 +230,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                         hasReceivedVelocity = false
                 }
             }
+
             "smoothreverse" -> {
                 val nearbyEntity = getNearestEntityInRange()
 
@@ -519,6 +526,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     if (inRange)
                         hasReceivedVelocity = true
                 }
+                
                 "3fmc" -> {
                     if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
                         val isZeroMotion = packet.motionX == 0 && packet.motionZ == 0
@@ -534,7 +542,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                         } else {
                             zeroMotionS12Count = 0
                         }
-
+                        
                         if (enableDelayCancel) {
                             if (waitingDelayCancel) {
                                 if (!delayCancelTimer.hasTimePassed(delayCancel.toLong())) {
@@ -574,9 +582,11 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                         thePlayer.motionY = packet.realMotionY
                     }
                 }
+
                 "glitch" -> {
                     if (!thePlayer.onGround)
                         return@handler
+
                     hasReceivedVelocity = true
                     event.cancelEvent()
                 }
@@ -605,6 +615,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 }
 
                 "grimc03" -> {
+                    // Checks to prevent from getting flagged (BadPacketsE)
                     if (thePlayer.isMoving) {
                         hasReceivedVelocity = true
                         event.cancelEvent()
@@ -828,6 +839,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         val packet = event.packet
 
         if (packet is S12PacketEntityVelocity) {
+            // Always cancel event and handle motion from here
             event.cancelEvent()
 
             if (horizontal == 0f && vertical == 0f)
