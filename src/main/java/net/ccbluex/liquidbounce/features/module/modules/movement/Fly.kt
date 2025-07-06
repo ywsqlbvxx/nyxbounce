@@ -73,7 +73,7 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
         MineSecure, HawkEye, HAC, WatchCat,
 
         // Other
-        Jetpack, KeepAlive, Collide, Jump, Flag, Fireball
+        Jetpack, KeepAlive, Collide, Jump, Flag, Fireball, IntaveFlagFly
     )
 
     /**
@@ -131,6 +131,7 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
     val hypixelBoostTimer by float("Hypixel-BoostTimer", 1f, 0.1f..5f) { mode == "Hypixel" && hypixelBoost }
 
     // Other
+    val maxFlyTicksValue by int ("MaxFlyTicks", 15, 5..30) {mode == "IntaveFlagFly"}
     val neruxVaceTicks by int("NeruxVace-Ticks", 6, 2..20) { mode == "NeruxVace" }
 
     // Verus
