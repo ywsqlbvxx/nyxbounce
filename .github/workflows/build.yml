@@ -1,14 +1,15 @@
-name: Build
+name: Build & Release
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      lb_version: ${{ steps.version.outputs.LB_VERSION }}
+      jar_name: ${{ steps.prep.outputs.jar_name }}
 
     steps:
       - name: Checkout repository and submodules
@@ -16,58 +17,137 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Java
+      - name: Setup Java 8 (AdoptOpenJDK)
         uses: actions/setup-java@v4
         with:
           distribution: "adopt"
           java-version: 8
           cache: "gradle"
 
+      - name: Read version from src/main/resources/version.txt
+        id: version
+        run: |
+          LB_VERSION=$(cat src/main/resources/version.txt | tr -d ' \n\r')
+          echo "LB_VERSION=$LB_VERSION" >> $GITHUB_OUTPUT
+          echo "LB_VERSION=$LB_VERSION" >> $GITHUB_ENV
+
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Build
-        run: ./gradlew build
+      - name: Delete old build JARs
+        run: rm -f ./build/libs/*.jar || true
 
-      - name: List files in build/libs
-        run: ls build/libs
+      - name: Build (no tests, parallel, daemon)
+        run: ./gradlew build --stacktrace
 
-      - name: Prepare artifact
+      - name: Prepare artifact and get jar name
+        id: prep
         run: |
           cd build/libs
-          export JAR=$(find . -name "liquidbounce-b*.jar")
-          echo "Found JAR: $JAR"
+          JAR=$(find . -name "*.jar" | grep "liquidbounce" | head -n1)
           if [ -z "$JAR" ]; then
-            echo "JAR file not found"
+            echo "No .jar file found! Build failed."
             exit 1
           fi
-          export LB_VERSION=$(echo $JAR | sed -r 's/.\/liquidbounce-([a-zA-Z0-9]+)\.jar/\1/')
-          export MINECRAFT_VERSION='1.8.9'
-          echo "Version: $LB_VERSION, Minecraft: $MINECRAFT_VERSION"
-          mkdir -p zip
-          cp $JAR zip/liquidbounce.jar
-          cd zip
-          zip -r liquidbounce.zip *
-          md5sum liquidbounce.zip
-          cp liquidbounce.zip ../../liquidbounce.zip
+          MINECRAFT_VERSION="1.8.9"
+          ARTIFACT_NAME="liquidbounce-${{ env.LB_VERSION }}-mc$MINECRAFT_VERSION.jar"
+          mkdir -p ../../artifacts
+          cp "$JAR" "../../artifacts/$ARTIFACT_NAME"
+          echo "jar_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
 
-      - name: Upload to GitHub Actions artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: liquidbounce-client
-          path: build/liquidbounce.zip
+          name: LiquidBounce-JAR
+          path: artifacts/*.jar
 
-      - name: Upload to LiquidBounce API
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ needs.build.outputs.lb_version != '' }}
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitHub CLI
         run: |
-          curl --connect-timeout 30 -m 300 -X POST \
-            -F "artifact=@build/liquidbounce.zip" \
-            -H "Authorization: ${{ secrets.NIGHTLY_PASS }}" \
-            -F "gh_id=${{ github.event.head_commit.id }}" \
-            -F "gh_ref=${{ github.ref }}" \
-            -F "gh_message=${{ github.event.head_commit.message }}" \
-            -F "gh_timestamp=${{ github.event.head_commit.timestamp }}" \
-            -F "lb_version=$LB_VERSION" \
-            -F "mc_version=1.8.9" \
-            -F "jre_version=8" \
-            -F "subsystem=forge" \
-            https://api.liquidbounce.net/api/v1/version/new
+          sudo apt update
+          sudo apt install gh -y
+
+      - name: Setup git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Download built artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LiquidBounce-JAR
+          path: ./artifacts
+
+      - name: Check JAR file exists
+        run: |
+          FILE="./artifacts/liquidbounce-${{ needs.build.outputs.lb_version }}-mc1.8.9.jar"
+          if [ ! -f "$FILE" ]; then
+            echo "JAR file not found: $FILE"
+            exit 1
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            git log "$LAST_TAG"..HEAD --pretty=format:"- %s" > changelog.txt
+          else
+            git log --pretty=format:"- %s" > changelog.txt
+          fi
+          CHANGELOG=$(cat changelog.txt)
+          CHANGELOG="${CHANGELOG//'%'/'%25'}"
+          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
+          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
+          echo "CHANGELOG=$CHANGELOG" >> $GITHUB_OUTPUT
+
+      - name: Delete and recreate tag, then push
+        run: |
+          TAG=${{ needs.build.outputs.lb_version }}
+
+          # Delete local tag if exists
+          if git tag | grep -q "^$TAG$"; then
+            git tag -d "$TAG"
+          fi
+
+          # Delete remote tag if exists
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG$"; then
+            git push origin :refs/tags/$TAG
+          fi
+
+          # Create and push new tag
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Ensure tag is synced before release
+        run: |
+          git fetch origin --tags
+
+      - name: Create or Replace GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=${{ needs.build.outputs.lb_version }}
+          if gh release view "$TAG" &>/dev/null; then
+            echo "Release $TAG already exists. Deleting..."
+            gh release delete "$TAG" -y
+          fi
+
+          gh release create "$TAG" \
+            --target main \
+            ./artifacts/liquidbounce-${{ needs.build.outputs.lb_version }}-mc1.8.9.jar \
+            --title "LiquidBounce $TAG" \
+            --notes "${{ steps.changelog.outputs.CHANGELOG }}"
