@@ -103,6 +103,8 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     val sprint by boolean("Sprint", false)
     private val swing by boolean("Swing", true).subjective()
     private val down by boolean("Down", true) { !sameY && scaffoldMode !in arrayOf("GodBridge", "Telly") }
+    private val autoJump by boolean("AutoJump", false)
+    private val jumpYWhenUserInput by boolean("JumpYWhenUserInput", false) { sameY }
 
     private val ticksUntilRotation by intRange("TicksUntilRotation", 3..3, 1..8) {
         scaffoldMode == "Telly"
@@ -305,7 +307,15 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         if (shouldGoDown) {
             mc.gameSettings.keyBindSneak.pressed = false
         }
-
+        
+        if (autoJump && player.onGround && player.isMoving) {
+            player.jump()
+        }
+        
+        if (sprint && player.isMoving && !player.isSprinting) {
+            player.isSprinting = true
+        }
+        
         if (slow) {
             if (!slowGround || slowGround && player.onGround) {
                 player.motionX *= slowSpeed
@@ -591,7 +601,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 BlockPos(player.posX, player.posY - 0.6, player.posZ).down()
             }
         } else if (shouldKeepLaunchPosition && launchY <= player.posY) {
-            BlockPos(player.posX, launchY - 1.0, player.posZ)
+            val baseY = launchY - 1.0
+            val finalY = if (jumpYWhenUserInput && mc.gameSettings.keyBindJump.isKeyDown) baseY + 1 else baseY
+            BlockPos(player.posX, finalY, player.posZ)
         } else if (player.posY == player.posY.roundToInt() + 0.5) {
             BlockPos(player)
         } else {
