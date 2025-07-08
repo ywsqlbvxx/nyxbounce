@@ -618,9 +618,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 }
                 
                 if (moonWalkRotation) {
-                    val baseYaw = sin(moonWalkTicks * 0.08) * 15f * moonWalkBalance
-                    val randomYaw = (Math.random() - 0.5) * 5f
-                    val targetYaw = player.rotationYaw + baseYaw + randomYaw.toFloat()
+                    val baseYaw = sin(moonWalkTicks * 0.08f).toFloat() * 15f * moonWalkBalance
+                    val randomYaw = (RandomUtils.nextFloat() - 0.5f) * 5f
+                    val targetYaw = player.rotationYaw + baseYaw + randomYaw
                     
                     player.rotationYaw = lerp(
                         lastMoonWalkYaw,
