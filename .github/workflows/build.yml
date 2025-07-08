@@ -66,6 +66,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: ${{ needs.build.outputs.lb_version != '' }}
+    outputs:
+      release_url: ${{ steps.create_release.outputs.release_url }}
 
     steps:
       - name: Checkout full history
@@ -96,67 +98,39 @@ jobs:
             exit 1
           fi
 
+      - name: Create GitHub Release
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.build.outputs.lb_version }}
+        run: |
+          # Tạo tag và release
+          TAG_NAME="v$VERSION-${{ github.run_number }}"
+          gh release create $TAG_NAME \
+            --title "Build $VERSION (Run #${{ github.run_number }})" \
+            --notes "Automated build by GitHub Actions" \
+            ./artifacts/*.jar
+          
+          # Lấy URL release
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+          echo "release_url=$RELEASE_URL" >> $GITHUB_OUTPUT
+
   discord_webhook:
     needs: [build, release]
     runs-on: ubuntu-latest
     steps:
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: LiquidBounce-Artifacts
-        path: ./artifacts
+      - name: Send Discord notification
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
+          VERSION: ${{ needs.build.outputs.lb_version }}
+          RELEASE_URL: ${{ needs.release.outputs.release_url }}
+        run: |
+          # Tạo message
+          MESSAGE="🚀 Build LiquidBounce thành công! Phiên bản: $VERSION\n"
+          MESSAGE+="📦 Release: $RELEASE_URL\n"
+          MESSAGE+="💾 Download ngay tại link trên!"
 
-    - name: Upload large files to catbox.moe and send to Discord
-      env:
-        WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
-        VERSION: ${{ needs.build.outputs.lb_version }}
-      run: |
-        # Kiểm tra thư mục artifacts
-        if [ ! -d "./artifacts" ] || [ -z "$(ls -A ./artifacts)" ]; then
-          echo "::error::Artifacts directory is empty!"
-          exit 1
-        fi
-
-        # Tạo message
-        MESSAGE="🚀 Build LiquidBounce thành công! Phiên bản: $VERSION\n📁 Các file đã build:"
-        UPLOADED_FILES=""
-
-        # Xử lý từng file
-        for file in ./artifacts/*; do
-          if [ -f "$file" ]; then
-            FILENAME=$(basename "$file")
-            FILESIZE=$(stat -c%s "$file")
-            MAX_SIZE=8000000  # 8MB
-            
-            # File nhỏ: gửi trực tiếp
-            if [ "$FILESIZE" -le "$MAX_SIZE" ]; then
-              curl -F "file=@$file" -F "content=File: $FILENAME" "$WEBHOOK_URL"
-            
-            # File lớn: upload lên catbox.moe
-            else
-              echo "Uploading large file to catbox.moe: $FILENAME"
-              
-              # Upload file lên catbox.moe
-              RESPONSE=$(curl -s -F "reqfile=@$file" "https://catbox.moe/user/api.php")
-              
-              # Kiểm tra response
-              if [[ $RESPONSE == http* ]]; then
-                DOWNLOAD_URL="$RESPONSE"
-                UPLOADED_FILES+="\n- [$FILENAME]($DOWNLOAD_URL) ($((FILESIZE/1000000)) MB)"
-              else
-                echo "::error::Upload failed for $FILENAME. Response: $RESPONSE"
-                UPLOADED_FILES+="\n- $FILENAME (Upload failed)"
-              fi
-            fi
-          fi
-        done
-
-        # Gửi message chứa link download nếu có file lớn
-        if [ -n "$UPLOADED_FILES" ]; then
-          MESSAGE+="\n\n📦 Các file lớn đã được upload lên catbox.moe:"
-          MESSAGE+="$UPLOADED_FILES"
-          
+          # Gửi thông báo đến Discord
           curl -H "Content-Type: application/json" \
                -d "{\"content\":\"$MESSAGE\"}" \
                "$WEBHOOK_URL"
-        fi
