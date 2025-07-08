@@ -48,8 +48,36 @@ class Target : Element("Target") {
     private val backgroundMode by choices("Background-ColorMode", arrayOf("Custom", "Rainbow"), "Custom")
     private val backgroundColor by color("Background-Color", Color.BLACK.withAlpha(150)) { backgroundMode == "Custom" }
 
-    private val healthBarColor1 by color("HealthBar-Gradient1", Color(3, 65, 252))
-    private val healthBarColor2 by color("HealthBar-Gradient2", Color(3, 252, 236))
+    private val healthBarColorMode by choices(
+        "HealthBar-ColorMode",
+        arrayOf(
+            "Custom", "Rainbow", "Gradient", "PinkPastel", "RedPastel",
+            "YellowPastel", "SkyLit", "GrayPastel", "GreenPastel"
+        ),
+        "Custom"
+    )
+    private val healthBarColor1 by color("HealthBar-Gradient1", Color(3, 65, 252)) { healthBarColorMode == "Custom" || healthBarColorMode == "Gradient" }
+    private val healthBarColor2 by color("HealthBar-Gradient2", Color(3, 252, 236)) { healthBarColorMode == "Custom" || healthBarColorMode == "Gradient" }
+    private val healthBarGradColors = listOf(healthBarColor1, healthBarColor2)
+    // Pastel gradients
+    private val pinkPastelGradient = listOf(
+        Color(255, 166, 217), Color(255, 115, 179), Color(255, 217, 242), Color(255, 242, 255)
+    )
+    private val redPastelGradient = listOf(
+        Color(255, 102, 102), Color(255, 179, 179), Color(255, 230, 230), Color(255, 255, 255)
+    )
+    private val yellowPastelGradient = listOf(
+        Color(255, 242, 153), Color(255, 217, 77), Color(255, 250, 204), Color(255, 255, 230)
+    )
+    private val skyLitGradient = listOf(
+        Color(153, 217, 255), Color(77, 242, 255), Color(204, 250, 255), Color(230, 255, 255)
+    )
+    private val grayPastelGradient = listOf(
+        Color(204, 204, 204), Color(153, 153, 153), Color(242, 242, 242), Color(255, 255, 255)
+    )
+    private val greenPastelGradient = listOf(
+        Color(153, 255, 179), Color(77, 255, 128), Color(204, 255, 230), Color(230, 255, 230)
+    )
 
     private val roundHealthBarShape by boolean("RoundHealthBarShape", true)
 
@@ -238,16 +266,45 @@ class Target : Element("Target") {
                             backgroundBar()
                         }
                     }, toClip = {
-                        drawGradientRect(
-                            healthBarStart.toInt(),
-                            healthBarTop.toInt(),
-                            healthBarStart.toInt() + currentWidth.toInt(),
-                            healthBarTop.toInt() + healthBarHeight.toInt(),
-                            healthBarColor1.rgb,
-                            healthBarColor2.rgb,
-                            0f
-                        )
+                        when (healthBarColorMode) {
+                            "PinkPastel" -> drawPastelGradientRect(healthBarStart, healthBarTop, currentWidth, healthBarHeight, pinkPastelGradient)
+                            "RedPastel" -> drawPastelGradientRect(healthBarStart, healthBarTop, currentWidth, healthBarHeight, redPastelGradient)
+                            "YellowPastel" -> drawPastelGradientRect(healthBarStart, healthBarTop, currentWidth, healthBarHeight, yellowPastelGradient)
+                            "SkyLit" -> drawPastelGradientRect(healthBarStart, healthBarTop, currentWidth, healthBarHeight, skyLitGradient)
+                            "GrayPastel" -> drawPastelGradientRect(healthBarStart, healthBarTop, currentWidth, healthBarHeight, grayPastelGradient)
+                            "GreenPastel" -> drawPastelGradientRect(healthBarStart, healthBarTop, currentWidth, healthBarHeight, greenPastelGradient)
+                            "Gradient" -> drawGradientRect(
+                                healthBarStart.toInt(),
+                                healthBarTop.toInt(),
+                                healthBarStart.toInt() + currentWidth.toInt(),
+                                healthBarTop.toInt() + healthBarHeight.toInt(),
+                                healthBarColor1.rgb,
+                                healthBarColor2.rgb,
+                                0f
+                            )
+                            else -> drawGradientRect(
+                                healthBarStart.toInt(),
+                                healthBarTop.toInt(),
+                                healthBarStart.toInt() + currentWidth.toInt(),
+                                healthBarTop.toInt() + healthBarHeight.toInt(),
+                                healthBarColor1.rgb,
+                                healthBarColor2.rgb,
+                                0f
+                            )
+                        }
                     })
+                // Helper for pastel gradients
+                fun drawPastelGradientRect(x: Float, y: Float, width: Float, height: Float, colors: List<Color>) {
+                    val seg = width / (colors.size - 1)
+                    for (i in 0 until colors.size - 1) {
+                        val x1 = x + seg * i
+                        val x2 = x + seg * (i + 1)
+                        drawGradientRect(
+                            x1.toInt(), y.toInt(), x2.toInt(), (y + height).toInt(),
+                            colors[i].rgb, colors[i + 1].rgb, 0f
+                        )
+                    }
+                }
 
                     val healthPercentage = (easingHealth / maxHealth * 100).toInt()
                     val percentageText = "$healthPercentage%"
