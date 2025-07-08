@@ -46,14 +46,28 @@ class Arraylist(
 ) : Element("Arraylist", x, y, scale, side) {
 
     private val textColorMode by choices(
-        "Text-Mode", arrayOf("Custom", "Fade", "Random", "Rainbow", "Gradient"), "Custom"
+        "Text-Mode", arrayOf("Custom", "Fade", "Random", "Rainbow", "Gradient", "Sakura", "RedPastel"), "Custom"
+    )
+    // Sakura gradient: strong pink-white
+    private val sakuraGradient = listOf(
+        floatArrayOf(1.0f, 0.65f, 0.85f, 1.0f), // vivid pink
+        floatArrayOf(1.0f, 0.45f, 0.7f, 1.0f), // deeper pink
+        floatArrayOf(1.0f, 0.85f, 0.95f, 1.0f), // white-pink
+        floatArrayOf(1.0f, 0.95f, 1.0f, 1.0f)  // white
+    )
+    // Red pastel gradient: red to white
+    private val redPastelGradient = listOf(
+        floatArrayOf(1.0f, 0.4f, 0.4f, 1.0f), // pastel red
+        floatArrayOf(1.0f, 0.7f, 0.7f, 1.0f), // light red
+        floatArrayOf(1.0f, 0.9f, 0.9f, 1.0f), // near white
+        floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)  // white
     )
     private val textColors = ColorSettingsInteger(this, "TextColor") { textColorMode == "Custom" }.with(blueRibbon)
     private val textFadeColors = ColorSettingsInteger(this, "Text-Fade") { textColorMode == "Fade" }.with(0, 111, 255)
 
     private val textFadeDistance by int("Text-Fade-Distance", 50, 0..100) { textColorMode == "Fade" }
 
-    private val gradientTextSpeed by float("Text-Gradient-Speed", 1f, 0.5f..10f) { textColorMode == "Gradient" }
+    private val gradientTextSpeed by float("Text-Gradient-Speed", 2.5f, 1.0f..10f) { textColorMode == "Gradient" || textColorMode == "Sakura" || textColorMode == "RedPastel" }
 
     private val maxTextGradientColors by int(
         "Max-Text-Gradient-Colors", 4, 1..MAX_GRADIENT_COLORS
@@ -317,31 +331,67 @@ class Arraylist(
                             }
                         }
 
-                        GradientFontShader.begin(
-                            !markAsInactive && textColorMode == "Gradient",
-                            gradientX,
-                            gradientY,
-                            textGradColors.toColorArray(maxTextGradientColors),
-                            gradientTextSpeed,
-                            gradientOffset
-                        ).use {
-                            RainbowFontShader.begin(
-                                !markAsInactive && textColorMode == "Rainbow", rainbowX, rainbowY, rainbowOffset
+                        if (!markAsInactive && textColorMode == "Sakura") {
+                            GradientFontShader.begin(
+                                true,
+                                gradientX,
+                                gradientY,
+                                sakuraGradient,
+                                2.5f,
+                                gradientOffset
                             ).use {
                                 font.drawString(
                                     displayString,
                                     xPos + 1 - if (rectMode == "Right") 3 else 0,
                                     yPos + textY,
-                                    if (markAsInactive) inactiveColor
-                                    else when (textColorMode) {
-                                        "Gradient" -> 0
-                                        "Rainbow" -> 0
-                                        "Random" -> moduleColor
-                                        "Fade" -> textFadeColor
-                                        else -> textCustomColor
-                                    },
-                                    textShadow,
+                                    Color.WHITE.rgb,
+                                    textShadow
                                 )
+                            }
+                        } else if (!markAsInactive && textColorMode == "RedPastel") {
+                            GradientFontShader.begin(
+                                true,
+                                gradientX,
+                                gradientY,
+                                redPastelGradient,
+                                2.5f,
+                                gradientOffset
+                            ).use {
+                                font.drawString(
+                                    displayString,
+                                    xPos + 1 - if (rectMode == "Right") 3 else 0,
+                                    yPos + textY,
+                                    Color.WHITE.rgb,
+                                    textShadow
+                                )
+                            }
+                        } else {
+                            GradientFontShader.begin(
+                                !markAsInactive && textColorMode == "Gradient",
+                                gradientX,
+                                gradientY,
+                                textGradColors.toColorArray(maxTextGradientColors),
+                                gradientTextSpeed,
+                                gradientOffset
+                            ).use {
+                                RainbowFontShader.begin(
+                                    !markAsInactive && textColorMode == "Rainbow", rainbowX, rainbowY, rainbowOffset
+                                ).use {
+                                    font.drawString(
+                                        displayString,
+                                        xPos + 1 - if (rectMode == "Right") 3 else 0,
+                                        yPos + textY,
+                                        if (markAsInactive) inactiveColor
+                                        else when (textColorMode) {
+                                            "Gradient" -> 0
+                                            "Rainbow" -> 0
+                                            "Random" -> moduleColor
+                                            "Fade" -> textFadeColor
+                                            else -> textCustomColor
+                                        },
+                                        textShadow,
+                                    )
+                                }
                             }
                         }
 
@@ -456,27 +506,63 @@ class Arraylist(
                             }
                         }
 
-                        GradientFontShader.begin(
-                            !markAsInactive && textColorMode == "Gradient",
-                            gradientX,
-                            gradientY,
-                            textGradColors.toColorArray(maxTextGradientColors),
-                            gradientTextSpeed,
-                            gradientOffset
-                        ).use {
-                            RainbowFontShader.begin(
-                                !markAsInactive && textColorMode == "Rainbow", rainbowX, rainbowY, rainbowOffset
+                        if (!markAsInactive && textColorMode == "Sakura") {
+                            GradientFontShader.begin(
+                                true,
+                                gradientX,
+                                gradientY,
+                                sakuraGradient,
+                                2.5f,
+                                gradientOffset
                             ).use {
                                 font.drawString(
-                                    displayString, xPos - 1, yPos + textY, if (markAsInactive) inactiveColor
-                                    else when (textColorMode) {
-                                        "Gradient" -> 0
-                                        "Rainbow" -> 0
-                                        "Random" -> moduleColor
-                                        "Fade" -> textFadeColor
-                                        else -> textCustomColor
-                                    }, textShadow
+                                    displayString,
+                                    xPos - 1,
+                                    yPos + textY,
+                                    Color.WHITE.rgb,
+                                    textShadow
                                 )
+                            }
+                        } else if (!markAsInactive && textColorMode == "RedPastel") {
+                            GradientFontShader.begin(
+                                true,
+                                gradientX,
+                                gradientY,
+                                redPastelGradient,
+                                2.5f,
+                                gradientOffset
+                            ).use {
+                                font.drawString(
+                                    displayString,
+                                    xPos - 1,
+                                    yPos + textY,
+                                    Color.WHITE.rgb,
+                                    textShadow
+                                )
+                            }
+                        } else {
+                            GradientFontShader.begin(
+                                !markAsInactive && textColorMode == "Gradient",
+                                gradientX,
+                                gradientY,
+                                textGradColors.toColorArray(maxTextGradientColors),
+                                gradientTextSpeed,
+                                gradientOffset
+                            ).use {
+                                RainbowFontShader.begin(
+                                    !markAsInactive && textColorMode == "Rainbow", rainbowX, rainbowY, rainbowOffset
+                                ).use {
+                                    font.drawString(
+                                        displayString, xPos - 1, yPos + textY, if (markAsInactive) inactiveColor
+                                        else when (textColorMode) {
+                                            "Gradient" -> 0
+                                            "Rainbow" -> 0
+                                            "Random" -> moduleColor
+                                            "Fade" -> textFadeColor
+                                            else -> textCustomColor
+                                        }, textShadow
+                                    )
+                                }
                             }
                         }
 
