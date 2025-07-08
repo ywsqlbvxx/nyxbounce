@@ -46,49 +46,14 @@ class Arraylist(
 ) : Element("Arraylist", x, y, scale, side) {
 
     private val textColorMode by choices(
-        "Text-Mode", arrayOf(
-            "Custom", "Fade", "Random", "Rainbow", "Gradient",
-            "PinkPastel", "RedPastel", "YellowPastel", "SkyLit", "GrayPastel", "GreenPastel"
-        ), "Custom"
+        "Text-Mode", arrayOf("Custom", "Fade", "Random", "Rainbow", "Gradient", "Sakura", "RedPastel"), "Custom"
     )
-    // Pink pastel gradient (formerly Sakura): strong pink-white
-    private val pinkPastelGradient = listOf(
+    // Sakura gradient: strong pink-white
+    private val sakuraGradient = listOf(
         floatArrayOf(1.0f, 0.65f, 0.85f, 1.0f), // vivid pink
         floatArrayOf(1.0f, 0.45f, 0.7f, 1.0f), // deeper pink
         floatArrayOf(1.0f, 0.85f, 0.95f, 1.0f), // white-pink
         floatArrayOf(1.0f, 0.95f, 1.0f, 1.0f)  // white
-    )
-
-    // Yellow pastel gradient
-    private val yellowPastelGradient = listOf(
-        floatArrayOf(1.0f, 0.95f, 0.6f, 1.0f), // light yellow
-        floatArrayOf(1.0f, 0.85f, 0.3f, 1.0f), // pastel yellow
-        floatArrayOf(1.0f, 0.98f, 0.8f, 1.0f), // near white-yellow
-        floatArrayOf(1.0f, 1.0f, 0.9f, 1.0f)   // white
-    )
-
-    // SkyLit (Aqua pastel) gradient
-    private val skyLitGradient = listOf(
-        floatArrayOf(0.6f, 0.85f, 1.0f, 1.0f), // light blue
-        floatArrayOf(0.3f, 0.95f, 1.0f, 1.0f), // aqua
-        floatArrayOf(0.8f, 0.98f, 1.0f, 1.0f), // near white-aqua
-        floatArrayOf(0.9f, 1.0f, 1.0f, 1.0f)   // white
-    )
-
-    // Gray pastel gradient
-    private val grayPastelGradient = listOf(
-        floatArrayOf(0.8f, 0.8f, 0.8f, 1.0f), // light gray
-        floatArrayOf(0.6f, 0.6f, 0.6f, 1.0f), // pastel gray
-        floatArrayOf(0.95f, 0.95f, 0.95f, 1.0f), // near white-gray
-        floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)   // white
-    )
-
-    // Green pastel gradient
-    private val greenPastelGradient = listOf(
-        floatArrayOf(0.6f, 1.0f, 0.7f, 1.0f), // light green
-        floatArrayOf(0.3f, 1.0f, 0.5f, 1.0f), // pastel green
-        floatArrayOf(0.8f, 1.0f, 0.9f, 1.0f), // near white-green
-        floatArrayOf(0.9f, 1.0f, 0.9f, 1.0f)  // white
     )
     // Red pastel gradient: red to white
     private val redPastelGradient = listOf(
