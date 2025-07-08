@@ -59,6 +59,9 @@ class Arraylist(
         floatArrayOf(1.0f, 0.95f, 1.0f, 1.0f)  // white
     )
 
+    // Sakura gradient alias for compatibility
+    private val sakuraGradient = pinkPastelGradient
+
     // Yellow pastel gradient
     private val yellowPastelGradient = listOf(
         floatArrayOf(1.0f, 0.95f, 0.6f, 1.0f), // light yellow

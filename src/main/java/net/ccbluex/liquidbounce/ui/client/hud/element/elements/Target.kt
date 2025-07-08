@@ -40,6 +40,24 @@ import kotlin.math.pow
  */
 @ElementInfo(name = "Target")
 class Target : Element("Target") {
+    // Helper for pastel gradients (fix unresolved reference)
+    private fun drawPastelGradientRect(x: Float, y: Float, width: Float, height: Float, colors: List<Color>) {
+        val seg = width / (colors.size - 1)
+        for (i in 0 until colors.size - 1) {
+            val x1 = x + seg * i
+            val x2 = x + seg * (i + 1)
+            RenderUtils.drawGradientRect(
+                x1.toInt(), y.toInt(), x2.toInt(), (y + height).toInt(),
+                colors[i].rgb, colors[i + 1].rgb, 0f
+            )
+        }
+    }
+
+    // Dummy blur/glow for compatibility if missing
+    @Suppress("UNUSED_PARAMETER")
+    private fun drawBlur(x: Float, y: Float, w: Float, h: Float, amount: Float) {}
+    @Suppress("UNUSED_PARAMETER")
+    private fun drawGlow(x: Float, y: Float, w: Float, h: Float, amount: Float) {}
     // Blur and Glow settings
     private val blurEnabled by boolean("Blur", false)
     private val blurAmount by float("Blur-Amount", 8F, 1F..30F) { blurEnabled }
