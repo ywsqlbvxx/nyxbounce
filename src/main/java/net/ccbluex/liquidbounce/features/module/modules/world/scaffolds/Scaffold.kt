@@ -292,9 +292,22 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     override fun onEnable() {
         val player = mc.thePlayer ?: return
 
+        // Stop player movement initially to get accurate rotations
+        if (isGodBridgeEnabled) {
+            player.motionX = 0.0
+            player.motionZ = 0.0
+            initialRotationSetup = false
+            startWaitTicks = 3 // Wait 3 ticks for accurate rotations
+        }
+
         launchY = player.posY.roundToInt()
         blocksUntilAxisChange = 0
+        lastJumpTime = 0L
     }
+
+    private var initialRotationSetup = false
+    private var startWaitTicks = 0
+    private var lastJumpTime = 0L
 
     // Events
     val onUpdate = loopSequence {
@@ -1121,10 +1134,24 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             return
         }
 
+        // Handle initial setup period for GodBridge
+        if (!initialRotationSetup && isGodBridgeEnabled) {
+            input.moveStrafe = 0f
+            input.moveForward = 0f
+            return
+        }
+
         if (!slow && speedLimiter && MovementUtils.speed > speedLimit) {
             input.moveStrafe = 0f
             input.moveForward = 0f
             return
+        }
+
+        // Stabilize diagonal movement
+        if (isGodBridgeEnabled && abs(input.moveStrafe) > 0.1f && abs(input.moveForward) > 0.1f) {
+            val factor = 0.7f // Reduce speed for diagonal movement
+            input.moveStrafe *= factor
+            input.moveForward *= factor
         }
 
         when (zitterMode.lowercase()) {
@@ -1200,6 +1227,19 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private fun generateGodBridgeRotations(ticks: Int) {
         val player = mc.thePlayer ?: return
 
+        // During initial setup, use more precise rotations
+        if (!initialRotationSetup) {
+            val direction = if (options.applyServerSide) {
+                MovementUtils.direction.toDegreesF() + 180f
+            } else MathHelper.wrapAngleTo180_float(player.rotationYaw)
+            
+            val preciseYaw = direction
+            val precisePitch = if (useOptimizedPitch) 73.5f else customGodPitch
+            
+            setRotation(Rotation(preciseYaw, precisePitch).fixedSensitivity(), ticks)
+            return
+        }
+
         val direction = if (options.applyServerSide) {
             MovementUtils.direction.toDegreesF() + 180f
         } else MathHelper.wrapAngleTo180_float(player.rotationYaw)
@@ -1212,7 +1252,8 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             movingYaw % 90 == 0f
         } else movingYaw in steps45 && player.movementInput.isSideways
 
-        if (!player.isNearEdge(2.5f)) return
+        // Improved edge detection for more stable bridging
+        if (!player.isNearEdge(if (initialRotationSetup) 2.5f else 0.5f)) return
 
         if (!player.isMoving) {
             placeRotation?.run {
