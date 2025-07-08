@@ -21,7 +21,11 @@ package net.ccbluex.liquidbounce.features.module.modules.movement.speedmodes.heo
 import net.ccbluex.liquidbounce.event.EventState
 import net.ccbluex.liquidbounce.event.MotionEvent
 import net.ccbluex.liquidbounce.features.module.modules.movement.speedmodes.SpeedMode
-import net.ccbluex.liquidbounce.utils.MovementUtils
+import net.ccbluex.liquidbounce.features.module.modules.movement.Speed
+import net.ccbluex.liquidbounce.utils.extensions.getDistanceToGround
+import net.ccbluex.liquidbounce.utils.extensions.strafe
+import net.ccbluex.liquidbounce.utils.extensions.isMoving
+import net.ccbluex.liquidbounce.utils.extensions.moving
 
 class HeomcLowHop : SpeedMode("HeomcLowHop") {
     
@@ -32,13 +36,13 @@ class HeomcLowHop : SpeedMode("HeomcLowHop") {
         
         val player = mc.thePlayer
 
-        if (MovementUtils.isMoving()) {
+        if (player.moving) {
             if (player.onGround) {
                 airTicks = 0
                 
                 // Ground speed boost
-                if (MovementUtils.getSpeed() < 0.32) {
-                    MovementUtils.strafe(0.37f)
+                if (player.motionX * player.motionX + player.motionZ * player.motionZ < 0.32 * 0.32) {
+                    player.strafe(0.37f)
                 }
                 
                 // Jump with lower motion
@@ -50,20 +54,20 @@ class HeomcLowHop : SpeedMode("HeomcLowHop") {
                 // Air speed boosts
                 when (airTicks) {
                     1 -> {
-                        if (MovementUtils.getSpeed() < 0.20) {
-                            MovementUtils.strafe(1.01f)
+                        if (player.motionX * player.motionX + player.motionZ * player.motionZ < 0.20 * 0.20) {
+                            player.strafe(1.01f)
                         }
                     }
                     9 -> {
-                        if (MovementUtils.getSpeed() < 0.29) {
-                            MovementUtils.strafe(1.007f) 
+                        if (player.motionX * player.motionX + player.motionZ * player.motionZ < 0.29 * 0.29) {
+                            player.strafe(1.007f)
                         }
                     }
                 }
 
                 // Additional boost when moving upwards in early air ticks
-                if (player.motionY > 0 && airTicks <= 2 && MovementUtils.getSpeed() < 0.2) {
-                    MovementUtils.strafe(1.02f)
+                if (player.motionY > 0 && airTicks <= 2 && player.motionX * player.motionX + player.motionZ * player.motionZ < 0.2 * 0.2) {
+                    player.strafe(1.02f)
                 }
             }
         } else {
