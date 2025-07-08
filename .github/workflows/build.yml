@@ -55,11 +55,12 @@ jobs:
           cp "$JAR" "../../artifacts/$ARTIFACT_NAME"
           echo "jar_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
 
-      - name: Upload artifact
+      - name: Upload artifact as ZIP
         uses: actions/upload-artifact@v4
         with:
           name: LiquidBounce-JAR
-          path: artifacts/*.jar
+          path: artifacts
+          retention-days: 1
 
   release:
     needs: build
@@ -88,10 +89,47 @@ jobs:
           name: LiquidBounce-JAR
           path: ./artifacts
 
-      - name: Check JAR file exists
+      - name: Check ZIP file exists
         run: |
-          FILE="./artifacts/liquidbounce-${{ needs.build.outputs.lb_version }}-mc1.8.9.jar"
-          if [ ! -f "$FILE" ]; then
-            echo "JAR file not found: $FILE"
+          if [ ! -f "./artifacts/LiquidBounce-JAR.zip" ]; then
+            echo "ZIP file not found!"
             exit 1
           fi
+
+  discord_webhook:
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LiquidBounce-JAR
+          path: ./artifacts
+
+      - name: Send ZIP to Discord via webhook
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          ZIP_PATH="./artifacts/LiquidBounce-JAR.zip"
+          
+          # Kiểm tra file ZIP tồn tại
+          if [ ! -f "$ZIP_PATH" ]; then
+            echo "::error::ZIP file not found at $ZIP_PATH"
+            exit 1
+          fi
+          
+          # Lấy kích thước file
+          FILE_SIZE=$(stat -c%s "$ZIP_PATH")
+          MAX_SIZE=8000000  # 8MB - giới hạn của Discord
+          
+          if [ "$FILE_SIZE" -gt "$MAX_SIZE" ]; then
+            echo "::warning::File size ($FILE_SIZE bytes) exceeds Discord limit, compressing..."
+            apt-get update && apt-get install -y zip
+            zip -r -9 ./artifacts/compressed.zip ./artifacts/LiquidBounce-JAR.zip
+            ZIP_PATH="./artifacts/compressed.zip"
+          fi
+          
+          # Gửi file lên Discord
+          curl -F "file=@$ZIP_PATH" \
+               -F "content=🚀 Build LiquidBounce thành công! Phiên bản: ${{ needs.build.outputs.lb_version }}\n📦 Kích thước: $(($FILE_SIZE/1000)) KB" \
+               "$WEBHOOK_URL"
