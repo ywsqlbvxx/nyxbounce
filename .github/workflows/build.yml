@@ -97,9 +97,9 @@ jobs:
           fi
 
   discord_webhook:
-  needs: [build, release]
-  runs-on: ubuntu-latest
-  steps:
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    steps:
     - name: Download artifacts
       uses: actions/download-artifact@v4
       with:
@@ -118,7 +118,7 @@ jobs:
         fi
 
         # Tạo message
-        MESSAGE=" Build LiquidBounce thành công! Phiên bản: $VERSION\n📁 Các file đã build:"
+        MESSAGE="🚀 Build LiquidBounce thành công! Phiên bản: $VERSION\n📁 Các file đã build:"
         UPLOADED_FILES=""
 
         # Xử lý từng file
