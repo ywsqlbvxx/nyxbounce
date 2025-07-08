@@ -114,23 +114,3 @@ jobs:
           # Lấy URL release
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
           echo "release_url=$RELEASE_URL" >> $GITHUB_OUTPUT
-
-  discord_webhook:
-    needs: [build, release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send Discord notification
-        env:
-          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
-          VERSION: ${{ needs.build.outputs.lb_version }}
-          RELEASE_URL: ${{ needs.release.outputs.release_url }}
-        run: |
-          # Tạo message
-          MESSAGE="🚀 Build LiquidBounce thành công! Phiên bản: $VERSION\n"
-          MESSAGE+="📦 Release: $RELEASE_URL\n"
-          MESSAGE+="💾 Download ngay tại link trên!"
-
-          # Gửi thông báo đến Discord
-          curl -H "Content-Type: application/json" \
-               -d "{\"content\":\"$MESSAGE\"}" \
-               "$WEBHOOK_URL"
