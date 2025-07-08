@@ -102,7 +102,7 @@ class Arraylist(
 
     private val textFadeDistance by int("Text-Fade-Distance", 50, 0..100) { textColorMode == "Fade" }
 
-    private val gradientTextSpeed by float("Text-Gradient-Speed", 2.5f, 1.0f..10f) { textColorMode == "Gradient" || textColorMode == "PinkPastel" || textColorMode == "RedPastel" }
+    private val gradientTextSpeed by float("Text-Gradient-Speed", 2.5f, 1.0f..10f) { textColorMode == "Gradient" || textColorMode == "Sakura" || textColorMode == "RedPastel" }
 
     private val maxTextGradientColors by int(
         "Max-Text-Gradient-Colors", 4, 1..MAX_GRADIENT_COLORS
@@ -274,7 +274,7 @@ class Arraylist(
 
                 when (animation) {
                     "Slide" -> {
-                        // If modules become inactive because they only work in game, animate them as if they got disabled
+                        // If modules become inactive because they only work when in game, animate them as if they got disabled
                         module.slideStep += if (shouldShow) delta / 4F else -delta / 4F
                         if (shouldShow) {
                             if (module.slide < width) {
@@ -366,12 +366,12 @@ class Arraylist(
                             }
                         }
 
-                        if (!markAsInactive && textColorMode == "PinkPastel") {
+                        if (!markAsInactive && textColorMode == "Sakura") {
                             GradientFontShader.begin(
                                 true,
                                 gradientX,
                                 gradientY,
-                                pinkPastelGradient,
+                                sakuraGradient,
                                 2.5f,
                                 gradientOffset
                             ).use {
@@ -473,7 +473,8 @@ class Arraylist(
                                                 RenderUtils.RoundedCorners.RIGHT_ONLY
                                             } else when (module) {
                                                 modules.first() -> RenderUtils.RoundedCorners.TOP_RIGHT_ONLY
-                                                modules.last() -> RenderUtils.RoundedCorners.BOTTOM_RIGHT Alison
+                                                modules.last() -> RenderUtils.RoundedCorners.BOTTOM_RIGHT_ONLY
+                                                else -> RenderUtils.RoundedCorners.NONE
                                             }
                                         )
 
@@ -540,12 +541,12 @@ class Arraylist(
                             }
                         }
 
-                        if (!markAsInactive && textColorMode == "PinkPastel") {
+                        if (!markAsInactive && textColorMode == "Sakura") {
                             GradientFontShader.begin(
                                 true,
                                 gradientX,
                                 gradientY,
-                                pinkPastelGradient, // Thay thế sakuraGradient
+                                sakuraGradient,
                                 2.5f,
                                 gradientOffset
                             ).use {
