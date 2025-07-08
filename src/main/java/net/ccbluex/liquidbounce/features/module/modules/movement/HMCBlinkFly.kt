@@ -4,14 +4,19 @@ import net.ccbluex.liquidbounce.event.*
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.utils.client.BlinkUtils
-import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
+import net.ccbluex.liquidbounce.utils.render.RenderUtils
+import net.minecraft.network.play.client.*
+import net.minecraft.network.play.server.*
+import net.minecraft.util.Vec3
+import org.lwjgl.opengl.GL11
+import java.awt.Color
 
 object HMCBlinkFly : Module("HMCBlinkFly", Category.MOVEMENT) {
 
-    val visibleLimitValue by int("VisibleLimit", 4, 0..10)
-    val flySpeedValue by float("FlySpeed", 1.0f, 0.1f..3.0f)
+    private val visibleLimit by int("VisibleBlocks", 4, 0..10)
 
     private var placedCount = 0
+    private var limitBlock = true
 
     init {
         EventManager.registerEventHook(PacketEvent::class.java, EventHook(this, false, 0) { event ->
@@ -21,11 +26,16 @@ object HMCBlinkFly : Module("HMCBlinkFly", Category.MOVEMENT) {
 
             if (event.eventType == EventState.SEND) {
                 when (packet) {
+                    is C03PacketPlayer -> {
+                        BlinkUtils.blink(packet, event, true, false)
+                    }
                     is C08PacketPlayerBlockPlacement -> {
-                        if (placedCount < visibleLimitValue) {
-                            placedCount++
-                        } else {
-                            BlinkUtils.blink(packet, event, true, false)
+                        if (limitBlock) {
+                            if (placedCount < visibleLimit) {
+                                placedCount++
+                            } else {
+                                BlinkUtils.blink(packet, event, true, false)
+                            }
                         }
                     }
                 }
@@ -39,30 +49,50 @@ object HMCBlinkFly : Module("HMCBlinkFly", Category.MOVEMENT) {
         })
 
         EventManager.registerEventHook(MotionEvent::class.java, EventHook(this, false, 0) { event ->
-            val thePlayer = mc.thePlayer ?: return@EventHook
-
-            if (event.eventState == EventState.PRE) {
-                val flySpeed = flySpeedValue
-
-                if (thePlayer.onGround) {
-                    thePlayer.motionY = flySpeed.toDouble()
-                } else {
-                    thePlayer.motionY = -0.05
-                }
-
-                thePlayer.motionX *= 1.0f + (flySpeed / 10f)
-                thePlayer.motionZ *= 1.0f + (flySpeed / 10f)
-            }
-        })
-
-        EventManager.registerEventHook(MotionEvent::class.java, EventHook(this, false, 0) { event ->
             if (event.eventState == EventState.POST) {
                 val thePlayer = mc.thePlayer ?: return@EventHook
+
                 if (thePlayer.isDead || thePlayer.ticksExisted <= 10) {
                     BlinkUtils.unblink()
                 } else {
-                    BlinkUtils.syncReceived()
+                    BlinkUtils.syncReceived()                                      // credit : DeletedUser , BeoPhiMan
                 }
+            }
+        })
+
+        EventManager.registerEventHook(Render3DEvent::class.java, EventHook(this, false, 0) {
+            val positions = BlinkUtils.positions
+            val color = Color(150, 200, 255, 180)
+
+            synchronized(positions) {
+                GL11.glPushMatrix()
+                GL11.glDisable(GL11.GL_TEXTURE_2D)
+                GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA)
+                GL11.glEnable(GL11.GL_LINE_SMOOTH)
+                GL11.glEnable(GL11.GL_BLEND)
+                GL11.glDisable(GL11.GL_DEPTH_TEST)
+                mc.entityRenderer.disableLightmap()
+                GL11.glBegin(GL11.GL_LINE_STRIP)
+                RenderUtils.glColor(color)
+
+                val renderPosX = mc.renderManager.renderPosX
+                val renderPosY = mc.renderManager.renderPosY
+                val renderPosZ = mc.renderManager.renderPosZ
+
+                for (vec in positions) {
+                    GL11.glVertex3d(
+                        vec.xCoord - renderPosX,
+                        vec.yCoord - renderPosY,
+                        vec.zCoord - renderPosZ
+                    )
+                }
+
+                GL11.glEnd()
+                GL11.glEnable(GL11.GL_DEPTH_TEST)
+                GL11.glDisable(GL11.GL_LINE_SMOOTH)
+                GL11.glDisable(GL11.GL_BLEND)
+                GL11.glEnable(GL11.GL_TEXTURE_2D)
+                GL11.glPopMatrix()
             }
         })
     }
@@ -76,7 +106,10 @@ object HMCBlinkFly : Module("HMCBlinkFly", Category.MOVEMENT) {
     }
 
     override val tag: String
-        get() = "V:${visibleLimitValue} S:${flySpeedValue}"
+        get() = BlinkUtils.packetsReceived.size.toString()
+
+    fun blinkingSend(): Boolean = false
+    fun blinkingReceive(): Boolean = handleEvents()
 
     private fun isServerPacket(packet: Any): Boolean {
         return packet.javaClass.simpleName.startsWith("S")
@@ -84,12 +117,12 @@ object HMCBlinkFly : Module("HMCBlinkFly", Category.MOVEMENT) {
 
     private fun isEntityMovementPacket(packet: Any): Boolean {
         return when (packet) {
-            is net.minecraft.network.play.server.S14PacketEntity,
-            is net.minecraft.network.play.server.S18PacketEntityTeleport,
-            is net.minecraft.network.play.server.S19PacketEntityHeadLook,
-            is net.minecraft.network.play.server.S0BPacketAnimation,
-            is net.minecraft.network.play.server.S0CPacketSpawnPlayer,
-            is net.minecraft.network.play.server.S1CPacketEntityMetadata -> true
+            is S14PacketEntity,
+            is S18PacketEntityTeleport,
+            is S19PacketEntityHeadLook,
+            is S0BPacketAnimation,
+            is S0CPacketSpawnPlayer,
+            is S1CPacketEntityMetadata -> true
             else -> {
                 val name = packet.javaClass.simpleName
                 name == "S15PacketEntityRelMove" ||
