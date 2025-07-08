@@ -69,8 +69,20 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // -->
 
     val scaffoldMode by choices(
-        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge"), "Normal"
+        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily", "MoonWalk"), "Normal"
     )
+    
+    private val breezilyTiming by floatRange("BreezilyTiming", 0.12f..0.18f, 0.1f..0.5f) { scaffoldMode == "Breezily" }
+    private val breezilyStrafe by float("BreezilyStrafe", 0.08f, 0.05f..0.15f) { scaffoldMode == "Breezily" }
+    private val breezilyRotSpeed by float("BreezilyRotSpeed", 35f, 20f..50f) { scaffoldMode == "Breezily" }
+    private val breezilyRandomization by float("BreezilyRandom", 0.15f, 0f..0.3f) { scaffoldMode == "Breezily" }
+    private val breezilyDelay by intRange("BreezilyDelay", 2..4, 1..8) { scaffoldMode == "Breezily" }
+    private val moonWalkSpeed by float("MoonWalkSpeed", 0.12f, 0.08f..0.2f) { scaffoldMode == "MoonWalk" }
+    private val moonWalkRotation by boolean("MoonWalkRotation", true) { scaffoldMode == "MoonWalk" }
+    private val moonWalkStrafe by boolean("MoonWalkStrafe", true) { scaffoldMode == "MoonWalk" }
+    private val moonWalkBalance by float("MoonWalkBalance", 0.8f, 0.5f..1.2f) { scaffoldMode == "MoonWalk" }
+    private val moonWalkSmoothness by float("MoonWalkSmooth", 0.3f, 0.1f..0.5f) { scaffoldMode == "MoonWalk" }
+    private val legitPlace by boolean("LegitPlace", true) { scaffoldMode in arrayOf("Breezily", "MoonWalk") }
 
     // Expand
     private val omniDirectionalExpand by boolean("OmniDirectionalExpand", false) { scaffoldMode == "Expand" }
@@ -554,10 +566,81 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         event.strafe *= eagleSpeed / 0.3f
     }
 
+    private var breezilyTicks = 0
+    private var moonWalkTicks = 0
+    private var lastMoonWalkYaw = 0f
+    
     val onMovementInput = handler<MovementInputEvent> { event ->
         val player = mc.thePlayer ?: return@handler
 
-        if (!isGodBridgeEnabled || !player.onGround) return@handler
+        when (scaffoldMode) {
+            "Breezily" -> {
+                if (!player.onGround) return@handler
+                
+                breezilyTicks++
+                
+                if (breezilyTicks >= breezilyDelay.random()) {
+                    val random = Math.random() * breezilyRandomization
+                    val direction = if (breezilyTicks % 2 == 0) 
+                        breezilyStrafe * (1 + random.toFloat()) 
+                    else 
+                        -breezilyStrafe * (1 + random.toFloat())
+                        
+                    val rotationSpeed = breezilyRotSpeed * (0.8f + Math.random().toFloat() * 0.4f)
+                    player.rotationYaw += rotationSpeed * direction * 
+                        if (legitPlace) 0.7f else 1f 
+                    
+                    event.originalInput.moveStrafe = direction * 
+                        if (player.isCollidedHorizontally) 0.8f else 1f
+                    
+                    if (breezilyTicks > (breezilyTiming.last * 20).toInt()) {
+                        breezilyTicks = 0
+                        if (Math.random() < 0.3) breezilyTicks -= 2
+                    }
+                }
+            }
+            
+            "MoonWalk" -> {
+                if (!player.onGround) return@handler
+                
+                moonWalkTicks++
+                
+                if (moonWalkStrafe) {
+                    val base = sin(moonWalkTicks * 0.3) 
+                    val random = (Math.random() - 0.5) * 0.1
+                    val strafeMultiplier = (base + random) * moonWalkSpeed
+                    
+                    event.originalInput.moveStrafe = lerp(
+                        event.originalInput.moveStrafe,
+                        strafeMultiplier.toFloat(),
+                        moonWalkSmoothness
+                    )
+                }
+                
+                if (moonWalkRotation) {
+                    val baseYaw = sin(moonWalkTicks * 0.08) * 15f * moonWalkBalance
+                    val randomYaw = (Math.random() - 0.5) * 5f
+                    val targetYaw = player.rotationYaw + baseYaw + randomYaw.toFloat()
+                    
+                    player.rotationYaw = lerp(
+                        lastMoonWalkYaw,
+                        targetYaw,
+                        moonWalkSmoothness * (if (legitPlace) 0.7f else 1f)
+                    )
+                    lastMoonWalkYaw = player.rotationYaw
+                }
+                
+                if (moonWalkTicks % 15 == 0) {
+                    val slowdown = 0.75f + (Math.random() * 0.1f).toFloat()
+                    player.motionX *= slowdown
+                    player.motionZ *= slowdown
+                }
+            }
+            
+            else -> {
+                if (!isGodBridgeEnabled || !player.onGround) return@handler
+            }
+        }
 
         if (waitForRots) {
             godBridgeTargetRotation?.run {
@@ -948,7 +1031,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     /**
      * For expand scaffold, fixes vector values that should match according to direction vector
      */
-    private fun modifyVec(original: Vec3, direction: EnumFacing, pos: Vec3, shouldModify: Boolean): Vec3 {
+    private fun lerp(start: Float, end: Float, fraction: Float): Float {
+        return start + (end - start) * fraction
+    }
+
+private fun modifyVec(original: Vec3, direction: EnumFacing, pos: Vec3, shouldModify: Boolean): Vec3 {
         if (!shouldModify) {
             return original
         }
