@@ -48,16 +48,22 @@ class Arraylist(
     private val textColorMode by choices(
         "Text-Mode", arrayOf("Custom", "Fade", "Random", "Rainbow", "Gradient", "Sakura", "RedPastel", "Skylit"), "Custom"
     )
+    // Sakura gradient: vivid pink to lighter pink to white (3 colors)
     private val sakuraGradient = listOf(
         floatArrayOf(1.0f, 0.65f, 0.85f, 1.0f), // vivid pink
+        floatArrayOf(1.0f, 0.80f, 0.92f, 1.0f), // lighter pink
         floatArrayOf(1.0f, 0.95f, 1.0f, 1.0f)  // white
     )
+    // Red Pastel gradient: pastel red to lighter red to near white (3 colors)
     private val redPastelGradient = listOf(
         floatArrayOf(1.0f, 0.4f, 0.4f, 1.0f), // pastel red
+        floatArrayOf(1.0f, 0.65f, 0.65f, 1.0f), // lighter red
         floatArrayOf(1.0f, 0.9f, 0.9f, 1.0f)  // near white
     )
+    // Skylit gradient: aqua to lighter aqua to white (3 colors)
     private val skylitGradient = listOf(
         floatArrayOf(0.0f, 1.0f, 1.0f, 1.0f), // aqua
+        floatArrayOf(0.5f, 1.0f, 1.0f, 1.0f), // lighter aqua
         floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)  // white
     )
     private val textColors = ColorSettingsInteger(this, "TextColor") { textColorMode == "Custom" }.with(blueRibbon)
