@@ -55,10 +55,10 @@ jobs:
           cp "$JAR" "../../artifacts/$ARTIFACT_NAME"
           echo "jar_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
 
-      - name: Upload artifact as ZIP
+      - name: Upload all artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: LiquidBounce-JAR
+          name: LiquidBounce-Artifacts
           path: artifacts
           retention-days: 1
 
@@ -83,16 +83,16 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Download built artifact
+      - name: Download built artifacts
         uses: actions/download-artifact@v4
         with:
-          name: LiquidBounce-JAR
+          name: LiquidBounce-Artifacts
           path: ./artifacts
 
-      - name: Check ZIP file exists
+      - name: Check artifacts exist
         run: |
-          if [ ! -f "./artifacts/LiquidBounce-JAR.zip" ]; then
-            echo "ZIP file not found!"
+          if [ ! -d "./artifacts" ] || [ -z "$(ls -A ./artifacts)" ]; then
+            echo "Artifacts directory is empty!"
             exit 1
           fi
 
@@ -100,36 +100,59 @@ jobs:
     needs: [build, release]
     runs-on: ubuntu-latest
     steps:
-      - name: Download artifact
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: LiquidBounce-JAR
+          name: LiquidBounce-Artifacts
           path: ./artifacts
 
-      - name: Send ZIP to Discord via webhook
+      - name: Send all files to Discord
         env:
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
+          VERSION: ${{ needs.build.outputs.lb_version }}
         run: |
-          ZIP_PATH="./artifacts/LiquidBounce-JAR.zip"
-          
-          # Kiểm tra file ZIP tồn tại
-          if [ ! -f "$ZIP_PATH" ]; then
-            echo "::error::ZIP file not found at $ZIP_PATH"
+          # Kiểm tra thư mục artifacts
+          if [ ! -d "./artifacts" ] || [ -z "$(ls -A ./artifacts)" ]; then
+            echo "::error::Artifacts directory is empty!"
             exit 1
           fi
-          
-          # Lấy kích thước file
-          FILE_SIZE=$(stat -c%s "$ZIP_PATH")
-          MAX_SIZE=8000000  # 8MB - giới hạn của Discord
-          
-          if [ "$FILE_SIZE" -gt "$MAX_SIZE" ]; then
-            echo "::warning::File size ($FILE_SIZE bytes) exceeds Discord limit, compressing..."
-            apt-get update && apt-get install -y zip
-            zip -r -9 ./artifacts/compressed.zip ./artifacts/LiquidBounce-JAR.zip
-            ZIP_PATH="./artifacts/compressed.zip"
-          fi
-          
-          # Gửi file lên Discord
-          curl -F "file=@$ZIP_PATH" \
-               -F "content=🚀 Build LiquidBounce thành công! Phiên bản: ${{ needs.build.outputs.lb_version }}\n📦 Kích thước: $(($FILE_SIZE/1000)) KB" \
+
+          # Tạo message chung
+          MESSAGE="🚀 Build LiquidBounce thành công! Phiên bản: $VERSION\n📁 Các file đã build:"
+
+          # Tạo danh sách các file
+          FILE_LIST=""
+          for file in ./artifacts/*; do
+            if [ -f "$file" ]; then
+              FILENAME=$(basename "$file")
+              FILESIZE=$(stat -c%s "$file")
+              FILE_LIST+="\n- $FILENAME ($((FILESIZE/1000)) KB"
+            fi
+          done
+
+          # Gửi thông báo chung với danh sách file
+          curl -H "Content-Type: application/json" \
+               -d "{\"content\":\"$MESSAGE$FILE_LIST\"}" \
                "$WEBHOOK_URL"
+
+          # Gửi từng file riêng biệt
+          for file in ./artifacts/*; do
+            if [ -f "$file" ]; then
+              echo "Sending file: $file"
+              FILENAME=$(basename "$file")
+              
+              # Kiểm tra kích thước file (giới hạn Discord 8MB)
+              FILESIZE=$(stat -c%s "$file")
+              MAX_SIZE=8000000
+              
+              if [ "$FILESIZE" -gt "$MAX_SIZE" ]; then
+                echo "::warning::File $FILENAME is too large ($FILESIZE bytes), skipping"
+                continue
+              fi
+              
+              # Gửi file lên Discord
+              curl -F "file=@$file" \
+                   -F "content=File: $FILENAME" \
+                   "$WEBHOOK_URL"
+            fi
+          done
