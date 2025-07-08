@@ -580,22 +580,22 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 breezilyTicks++
                 
                 if (breezilyTicks >= breezilyDelay.random()) {
-                    val random = Math.random() * breezilyRandomization
+                    val random = RandomUtils.nextFloat() * breezilyRandomization
                     val direction = if (breezilyTicks % 2 == 0) 
-                        breezilyStrafe * (1 + random.toFloat()) 
+                        breezilyStrafe * (1 + random) 
                     else 
-                        -breezilyStrafe * (1 + random.toFloat())
+                        -breezilyStrafe * (1 + random)
                         
-                    val rotationSpeed = breezilyRotSpeed * (0.8f + Math.random().toFloat() * 0.4f)
+                    val rotationSpeed = breezilyRotSpeed * (0.8f + RandomUtils.nextFloat() * 0.4f)
                     player.rotationYaw += rotationSpeed * direction * 
                         if (legitPlace) 0.7f else 1f 
                     
                     event.originalInput.moveStrafe = direction * 
                         if (player.isCollidedHorizontally) 0.8f else 1f
                     
-                    if (breezilyTicks > (breezilyTiming.last * 20).toInt()) {
+                    if (breezilyTicks > breezilyTiming.endInclusive.toInt() * 20) {
                         breezilyTicks = 0
-                        if (Math.random() < 0.3) breezilyTicks -= 2
+                        if (RandomUtils.nextFloat() < 0.3f) breezilyTicks -= 2
                     }
                 }
             }
@@ -606,13 +606,13 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 moonWalkTicks++
                 
                 if (moonWalkStrafe) {
-                    val base = sin(moonWalkTicks * 0.3) 
-                    val random = (Math.random() - 0.5) * 0.1
+                    val base = sin(moonWalkTicks * 0.3f).toFloat()
+                    val random = (RandomUtils.nextFloat() - 0.5f) * 0.1f
                     val strafeMultiplier = (base + random) * moonWalkSpeed
                     
                     event.originalInput.moveStrafe = lerp(
                         event.originalInput.moveStrafe,
-                        strafeMultiplier.toFloat(),
+                        strafeMultiplier,
                         moonWalkSmoothness
                     )
                 }
