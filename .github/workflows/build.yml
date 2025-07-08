@@ -97,62 +97,66 @@ jobs:
           fi
 
   discord_webhook:
-    needs: [build, release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: LiquidBounce-Artifacts
-          path: ./artifacts
+  needs: [build, release]
+  runs-on: ubuntu-latest
+  steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: LiquidBounce-Artifacts
+        path: ./artifacts
 
-      - name: Send all files to Discord
-        env:
-          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
-          VERSION: ${{ needs.build.outputs.lb_version }}
-        run: |
-          # Kiểm tra thư mục artifacts
-          if [ ! -d "./artifacts" ] || [ -z "$(ls -A ./artifacts)" ]; then
-            echo "::error::Artifacts directory is empty!"
-            exit 1
-          fi
+    - name: Upload large files to catbox.moe and send to Discord
+      env:
+        WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
+        VERSION: ${{ needs.build.outputs.lb_version }}
+      run: |
+        # Kiểm tra thư mục artifacts
+        if [ ! -d "./artifacts" ] || [ -z "$(ls -A ./artifacts)" ]; then
+          echo "::error::Artifacts directory is empty!"
+          exit 1
+        fi
 
-          # Tạo message chung
-          MESSAGE="🚀 Build LiquidBounce thành công! Phiên bản: $VERSION\n📁 Các file đã build:"
+        # Tạo message
+        MESSAGE=" Build LiquidBounce thành công! Phiên bản: $VERSION\n📁 Các file đã build:"
+        UPLOADED_FILES=""
 
-          # Tạo danh sách các file
-          FILE_LIST=""
-          for file in ./artifacts/*; do
-            if [ -f "$file" ]; then
-              FILENAME=$(basename "$file")
-              FILESIZE=$(stat -c%s "$file")
-              FILE_LIST+="\n- $FILENAME ($((FILESIZE/1000)) KB"
-            fi
-          done
-
-          # Gửi thông báo chung với danh sách file
-          curl -H "Content-Type: application/json" \
-               -d "{\"content\":\"$MESSAGE$FILE_LIST\"}" \
-               "$WEBHOOK_URL"
-
-          # Gửi từng file riêng biệt
-          for file in ./artifacts/*; do
-            if [ -f "$file" ]; then
-              echo "Sending file: $file"
-              FILENAME=$(basename "$file")
+        # Xử lý từng file
+        for file in ./artifacts/*; do
+          if [ -f "$file" ]; then
+            FILENAME=$(basename "$file")
+            FILESIZE=$(stat -c%s "$file")
+            MAX_SIZE=8000000  # 8MB
+            
+            # File nhỏ: gửi trực tiếp
+            if [ "$FILESIZE" -le "$MAX_SIZE" ]; then
+              curl -F "file=@$file" -F "content=File: $FILENAME" "$WEBHOOK_URL"
+            
+            # File lớn: upload lên catbox.moe
+            else
+              echo "Uploading large file to catbox.moe: $FILENAME"
               
-              # Kiểm tra kích thước file (giới hạn Discord 8MB)
-              FILESIZE=$(stat -c%s "$file")
-              MAX_SIZE=8000000
+              # Upload file lên catbox.moe
+              RESPONSE=$(curl -s -F "reqfile=@$file" "https://catbox.moe/user/api.php")
               
-              if [ "$FILESIZE" -gt "$MAX_SIZE" ]; then
-                echo "::warning::File $FILENAME is too large ($FILESIZE bytes), skipping"
-                continue
+              # Kiểm tra response
+              if [[ $RESPONSE == http* ]]; then
+                DOWNLOAD_URL="$RESPONSE"
+                UPLOADED_FILES+="\n- [$FILENAME]($DOWNLOAD_URL) ($((FILESIZE/1000000)) MB)"
+              else
+                echo "::error::Upload failed for $FILENAME. Response: $RESPONSE"
+                UPLOADED_FILES+="\n- $FILENAME (Upload failed)"
               fi
-              
-              # Gửi file lên Discord
-              curl -F "file=@$file" \
-                   -F "content=File: $FILENAME" \
-                   "$WEBHOOK_URL"
             fi
-          done
+          fi
+        done
+
+        # Gửi message chứa link download nếu có file lớn
+        if [ -n "$UPLOADED_FILES" ]; then
+          MESSAGE+="\n\n📦 Các file lớn đã được upload lên catbox.moe:"
+          MESSAGE+="$UPLOADED_FILES"
+          
+          curl -H "Content-Type: application/json" \
+               -d "{\"content\":\"$MESSAGE\"}" \
+               "$WEBHOOK_URL"
+        fi
