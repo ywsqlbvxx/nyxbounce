@@ -69,9 +69,15 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // -->
 
     val scaffoldMode by choices(
-        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge"), "Normal"
+        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "3fmc"), "Normal"
     )
-
+    
+    // 3fmc
+    private val 3fmcLegitRotations by boolean("3fmcLegitRotations", true) { scaffoldMode == "3fmc" }
+    private val 3fmcRandomJump by boolean("3fmcRandomJump", true) { scaffoldMode == "3fmc" }
+    private val 3fmcMinJumpDelay by int("3fmcMinJumpDelay", 1, 1..5) { scaffoldMode == "3fmc" }
+    private val 3fmcMaxJumpDelay by int("3fmcMaxJumpDelay", 3, 1..8) { scaffoldMode == "3fmc" }
+    
     // Expand
     private val omniDirectionalExpand by boolean("OmniDirectionalExpand", false) { scaffoldMode == "Expand" }
     private val expandLength by int("ExpandLength", 1, 1..6) { scaffoldMode == "Expand" }
@@ -237,6 +243,14 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         get() = down && !sameY && GameSettings.isKeyDown(mc.gameSettings.keyBindSneak) && scaffoldMode !in arrayOf(
             "GodBridge", "Telly"
         ) && blocksAmount() > 1
+        
+    // smooth rotation
+    private fun smoothRotation(from: Float, to: Float, maxChange: Float): Float {
+        var delta = ((to - from + 540) % 360) - 180
+        if (delta > maxChange) delta = maxChange
+        else if (delta < -maxChange) delta = -maxChange
+        return (from + delta)
+    }
 
     // Current rotation
     private val currRotation
@@ -563,6 +577,17 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
             blocksToJump = blocksToJumpRange.random()
         }
+        // 3fmc
+        if (scaffoldMode == "3fmc" && player.onGround) {
+            // jump randomly (legit style)
+            val jumpDelay = RandomUtils.nextInt(3fmcMinJumpDelay, 3fmcMaxJumpDelay)
+            if (3fmcRandomJump && player.ticksExisted % jumpDelay == 0) {
+                event.originalInput.jump = true
+            }
+            // never sneak
+            event.originalInput.sneak = false
+        }
+    }
     }
 
     fun update() {
@@ -578,7 +603,18 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     private fun setRotation(rotation: Rotation, ticks: Int) {
         val player = mc.thePlayer ?: return
-
+        
+        if (scaffoldMode == "3fmc" && 3fmcLegitRotations) {
+            // smooth rotation, make you look like a legit player
+            val prevRot = RotationUtils.currentRotation ?: player.rotation
+            val maxYawChange = (4.5 + Math.random() * 2.5).toFloat()
+            val maxPitchChange = (3.2 + Math.random() * 1.5).toFloat()
+            val newYaw = smoothRotation(prevRot.yaw, rotation.yaw, maxYawChange)
+            val newPitch = smoothRotation(prevRot.pitch, rotation.pitch, maxPitchChange)
+            setTargetRotation(Rotation(newYaw, newPitch), options, ticks)
+            return
+        }
+        
         if (scaffoldMode == "Telly" && player.isMoving) {
             if (player.airTicks < ticksUntilRotation.random() && ticksUntilJump >= jumpTicks) {
                 return
