@@ -40,6 +40,11 @@ import kotlin.math.pow
  */
 @ElementInfo(name = "Target")
 class Target : Element("Target") {
+    // Blur and Glow settings
+    private val blurEnabled by boolean("Blur", false)
+    private val blurAmount by float("Blur-Amount", 8F, 1F..30F) { blurEnabled }
+    private val glowEnabled by boolean("Glow", false)
+    private val glowAmount by float("Glow-Amount", 8F, 1F..30F) { glowEnabled }
 
     private val roundedRectRadius by float("Rounded-Radius", 3F, 0F..5F)
 
@@ -135,6 +140,10 @@ class Target : Element("Target") {
         val stringWidth = (40f + (target.name?.let(titleFont::getStringWidth) ?: 0)).coerceAtLeast(118F)
 
         assumeNonVolatile {
+            // Draw blur if enabled
+            if (blurEnabled) {
+                RenderUtils.drawBlur(0F, 0F, stringWidth, 36F, blurAmount)
+            }
             if (shouldRender) {
                 delayCounter = 0
             } else if (isRendered || isAlpha) {
@@ -211,6 +220,11 @@ class Target : Element("Target") {
 
                 glEnable(GL_BLEND)
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+                // Draw glow if enabled
+                if (glowEnabled) {
+                    RenderUtils.drawGlow(0F, 0F, width.coerceAtLeast(0F), height.coerceAtLeast(0F), glowAmount)
+                }
 
                 if (fadeMode && isAlpha || smoothMode && isRendered || delayCounter < vanishDelay) {
                     val width = width.coerceAtLeast(0F)
