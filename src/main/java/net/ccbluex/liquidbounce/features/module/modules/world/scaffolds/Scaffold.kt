@@ -353,6 +353,32 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         return false
     }
     
+    private fun checkRotationSafety(rotation: Rotation): Boolean {
+        val player = mc.thePlayer ?: return false
+        val world = mc.theWorld ?: return false
+        
+        val eyePos = player.getPositionEyes(1f)
+        val lookVec = getVectorForRotation(rotation)
+        val reachVec = eyePos.addVector(
+            lookVec.xCoord * 4.5,
+            lookVec.yCoord * 4.5,
+            lookVec.zCoord * 4.5
+        )
+        
+        val raytrace = world.rayTraceBlocks(eyePos, reachVec, false, true, false)
+        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK
+    }
+
+    private fun smoothRotation(from: Rotation, to: Rotation, speed: Float): Rotation {
+        val diffYaw = MathHelper.wrapAngleTo180_float(to.yaw - from.yaw)
+        val diffPitch = MathHelper.wrapAngleTo180_float(to.pitch - from.pitch)
+        
+        return Rotation(
+            from.yaw + diffYaw * speed,
+            from.pitch + diffPitch * speed
+        ).fixedSensitivity()
+    }
+
     private fun calculateDynamicRotation(current: Rotation): Rotation {
         val player = mc.thePlayer ?: return current
         val currentTime = System.currentTimeMillis()
@@ -399,10 +425,22 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             else -> 79.5f
         }
         
-        return Rotation(
+        val newRotation = Rotation(
             MathHelper.wrapAngleTo180_float(targetYaw + ((-2f..2f).random() * baseSpeed)),
             targetPitch + ((-1f..1f).random() * baseSpeed)
         ).fixedSensitivity()
+        
+        if (!checkRotationSafety(newRotation)) {
+            return current 
+        }
+
+        val smoothSpeed = when {
+            inDangerZone -> 0.6f 
+            player.onGround -> 0.3f 
+            else -> 0.4f 
+        }
+
+        return smoothRotation(current, newRotation, smoothSpeed)
     }
 
     private var godBridgeTargetRotation: Rotation? = null
@@ -670,7 +708,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         }
         
         if (isDynamicEnabled && options.rotationsActive) {
-            val current = currentRotation ?: mc.thePlayer.rotation
+            val current = RotationUtils.currentRotation ?: mc.thePlayer.rotation
             dynamicRotation = calculateDynamicRotation(current)
             dynamicRotation?.let { setRotation(it, ticks) }
             return@handler
