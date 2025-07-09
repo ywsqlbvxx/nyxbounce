@@ -891,10 +891,77 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             return player.getDistanceToEntityBox(entity) <= range
         }
 
-        val prediction = entity.currPos.subtract(entity.prevPos).times(2 + predictEnemyPosition.toDouble())
-
-        val boundingBox = entity.hitBox.offset(prediction)
-        val (currPos, oldPos) = player.currPos to player.prevPos
+        val mode = rotationValue.get().lowercase()
+        
+        when (mode) {
+            "grim" -> {
+                // Get center point for more legitimate rotations
+                val targetBox = entity.hitBox
+                val eyesPos = player.getPositionEyes(1F)
+                
+                // Calculate nearest point on bounding box to player's eyes
+                val targetVec = getNearestPointBB(eyesPos, targetBox)
+                
+                // Add slight prediction based on target's movement
+                targetVec.addVector(
+                    (entity.posX - entity.lastTickPosX) * 1.5,
+                    (entity.posY - entity.lastTickPosY) * 1.5, 
+                    (entity.posZ - entity.lastTickPosZ) * 1.5
+                )
+                
+                // Get base rotation to target point
+                val rotation = RotationUtils.toRotation(targetVec)
+                
+                // Add small random variations for humanization
+                val randomYaw = (Math.random() * 2.0 - 1.0).toFloat() * 2.0f
+                val randomPitch = (Math.random() * 2.0 - 1.0).toFloat() * 1.0f
+                
+                rotation.yaw += randomYaw
+                rotation.pitch = (rotation.pitch + randomPitch).coerceIn(-90f, 90f)
+                
+                setTargetRotation(rotation, options)
+                return true
+            }
+            
+            "intave" -> {
+                // Calculate center height target point
+                val targetVec = Vec3(
+                    entity.posX,
+                    entity.posY + (entity.eyeHeight * 0.9),
+                    entity.posZ
+                )
+                
+                // Add predictive motion
+                val motionPrediction = 2.0
+                targetVec.addVector(
+                    (entity.posX - entity.lastTickPosX) * motionPrediction,
+                    (entity.posY - entity.lastTickPosY) * motionPrediction,
+                    (entity.posZ - entity.lastTickPosZ) * motionPrediction
+                )
+                
+                // Calculate direction vector 
+                val diffX = targetVec.xCoord - player.posX
+                val diffY = targetVec.yCoord - (player.posY + player.eyeHeight)
+                val diffZ = targetVec.zCoord - player.posZ
+                
+                // Convert to rotation
+                val baseRotation = RotationUtils.toRotation(Vec3(diffX, diffY, diffZ))
+                
+                // Add Intave randomization
+                val randAmount = intaveRandomAmount.get()
+                val rotation = Rotation(
+                    baseRotation.yaw + (Math.random().toFloat() * randAmount - randAmount/2),
+                    baseRotation.pitch + (Math.random().toFloat() * randAmount/2 - randAmount/4)
+                )
+                
+                setTargetRotation(rotation, options)
+                return true
+            }
+            
+            else -> {
+                val prediction = entity.currPos.subtract(entity.prevPos).times(2 + predictEnemyPosition.toDouble())
+                val boundingBox = entity.hitBox.offset(prediction)
+                val (currPos, oldPos) = player.currPos to player.prevPos
 
         val simPlayer = SimulatedPlayer.fromClientPlayer(RotationUtils.modifiedInput)
 
