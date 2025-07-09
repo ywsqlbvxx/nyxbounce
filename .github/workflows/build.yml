@@ -126,17 +126,17 @@ jobs:
           curl -H "Content-Type: application/json" \
                -d '{
                  "embeds": [{
-                   "title": "🚀 LiquidBounce Build Successful!",
-                   "description": "A new version of LiquidBounce has been built and released.",
+                   "title": "🚀 RinBounce Beta Build Successful!",
+                   "description": "A new version of RinBounce has been built and released.",
                    "color": 5814783,
                    "fields": [
                      {
                        "name": "Version",
-                       "value": "'"$VERSION"'",
+                       "value": Beta "'"$VERSION"'",
                        "inline": true
                      },
                      {
-                       "name": "Release",
+                       "name": "Download",
                        "value": "[Download here]('"$RELEASE_URL"')",
                        "inline": true
                      }
