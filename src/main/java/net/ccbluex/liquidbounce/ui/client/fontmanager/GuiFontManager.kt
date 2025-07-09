@@ -13,9 +13,14 @@ import net.ccbluex.liquidbounce.utils.io.FileFilters
 import net.ccbluex.liquidbounce.utils.io.MiscUtils
 import net.ccbluex.liquidbounce.utils.ui.AbstractScreen
 import net.minecraft.client.gui.*
+import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.renderer.Tessellator
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import org.lwjgl.input.Keyboard
+import org.lwjgl.opengl.GL11
 import java.awt.Color
 import java.io.File
+import kotlin.math.sin
 
 private const val BACK_BTN_ID = 0
 private const val ADD_BTN_ID = 10
@@ -34,6 +39,7 @@ class GuiFontManager(private val prevGui: GuiScreen) : AbstractScreen() {
     }
 
     private var status = Status.IDLE
+    private var animationTime = 0f
 
     private lateinit var fontListView: GuiList
     private lateinit var addButton: GuiButton
@@ -75,6 +81,38 @@ class GuiFontManager(private val prevGui: GuiScreen) : AbstractScreen() {
         }
     }
 
+    private fun drawGradientBackground() {
+        animationTime += 0.02f
+        
+        val tessellator = Tessellator.getInstance()
+        val worldRenderer = tessellator.worldRenderer
+        
+        GlStateManager.disableTexture2D()
+        GlStateManager.enableBlend()
+        GlStateManager.disableAlpha()
+        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0)
+        GlStateManager.shadeModel(GL11.GL_SMOOTH)
+        
+        worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
+        
+        val time = animationTime
+        val topR = (0.1f + 0.3f * sin(time * 0.5f)).coerceIn(0f, 1f)
+        val topG = (0.3f + 0.4f * sin(time * 0.7f + 1f)).coerceIn(0f, 1f)
+        val topB = (0.7f + 0.3f * sin(time * 0.3f + 2f)).coerceIn(0f, 1f)
+        
+        worldRenderer.pos(width.toDouble(), 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
+        worldRenderer.pos(0.0, 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
+        worldRenderer.pos(0.0, height.toDouble(), zLevel.toDouble()).color(0.9f, 0.95f, 1.0f, 1.0f).endVertex()
+        worldRenderer.pos(width.toDouble(), height.toDouble(), zLevel.toDouble()).color(0.9f, 0.95f, 1.0f, 1.0f).endVertex()
+        
+        tessellator.draw()
+        
+        GlStateManager.shadeModel(GL11.GL_FLAT)
+        GlStateManager.disableBlend()
+        GlStateManager.enableAlpha()
+        GlStateManager.enableTexture2D()
+    }
+
     override fun handleMouseInput() {
         super.handleMouseInput()
         fontListView.handleMouseInput()
@@ -88,66 +126,72 @@ class GuiFontManager(private val prevGui: GuiScreen) : AbstractScreen() {
         }
 
         when (keyCode) {
-            // Go back
             Keyboard.KEY_ESCAPE -> mc.displayGuiScreen(prevGui)
-
-            // Go one up in account list
             Keyboard.KEY_UP -> fontListView.selectedSlot -= 1
-
-            // Go one down in account list
             Keyboard.KEY_DOWN -> fontListView.selectedSlot += 1
-
-            // Go up or down in account list
             Keyboard.KEY_TAB -> fontListView.selectedSlot += if (Keyboard.isKeyDown(Keyboard.KEY_LSHIFT)) -1 else 1
-
-            // Login into account
             Keyboard.KEY_RETURN -> fontListView.elementClicked(fontListView.selectedSlot, true, 0, 0)
-
-            // Scroll account list
             Keyboard.KEY_NEXT -> fontListView.scrollBy(height - 100)
-
-            // Scroll account list
             Keyboard.KEY_PRIOR -> fontListView.scrollBy(-height + 100)
-
-            // Add account
             Keyboard.KEY_ADD -> actionPerformed(addButton)
-
-            // Remove account
             Keyboard.KEY_DELETE, Keyboard.KEY_MINUS -> actionPerformed(removeButton)
-
             else -> super.keyTyped(typedChar, keyCode)
         }
     }
 
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
         assumeNonVolatile {
-            drawBackground(0)
+            drawGradientBackground()
             fontListView.drawScreen(mouseX, mouseY, partialTicks)
-            Fonts.fontSemibold40.drawCenteredString(translationMenu("fontManager"), width / 2f, 6f, 0xffffff)
+            
+            // Animated title
+            val titleTime = animationTime * 1.5f
+            val titleR = (0.2f + 0.4f * sin(titleTime)).coerceIn(0f, 1f)
+            val titleG = (0.4f + 0.4f * sin(titleTime + 1f)).coerceIn(0f, 1f)
+            val titleB = (0.8f + 0.2f * sin(titleTime + 2f)).coerceIn(0f, 1f)
+            val titleColor = ((titleR * 255).toInt() shl 16) or ((titleG * 255).toInt() shl 8) or (titleB * 255).toInt()
+            
+            Fonts.fontSemibold40.drawCenteredString(translationMenu("fontManager"), width / 2f, 6f, titleColor)
+            
             val count = Fonts.customFonts.size
             val text = if (count == 1) {
                 translationText("fontManager.customFonts", count)
             } else {
                 translationText("fontManager.customFonts.plural", count)
             }
-            Fonts.fontSemibold35.drawCenteredString(
-                text,
-                width / 2f,
-                18f,
-                0xffffff
-            )
-            Fonts.fontSemibold35.drawCenteredString(status.text, width / 2f, 32f, 0xffffff)
+            
+            // Glowing text
+            val textGlow = (0.6f + 0.4f * sin(animationTime * 2.5f)).coerceIn(0f, 1f)
+            val textColor = (0xFFFFFF and 0x00FFFFFF) or ((255 * textGlow).toInt() shl 24)
+            
+            Fonts.fontSemibold35.drawCenteredString(text, width / 2f, 18f, textColor)
+            Fonts.fontSemibold35.drawCenteredString(status.text, width / 2f, 32f, textColor)
 
             this.textFields.forEach { it.drawTextBox() }
-            if (nameField.text.isEmpty() && !nameField.isFocused) Fonts.fontSemibold40.drawStringWithShadow(
-                translationText("fontManager.name") + "...", nameField.xPosition + 4f, nameField.yPosition + 7f, Color.GRAY.rgb
-            )
-            if (sizeField.text.isEmpty() && !sizeField.isFocused) Fonts.fontSemibold40.drawStringWithShadow(
-                translationText("fontManager.size") + "...", sizeField.xPosition + 4f, sizeField.yPosition + 7f, Color.GRAY.rgb
-            )
-            if (textField.text.isEmpty() && !textField.isFocused) Fonts.fontSemibold40.drawStringWithShadow(
-                translationText("fontManager.preview") + "...", textField.xPosition + 4f, 17f, Color.GRAY.rgb
-            ) else {
+            
+            if (nameField.text.isEmpty() && !nameField.isFocused) {
+                val placeholderGlow = (0.5f + 0.3f * sin(animationTime * 1.5f)).coerceIn(0f, 1f)
+                val placeholderColor = (Color.GRAY.rgb and 0x00FFFFFF) or ((255 * placeholderGlow).toInt() shl 24)
+                Fonts.fontSemibold40.drawStringWithShadow(
+                    translationText("fontManager.name") + "...", nameField.xPosition + 4f, nameField.yPosition + 7f, placeholderColor
+                )
+            }
+            
+            if (sizeField.text.isEmpty() && !sizeField.isFocused) {
+                val placeholderGlow = (0.5f + 0.3f * sin(animationTime * 1.5f + 1f)).coerceIn(0f, 1f)
+                val placeholderColor = (Color.GRAY.rgb and 0x00FFFFFF) or ((255 * placeholderGlow).toInt() shl 24)
+                Fonts.fontSemibold40.drawStringWithShadow(
+                    translationText("fontManager.size") + "...", sizeField.xPosition + 4f, sizeField.yPosition + 7f, placeholderColor
+                )
+            }
+            
+            if (textField.text.isEmpty() && !textField.isFocused) {
+                val placeholderGlow = (0.5f + 0.3f * sin(animationTime * 1.5f + 2f)).coerceIn(0f, 1f)
+                val placeholderColor = (Color.GRAY.rgb and 0x00FFFFFF) or ((255 * placeholderGlow).toInt() shl 24)
+                Fonts.fontSemibold40.drawStringWithShadow(
+                    translationText("fontManager.preview") + "...", textField.xPosition + 4f, 17f, placeholderColor
+                )
+            } else {
                 val font = fontListView.selectedEntry.value
                 font.drawCenteredString(
                     textField.text,
@@ -190,7 +234,6 @@ class GuiFontManager(private val prevGui: GuiScreen) : AbstractScreen() {
     }
 
     public override fun actionPerformed(button: GuiButton) {
-        // Not enabled buttons should be ignored
         if (!button.enabled) return
 
         when (button.id) {
@@ -202,8 +245,6 @@ class GuiFontManager(private val prevGui: GuiScreen) : AbstractScreen() {
                 }
 
                 val directory = FileManager.fontsDir
-
-                // Copy font file
                 val targetFile = File(directory, file.name)
                 if (!targetFile.exists()) {
                     file.copyTo(targetFile, overwrite = true)
@@ -260,9 +301,11 @@ class GuiFontManager(private val prevGui: GuiScreen) : AbstractScreen() {
         override fun drawSlot(id: Int, x: Int, y: Int, var4: Int, var5: Int, var6: Int) {
             val (fontInfo, _) = Fonts.customFonts.entries.elementAt(id)
 
-            Fonts.minecraftFont.drawCenteredString("${fontInfo.name} - ${fontInfo.size}", width / 2f, y + 2f, Color.WHITE.rgb, true)
+            // Animated font entry colors
+            val entryGlow = (0.7f + 0.3f * sin(animationTime * 2f + id * 0.3f)).coerceIn(0f, 1f)
+            val entryColor = (Color.WHITE.rgb and 0x00FFFFFF) or ((255 * entryGlow).toInt() shl 24)
+
+            Fonts.minecraftFont.drawCenteredString("${fontInfo.name} - ${fontInfo.size}", width / 2f, y + 2f, entryColor, true)
         }
-
     }
-
 }

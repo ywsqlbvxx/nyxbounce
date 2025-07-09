@@ -23,13 +23,19 @@ import net.ccbluex.liquidbounce.utils.ui.AbstractScreen
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.GuiSlot
+import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.renderer.Tessellator
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import org.lwjgl.input.Keyboard
+import org.lwjgl.opengl.GL11
 import java.awt.Color
 import java.awt.Desktop
+import kotlin.math.sin
 
 class GuiScripts(private val prevGui: GuiScreen) : AbstractScreen() {
 
     private lateinit var list: GuiList
+    private var animationTime = 0f
 
     override fun initGui() {
         list = GuiList(this)
@@ -46,13 +52,52 @@ class GuiScripts(private val prevGui: GuiScreen) : AbstractScreen() {
         +GuiButton(6, width - 80, j + 24 * 6, 70, 20, "Find Scripts")
     }
 
+    private fun drawGradientBackground() {
+        animationTime += 0.02f
+        
+        val tessellator = Tessellator.getInstance()
+        val worldRenderer = tessellator.worldRenderer
+        
+        GlStateManager.disableTexture2D()
+        GlStateManager.enableBlend()
+        GlStateManager.disableAlpha()
+        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0)
+        GlStateManager.shadeModel(GL11.GL_SMOOTH)
+        
+        worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
+        
+        val time = animationTime
+        val topR = (0.2f + 0.3f * sin(time * 0.6f)).coerceIn(0f, 1f)
+        val topG = (0.4f + 0.4f * sin(time * 0.8f + 1f)).coerceIn(0f, 1f)
+        val topB = (0.8f + 0.2f * sin(time * 0.4f + 2f)).coerceIn(0f, 1f)
+        
+        worldRenderer.pos(width.toDouble(), 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
+        worldRenderer.pos(0.0, 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
+        worldRenderer.pos(0.0, height.toDouble(), zLevel.toDouble()).color(0.85f, 0.9f, 1.0f, 1.0f).endVertex()
+        worldRenderer.pos(width.toDouble(), height.toDouble(), zLevel.toDouble()).color(0.85f, 0.9f, 1.0f, 1.0f).endVertex()
+        
+        tessellator.draw()
+        
+        GlStateManager.shadeModel(GL11.GL_FLAT)
+        GlStateManager.disableBlend()
+        GlStateManager.enableAlpha()
+        GlStateManager.enableTexture2D()
+    }
+
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
         assumeNonVolatile {
-            drawBackground(0)
+            drawGradientBackground()
 
             list.drawScreen(mouseX, mouseY, partialTicks)
 
-            Fonts.fontSemibold40.drawCenteredString("§9§lScripts", width / 2f, 28f, 0xffffff)
+            // Animated title
+            val titleTime = animationTime * 1.8f
+            val titleR = (0.1f + 0.4f * sin(titleTime)).coerceIn(0f, 1f)
+            val titleG = (0.3f + 0.5f * sin(titleTime + 1.5f)).coerceIn(0f, 1f)
+            val titleB = (0.9f + 0.1f * sin(titleTime + 3f)).coerceIn(0f, 1f)
+            val titleColor = ((titleR * 255).toInt() shl 16) or ((titleG * 255).toInt() shl 8) or (titleB * 255).toInt()
+
+            Fonts.fontSemibold40.drawCenteredString("§9§lScripts", width / 2f, 28f, titleColor)
         }
 
         super.drawScreen(mouseX, mouseY, partialTicks)
@@ -67,19 +112,15 @@ class GuiScripts(private val prevGui: GuiScreen) : AbstractScreen() {
                 when (file.extension.lowercase()) {
                     "js" -> {
                         scriptManager.importScript(file)
-
                         loadConfig(clickGuiConfig)
                     }
 
                     "zip" -> {
                         val existingFiles = ScriptManager.availableScriptFiles.toSet()
-
                         file.extractZipTo(scriptsFolder)
-
                         ScriptManager.availableScriptFiles.filterNot {
                             it in existingFiles
                         }.forEach(scriptManager::loadScript)
-
                         loadConfigs(clickGuiConfig, hudConfig)
                     }
 
@@ -93,9 +134,7 @@ class GuiScripts(private val prevGui: GuiScreen) : AbstractScreen() {
             2 -> try {
                 if (list.getSelectedSlot() != -1) {
                     val script = ScriptManager[list.getSelectedSlot()]
-
                     scriptManager.deleteScript(script)
-
                     loadConfigs(clickGuiConfig, hudConfig)
                 }
             } catch (t: Throwable) {
@@ -141,7 +180,6 @@ class GuiScripts(private val prevGui: GuiScreen) : AbstractScreen() {
             mc.displayGuiScreen(prevGui)
             return
         }
-
         super.keyTyped(typedChar, keyCode)
     }
 
@@ -168,18 +206,22 @@ class GuiScripts(private val prevGui: GuiScreen) : AbstractScreen() {
         override fun drawSlot(id: Int, x: Int, y: Int, var4: Int, var5: Int, var6: Int) {
             val script = ScriptManager[id]
 
+            // Animated script name colors
+            val nameGlow = (0.7f + 0.3f * sin(animationTime * 2f + id * 0.5f)).coerceIn(0f, 1f)
+            val nameColor = (Color.LIGHT_GRAY.rgb and 0x00FFFFFF) or ((255 * nameGlow).toInt() shl 24)
+
             Fonts.fontSemibold40.drawCenteredString(
                 "§9" + script.scriptName + " §7v" + script.scriptVersion,
                 width / 2f,
                 y + 2f,
-                Color.LIGHT_GRAY.rgb
+                nameColor
             )
 
             Fonts.fontSemibold40.drawCenteredString(
                 "by §c" + script.scriptAuthors.joinToString(", "),
                 width / 2f,
                 y + 15f,
-                Color.LIGHT_GRAY.rgb
+                nameColor
             )
         }
 

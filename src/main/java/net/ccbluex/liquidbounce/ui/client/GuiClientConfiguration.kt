@@ -31,26 +31,28 @@ import net.ccbluex.liquidbounce.utils.ui.AbstractScreen
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.GuiTextField
+import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.renderer.Tessellator
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraftforge.fml.client.config.GuiSlider
 import org.lwjgl.input.Keyboard
+import org.lwjgl.opengl.GL11
+import java.awt.Color
+import kotlin.math.sin
 
 class GuiClientConfiguration(val prevGui: GuiScreen) : AbstractScreen() {
 
     private lateinit var languageButton: GuiButton
-
     private lateinit var backgroundButton: GuiButton
     private lateinit var particlesButton: GuiButton
     private lateinit var altsModeButton: GuiButton
     private lateinit var unformattedAltsButton: GuiButton
     private lateinit var altsSlider: GuiSlider
-
     private lateinit var titleButton: GuiButton
-
     private lateinit var altPrefixField: GuiTextField
+    private var animationTime = 0f
 
     override fun initGui() {
-        // Title button
-        // Location > 1st row
         titleButton = +GuiButton(
             4, width / 2 - 100, height / 4 + 25, "Client title (${if (clientTitle) "On" else "Off"})"
         )
@@ -62,8 +64,6 @@ class GuiClientConfiguration(val prevGui: GuiScreen) : AbstractScreen() {
             "Language (${overrideLanguage.ifBlank { "Game" }})"
         )
 
-        // Background configuration buttons
-        // Button location > 2nd row
         backgroundButton = +GuiButton(
             0,
             width / 2 - 100,
@@ -76,11 +76,8 @@ class GuiClientConfiguration(val prevGui: GuiScreen) : AbstractScreen() {
         )
 
         +GuiButton(2, width / 2 - 100, height / 4 + 25 + 75 + 25 * 2, 98, 20, "Change wallpaper")
-
         +GuiButton(3, width / 2 + 2, height / 4 + 25 + 75 + 25 * 2, 98, 20, "Reset wallpaper")
 
-        // AltManager configuration buttons
-        // Location > 3rd row
         altsModeButton = +GuiButton(
             6,
             width / 2 - 100,
@@ -117,8 +114,39 @@ class GuiClientConfiguration(val prevGui: GuiScreen) : AbstractScreen() {
         altPrefixField = GuiTextField(2, Fonts.fontSemibold35, width / 2 - 100, height / 4 + 260 + 25, 200, 20)
         altPrefixField.maxStringLength = 16
 
-        // Back button
         +GuiButton(8, width / 2 - 100, height / 4 + 25 + 25 + 25 * 11, "Back")
+    }
+
+    private fun drawGradientBackground() {
+        animationTime += 0.02f
+        
+        val tessellator = Tessellator.getInstance()
+        val worldRenderer = tessellator.worldRenderer
+        
+        GlStateManager.disableTexture2D()
+        GlStateManager.enableBlend()
+        GlStateManager.disableAlpha()
+        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0)
+        GlStateManager.shadeModel(GL11.GL_SMOOTH)
+        
+        worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
+        
+        val time = animationTime
+        val topR = (0.1f + 0.3f * sin(time * 0.4f)).coerceIn(0f, 1f)
+        val topG = (0.25f + 0.35f * sin(time * 0.6f + 1f)).coerceIn(0f, 1f)
+        val topB = (0.7f + 0.3f * sin(time * 0.2f + 2f)).coerceIn(0f, 1f)
+        
+        worldRenderer.pos(width.toDouble(), 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
+        worldRenderer.pos(0.0, 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
+        worldRenderer.pos(0.0, height.toDouble(), zLevel.toDouble()).color(0.9f, 0.95f, 1.0f, 1.0f).endVertex()
+        worldRenderer.pos(width.toDouble(), height.toDouble(), zLevel.toDouble()).color(0.9f, 0.95f, 1.0f, 1.0f).endVertex()
+        
+        tessellator.draw()
+        
+        GlStateManager.shadeModel(GL11.GL_FLAT)
+        GlStateManager.disableBlend()
+        GlStateManager.enableAlpha()
+        GlStateManager.enableTexture2D()
     }
 
     override fun actionPerformed(button: GuiButton) {
@@ -158,12 +186,10 @@ class GuiClientConfiguration(val prevGui: GuiScreen) : AbstractScreen() {
             2 -> {
                 val file = MiscUtils.openFileChooser(FileFilters.IMAGE, FileFilters.SHADER) ?: return
 
-                // Delete old files
                 background = null
                 if (backgroundImageFile.exists()) backgroundImageFile.deleteRecursively()
                 if (backgroundShaderFile.exists()) backgroundShaderFile.deleteRecursively()
 
-                // Copy new file
                 val fileExtension = file.extension
 
                 background = try {
@@ -177,8 +203,6 @@ class GuiClientConfiguration(val prevGui: GuiScreen) : AbstractScreen() {
                     }
 
                     file.copyTo(destFile)
-
-                    // Load new background
                     Background.fromFile(destFile)
                 } catch (e: Exception) {
                     e.showErrorPopup()
@@ -198,18 +222,9 @@ class GuiClientConfiguration(val prevGui: GuiScreen) : AbstractScreen() {
                 val languageIndex = LanguageManager.knownLanguages.indexOf(overrideLanguage)
 
                 overrideLanguage = when (languageIndex) {
-                    -1 -> {
-                        // If the language is not found, set it to the first language
-                        LanguageManager.knownLanguages.first()
-                    }
-                    LanguageManager.knownLanguages.size - 1 -> {
-                        // If the language is the last one, set it to blank
-                        ""
-                    }
-                    else -> {
-                        // Otherwise, set it to the next language
-                        LanguageManager.knownLanguages[languageIndex + 1]
-                    }
+                    -1 -> LanguageManager.knownLanguages.first()
+                    LanguageManager.knownLanguages.size - 1 -> ""
+                    else -> LanguageManager.knownLanguages[languageIndex + 1]
                 }
 
                 languageButton.displayString = "Language (${overrideLanguage.ifBlank { "Game" }})"
@@ -220,37 +235,52 @@ class GuiClientConfiguration(val prevGui: GuiScreen) : AbstractScreen() {
     }
 
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
-        drawBackground(0)
+        drawGradientBackground()
+        
+        // Animated title
+        val titleTime = animationTime * 1.5f
+        val titleR = (0.2f + 0.4f * sin(titleTime)).coerceIn(0f, 1f)
+        val titleG = (0.3f + 0.5f * sin(titleTime + 1f)).coerceIn(0f, 1f)
+        val titleB = (0.8f + 0.2f * sin(titleTime + 2f)).coerceIn(0f, 1f)
+        val titleColor = ((titleR * 255).toInt() shl 16) or ((titleG * 255).toInt() shl 8) or (titleB * 255).toInt()
+        
         Fonts.fontBold180.drawCenteredString(
-            translationMenu("configuration"), width / 2F, height / 8F + 5F, 4673984, true
+            translationMenu("configuration"), width / 2F, height / 8F + 5F, titleColor, true
+        )
+
+        // Glowing section headers
+        val headerGlow = (0.7f + 0.3f * sin(animationTime * 2.5f)).coerceIn(0f, 1f)
+        val headerColor = (0xFFFFFF and 0x00FFFFFF) or ((255 * headerGlow).toInt() shl 24)
+
+        Fonts.fontSemibold40.drawString(
+            "Window", width / 2F - 98F, height / 4F + 15F, headerColor, true
         )
 
         Fonts.fontSemibold40.drawString(
-            "Window", width / 2F - 98F, height / 4F + 15F, 0xFFFFFF, true
-        )
-
-        Fonts.fontSemibold40.drawString(
-            "Background", width / 2F - 98F, height / 4F + 90F, 0xFFFFFF, true
+            "Background", width / 2F - 98F, height / 4F + 90F, headerColor, true
         )
         Fonts.fontSemibold35.drawString(
             "Supported background types: (.png, .frag, .glsl)",
             width / 2F - 98F,
             height / 4F + 100 + 25 * 3,
-            0xFFFFFF,
+            headerColor,
             true
         )
 
         Fonts.fontSemibold40.drawString(
-            translationMenu("altManager"), width / 2F - 98F, height / 4F + 200F, 0xFFFFFF, true
+            translationMenu("altManager"), width / 2F - 98F, height / 4F + 200F, headerColor, true
         )
 
         altPrefixField.drawTextBox()
         if (altPrefixField.text.isEmpty() && !altPrefixField.isFocused) {
+            val placeholderGlow = (0.5f + 0.3f * sin(animationTime * 1.5f)).coerceIn(0f, 1f)
+            val placeholderColor = (0xFFFFFF and 0x00FFFFFF) or ((255 * placeholderGlow).toInt() shl 24)
+            
             Fonts.fontSemibold35.drawStringWithShadow(
                 altsPrefix.ifEmpty { translationMenu("altManager.typeCustomPrefix") },
                 altPrefixField.xPosition + 4f,
                 altPrefixField.yPosition + (altPrefixField.height - Fonts.fontSemibold35.FONT_HEIGHT) / 2F,
-                0xffffff
+                placeholderColor
             )
         }
 

@@ -1,5 +1,5 @@
 /*
- * LiquidBounce Hacked Client
+ * DeletedUser has been commented out for easier coding
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
  * https://github.com/CCBlueX/LiquidBounce/
  */
@@ -18,22 +18,28 @@ import net.ccbluex.liquidbounce.ui.font.Fonts
 import net.ccbluex.liquidbounce.utils.client.JavaVersion
 import net.ccbluex.liquidbounce.utils.client.javaVersion
 import net.ccbluex.liquidbounce.utils.io.MiscUtils
-import net.ccbluex.liquidbounce.utils.render.RenderUtils.drawRoundedBorderRect
+import net.ccbluex.liquidbounce.utils.render.RenderUtils.drawRect
 import net.ccbluex.liquidbounce.utils.ui.AbstractScreen
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiMultiplayer
 import net.minecraft.client.gui.GuiOptions
 import net.minecraft.client.gui.GuiSelectWorld
+import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.renderer.Tessellator
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.client.resources.I18n
 import org.lwjgl.input.Mouse
+import org.lwjgl.opengl.GL11
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.math.sin
 
 class GuiMainMenu : AbstractScreen() {
 
     private var popup: PopupScreen? = null
+    private var animationTime = 0f
 
     companion object {
         private var popupOnce = false
@@ -43,53 +49,81 @@ class GuiMainMenu : AbstractScreen() {
         fun shouldShowWarning() = lastWarningTime == null || Instant.now().toEpochMilli() - lastWarningTime!! > warningInterval
     }
 
-    init {
-        if (!popupOnce) {
-            javaVersion?.let {
-                when {
-                    it.major == 1 && it.minor == 8 && it.update < 100 -> showOutdatedJava8Warning()
-                    it.major > 8 -> showJava11Warning()
-                }
-            }
-            when {
-                FileManager.firstStart -> showWelcomePopup()
-                hasUpdate() -> showUpdatePopup()
-                shouldShowWarning() -> showDiscontinuedWarning()
-            }
+    override fun initGui() {
+        // Left side menu buttons
+        val buttonWidth = 120
+        val buttonHeight = 20
+        val leftMargin = 20
+        val startY = height / 4
 
-            popupOnce = true
-        }
+        +GuiButton(1, leftMargin, startY, buttonWidth, buttonHeight, I18n.format("menu.singleplayer"))
+        +GuiButton(2, leftMargin, startY + 25, buttonWidth, buttonHeight, I18n.format("menu.multiplayer"))
+        +GuiButton(100, leftMargin, startY + 50, buttonWidth, buttonHeight, translationMenu("altManager"))
+        +GuiButton(0, leftMargin, startY + 75, buttonWidth, buttonHeight, I18n.format("menu.options"))
+        +GuiButton(4, leftMargin, startY + 100, buttonWidth, buttonHeight, I18n.format("menu.quit"))
+        
+        // Additional buttons
+        +GuiButton(103, leftMargin, startY + 125, buttonWidth, buttonHeight, translationMenu("mods"))
+        +GuiButton(109, leftMargin, startY + 150, buttonWidth, buttonHeight, translationMenu("fontManager"))
+        +GuiButton(102, leftMargin, startY + 175, buttonWidth, buttonHeight, translationMenu("configuration"))
+        +GuiButton(101, leftMargin, startY + 200, buttonWidth, buttonHeight, translationMenu("serverStatus"))
+        +GuiButton(108, leftMargin, startY + 225, buttonWidth, buttonHeight, translationMenu("contributors"))
     }
 
+    private fun drawGradientBackground() {
+        animationTime += 0.02f
+        
+        val tessellator = Tessellator.getInstance()
+        val worldRenderer = tessellator.worldRenderer
+        
+        GlStateManager.disableTexture2D()
+        GlStateManager.enableBlend()
+        GlStateManager.disableAlpha()
+        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0)
+        GlStateManager.shadeModel(GL11.GL_SMOOTH)
+        
+        worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
+        
+        val time = animationTime
+        // Blue to white gradient
+        val topR = (0.2f + 0.1f * sin(time * 0.3f)).coerceIn(0f, 1f)
+        val topG = (0.5f + 0.2f * sin(time * 0.4f + 1f)).coerceIn(0f, 1f)
+        val topB = (0.8f + 0.2f * sin(time * 0.2f + 2f)).coerceIn(0f, 1f)
+        
+        worldRenderer.pos(width.toDouble(), 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
+        worldRenderer.pos(0.0, 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
+        worldRenderer.pos(0.0, height.toDouble(), zLevel.toDouble()).color(0.95f, 0.98f, 1.0f, 1.0f).endVertex()
+        worldRenderer.pos(width.toDouble(), height.toDouble(), zLevel.toDouble()).color(0.95f, 0.98f, 1.0f, 1.0f).endVertex()
+        
+        tessellator.draw()
+        
+        GlStateManager.shadeModel(GL11.GL_FLAT)
+        GlStateManager.disableBlend()
+        GlStateManager.enableAlpha()
+        GlStateManager.enableTexture2D()
+    }
 
-    override fun initGui() {
-        val defaultHeight = height / 4 + 48
-
-        val baseCol1 = width / 2 - 100
-        val baseCol2 = width / 2 + 2
-
-        +GuiButton(100, baseCol1, defaultHeight + 24, 98, 20, translationMenu("altManager"))
-        +GuiButton(103, baseCol2, defaultHeight + 24, 98, 20, translationMenu("mods"))
-        +GuiButton(109, baseCol1, defaultHeight + 24 * 2, 98, 20, translationMenu("fontManager"))
-        +GuiButton(102, baseCol2, defaultHeight + 24 * 2, 98, 20, translationMenu("configuration"))
-        +GuiButton(101, baseCol1, defaultHeight + 24 * 3, 98, 20, translationMenu("serverStatus"))
-        +GuiButton(108, baseCol2, defaultHeight + 24 * 3, 98, 20, translationMenu("contributors"))
-
-        +GuiButton(1, baseCol1, defaultHeight, 98, 20, I18n.format("menu.singleplayer"))
-        +GuiButton(2, baseCol2, defaultHeight, 98, 20, I18n.format("menu.multiplayer"))
-
-        // Minecraft Realms
-        //        +GuiButton(14, this.baseCol1, j + 24 * 2, I18n.format("menu.online"))
-
-        +GuiButton(0, baseCol1, defaultHeight + 24 * 4, 98, 20, I18n.format("menu.options"))
-        +GuiButton(4, baseCol2, defaultHeight + 24 * 4, 98, 20, I18n.format("menu.quit"))
+    private fun drawMenuBackground() {
+        // Draw menu background full height
+        val menuWidth = 180 // Keep same width
+        
+        // Lighter semi-transparent background
+        val bgColor = 0x40000000.toInt() // More transparent black
+        
+        drawRect(
+            0f, // Start from left edge
+            0f, // Start from top of screen (full height)
+            menuWidth.toFloat(), // Same width as before
+            height.toFloat(), // Full height to bottom of screen
+            bgColor
+        )
     }
 
     private fun showWelcomePopup() {
         popup = PopupScreen {
             title("§a§lWelcome!")
             message("""
-                §eThank you for downloading and installing §bLiquidBounce§e!
+                §eThank you for downloading and installing §bRinBounce§e!
         
                 §6Here is some information you might find useful:§r
                 §a- §fClickGUI:§r Press §7[RightShift]§f to open ClickGUI.
@@ -123,7 +157,7 @@ class GuiMainMenu : AbstractScreen() {
         popup = PopupScreen {
             title("§bNew Update Available!")
             message("""
-                §eA new $updateType of LiquidBounce is available!
+                §eA new $updateType of RinBounce is available!
         
                 - ${if (isReleaseBuild) "§aVersion" else "§aBuild ID"}:§r ${if (isReleaseBuild) newestVersion.lbVersion else newestVersion.buildId}
                 - §aMinecraft Version:§r ${newestVersion.mcVersion}
@@ -146,7 +180,7 @@ class GuiMainMenu : AbstractScreen() {
             message("""
                 §6§lThis version is discontinued and unsupported.§r
                 
-                §eWe strongly recommend switching to §bLiquidBounce Nextgen§e, 
+                §eWe strongly recommend switching to §bRinBounce Nextgen§e, 
                 which offers the following benefits:
                 
                 §a- §fSupports all Minecraft versions from §71.7§f to §71.21+§f.
@@ -159,7 +193,7 @@ class GuiMainMenu : AbstractScreen() {
                 - Auto config support will not be actively maintained.
                 - Unofficial forks of this version are discouraged as they lack the full feature set of Nextgen and cannot be trusted.
         
-                §9Upgrade to LiquidBounce Nextgen today for a better experience!§r
+                §9Upgrade to RinBounce Nextgen today for a better experience!§r
             """.trimIndent())
             button("§aDownload Nextgen") { MiscUtils.showURL("https://liquidbounce.net/download") }
             button("§eInstallation Tutorial") { MiscUtils.showURL("https://www.youtube.com/watch?v=i_r1i4m-NZc") }
@@ -190,7 +224,7 @@ class GuiMainMenu : AbstractScreen() {
         popup = PopupScreen {
             title("§c§lInappropriate Java Runtime Environment")
             message("""
-                §6§lThis version of $CLIENT_NAME is designed for Java 8 environment.§r
+                §6§lThis version of RinBounce is designed for Java 8 environment.§r
                 
                 §fHigher versions of Java might cause bug or crash.
                 You can get JRE 8 from the Internet.
@@ -201,25 +235,41 @@ class GuiMainMenu : AbstractScreen() {
         }
     }
 
-
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
-        drawBackground(0)
+        drawGradientBackground()
+        
+        // Draw menu background first (behind buttons)
+        drawMenuBackground()
 
-        drawRoundedBorderRect(
-            width / 2f - 115, height / 4f + 35, width / 2f + 115, height / 4f + 175,
-            2f,
-            Integer.MIN_VALUE,
-            Integer.MIN_VALUE,
-            3F
+        // b1.0.1 in top left corner (white color)
+        mc.fontRendererObj.drawStringWithShadow(
+            "b1.0.1",
+            10f,
+            10f,
+            0xFFFFFF // White color
         )
 
-        Fonts.fontBold180.drawCenteredString(CLIENT_NAME, width / 2F, height / 8F, 4673984, true)
-        Fonts.fontSemibold35.drawCenteredString(
-            clientVersionText,
-            width / 2F + 148,
-            height / 8F + Fonts.fontSemibold35.fontHeight,
-            0xffffff,
-            true
+        // Large "Rinbounce" title moved more to the right (BLUE color)
+        val rinbounceTitle = "Rinbounce"
+        val titleScale = 3.0f
+        
+        GlStateManager.pushMatrix()
+        GlStateManager.scale(titleScale, titleScale, titleScale)
+        
+        // Move title more to the right (increased X offset)
+        val scaledX = (width * 0.65f - mc.fontRendererObj.getStringWidth(rinbounceTitle) * titleScale / 2f) / titleScale
+        val scaledY = (height / 2f - mc.fontRendererObj.FONT_HEIGHT * titleScale / 2f) / titleScale
+        
+        mc.fontRendererObj.drawStringWithShadow(rinbounceTitle, scaledX, scaledY, 0xFFFFFF) // White color
+        GlStateManager.popMatrix()
+
+        // "credit" text in bottom right corner (white color)
+        val creditText = "credit; [idle, deleteduser, welovegiabao]"
+        mc.fontRendererObj.drawStringWithShadow(
+            creditText,
+            width - mc.fontRendererObj.getStringWidth(creditText) - 10f,
+            height - mc.fontRendererObj.FONT_HEIGHT - 10f,
+            0xFFFFFF // White color
         )
 
         super.drawScreen(mouseX, mouseY, partialTicks)
