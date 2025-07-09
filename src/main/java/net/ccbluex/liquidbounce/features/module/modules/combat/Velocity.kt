@@ -54,9 +54,17 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             "Reverse", "SmoothReverse", "Jump", "Glitch", "Legit",
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce",
             "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
-            "Click", "BlocksMC", "3FMC", "3FMC2"
+            "Click", "BlocksMC", "3FMC", "3FMC2", "GrimReduce", "GrimLatest", 
+            "Intave"
         ), "Simple"
     )
+
+    private val horizontal by float("Horizontal", 0F, -1F..1F) { mode in arrayOf("Simple", "AAC", "Legit", "GrimReduce") }
+    private val grimReduceVertical by float("GrimReduceVertical", 0.4F, 0F..1F) { mode == "GrimReduce" }
+    private val grimReduceHorizontal by float("GrimReduceHorizontal", 0.4F, 0F..1F) { mode == "GrimReduce" }
+    private val grimReduceAirOnly by boolean("GrimReduceAirOnly", false) { mode == "GrimReduce" }
+    private val grimReduceTicks by int("GrimReduceTicks", 2, 1..10) { mode == "GrimReduce" }
+    private val grimSmartReduce by boolean("GrimSmartReduce", true) { mode == "GrimReduce" }
 
     private val horizontal by float("Horizontal", 0F, -1F..1F) { mode in arrayOf("Simple", "AAC", "Legit") }
     private val vertical by float("Vertical", 0F, -1F..1F) { mode in arrayOf("Simple", "Legit") }
@@ -106,6 +114,19 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     // Delay
     private val spoofDelay by int("SpoofDelay", 500, 0..5000) { mode == "Delay" }
     var delayMode = false
+
+    // Intave Options
+    private val intaveJump by boolean("IntaveJump", true) { mode == "Intave" }
+    private val intaveJumpDelay by int("JumpDelay", 10, 0..20) { mode == "Intave" && intaveJump }
+    private val intaveJumpChance by int("JumpChance", 100, 0..100) { mode == "Intave" && intaveJump }
+    
+    private val intaveSilent by boolean("IntaveSilent", true) { mode == "Intave" }
+    private val intaveSilentVertical by float("SilentVertical", 0.6f, 0f..1f) { mode == "Intave" && intaveSilent }
+    private val intaveSilentHorizontal by float("SilentHorizontal", 0.8f, 0f..1f) { mode == "Intave" && intaveSilent }
+
+    private val intaveSmart by boolean("IntaveSmart", true) { mode == "Intave" }
+    private val intaveSmartFallDistance by float("SmartFallDistance", 0.5f, 0f..1f) { mode == "Intave" && intaveSmart }
+    private val intaveSmartInAir by boolean("SmartInAir", true) { mode == "Intave" && intaveSmart }
 
     // IntaveReduce
     private val reduceFactor by float("Factor", 0.6f, 0.6f..1f) { mode == "IntaveReduce" }
@@ -339,6 +360,23 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 }
             }
 
+            "grimreduce" -> {
+                if (!hasReceivedVelocity) return@handler
+
+                if (thePlayer.hurtTime > 0) {
+                    // Apply gradual reduction over multiple ticks to bypass prediction checks
+                    if (thePlayer.hurtTime <= grimReduceTicks) {
+                        if (!grimReduceAirOnly || !thePlayer.onGround) {
+                            thePlayer.motionX *= grimReduceHorizontal
+                            thePlayer.motionY *= grimReduceVertical 
+                            thePlayer.motionZ *= grimReduceHorizontal
+                        }
+                    }
+                } else {
+                    hasReceivedVelocity = false
+                }
+            }
+
             "hypixel" -> {
                 if (hasReceivedVelocity && thePlayer.onGround) {
                     absorbedVelocity = false
@@ -526,6 +564,27 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     if (inRange)
                         hasReceivedVelocity = true
                 }
+
+                "intave" -> {
+                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
+                        if (intaveSmart) {
+                            if (!intaveSmartInAir && !thePlayer.onGround) return@handler
+                            if (thePlayer.fallDistance > intaveSmartFallDistance) return@handler
+                        }
+
+                        if (intaveJump && thePlayer.onGround && thePlayer.hurtTime == intaveJumpDelay) {
+                            if (Random().nextInt(100) <= intaveJumpChance) {
+                                thePlayer.jump()
+                            }
+                        }
+
+                        if (intaveSilent) {
+                            packet.motionY = (packet.getMotionY() * intaveSilentVertical).toInt()
+                            packet.motionX = (packet.getMotionX() * intaveSilentHorizontal).toInt()
+                            packet.motionZ = (packet.getMotionZ() * intaveSilentHorizontal).toInt()
+                        }
+                    }
+                }
                 
                 "3fmc" -> {
                     if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
@@ -619,6 +678,57 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     if (thePlayer.isMoving) {
                         hasReceivedVelocity = true
                         event.cancelEvent()
+                    }
+                }
+
+                "grimreduce" -> {
+                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
+                        if (grimReduceAirOnly && thePlayer.onGround) return@handler
+                        
+                        if (grimSmartReduce) {
+                            // Smart reduce based on player state
+                            val baseReduce = if (thePlayer.onGround) 0.4f else 0.3f
+                            
+                            // Adaptive reduction for Y motion to prevent flags
+                            val yReduce = when {
+                                packet.getMotionY() > 5000 -> 0.35f  // Strong vertical KB
+                                packet.getMotionY() > 3000 -> 0.4f   // Medium vertical KB
+                                else -> grimReduceVertical           // Normal vertical KB
+                            }
+                            
+                            packet.motionX = (packet.getMotionX() * baseReduce).toInt()
+                            packet.motionY = (packet.getMotionY() * yReduce).toInt()
+                            packet.motionZ = (packet.getMotionZ() * baseReduce).toInt()
+                        } else {
+                            packet.motionX = (packet.getMotionX() * grimReduceHorizontal).toInt()
+                            packet.motionY = (packet.getMotionY() * grimReduceVertical).toInt()
+                            packet.motionZ = (packet.getMotionZ() * grimReduceHorizontal).toInt()
+                        }
+
+                        velocityTimer.reset()
+                        hasReceivedVelocity = true
+                    }
+                }
+
+                "grimlatest" -> {
+                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
+                        // Exploit Grim's transaction packet timing system
+                        velocityTimer.reset()
+                        hasReceivedVelocity = true
+                        
+                        if (thePlayer.onGround) {
+                            // Send fake transaction response
+                            sendPacket(C0FPacketConfirmTransaction(-1, -1, false))
+                            // Cancel velocity when on ground
+                            event.cancelEvent()
+                        } else {
+                            // In air: Reduce velocity and modify timing
+                            packet.motionX = (packet.getMotionX() * 0.3).toInt()
+                            packet.motionY = (packet.getMotionY() * 0.4).toInt() 
+                            packet.motionZ = (packet.getMotionZ() * 0.3).toInt()
+                            // Send delayed transaction response
+                            sendPacket(C0FPacketConfirmTransaction(1, 1, true))
+                        }
                     }
                 }
 
