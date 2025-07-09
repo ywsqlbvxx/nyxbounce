@@ -69,7 +69,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // -->
 
     val scaffoldMode by choices(
-        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily"), "Normal"
+        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily", "Dynamic"), "Normal"
     )
 
     // Expand
@@ -116,6 +116,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val breezilyStabilize by boolean("BreezilyStabilize", true) { scaffoldMode == "Breezily" }
     private val breezilyPitch by float("BreezilyPitch", 82.5f, 75f..85f) { scaffoldMode == "Breezily" }
 
+    // Dynamic mode sub-values
+    private val dynamicRandomization by boolean("DynamicRandomization", true) { scaffoldMode == "Dynamic" }
+    private val dynamicSmoothness by floatRange("DynamicSmoothness", 0.8f..1.2f, 0.1f..2.0f) { scaffoldMode == "Dynamic" }
+    private val dynamicAcceleration by float("DynamicAcceleration", 0.3f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
+    private val dynamicDeceleration by float("DynamicDeceleration", 0.7f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
+    private val dynamicPitchAdjust by boolean("DynamicPitchAdjust", true) { scaffoldMode == "Dynamic" }
+    private val dynamicEdgeDistance by float("DynamicEdgeDistance", 0.3f, 0.1f..0.5f) { scaffoldMode == "Dynamic" }
+    private val dynamicVoidCheck by boolean("DynamicVoidCheck", true) { scaffoldMode == "Dynamic" }
+    private val dynamicVoidDistance by int("DynamicVoidDistance", 5, 1..10) { scaffoldMode == "Dynamic" && dynamicVoidCheck }
+
     // GodBridge mode sub-values
     private val waitForRots by boolean("WaitForRotations", false) { isGodBridgeEnabled }
     private val useOptimizedPitch by boolean("UseOptimizedPitch", false) { isGodBridgeEnabled }
@@ -147,10 +157,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Eagle
     private val eagleValue =
-        choices("Eagle", arrayOf("Normal", "Silent", "Off"), "Normal") { scaffoldMode != "GodBridge" }
+        choices("Eagle", arrayOf("Normal", "Silent", "Legit", "Off"), "Normal") { scaffoldMode != "GodBridge" }
     val eagle by eagleValue
-    private val eagleMode by choices("EagleMode", arrayOf("Both", "OnGround", "InAir"), "Both")
+    private val eagleMode by choices("EagleMode", arrayOf("Both", "OnGround", "InAir", "Smart"), "Smart")
     { eagle != "Off" && scaffoldMode != "GodBridge" }
+    private val eagleSneakTiming by floatRange("EagleSneakTiming", 0.1f..0.3f, 0.1f..1.0f) 
+    { eagle == "Legit" && scaffoldMode != "GodBridge" }
+    private val eagleSmartPrediction by int("EagleSmartPrediction", 2, 1..5)
+    { eagleMode == "Smart" && eagle != "Off" && scaffoldMode != "GodBridge" }
+    private val eagleRandomization by boolean("EagleRandomization", true) 
+    { eagle == "Legit" && scaffoldMode != "GodBridge" }
     private val adjustedSneakSpeed by boolean("AdjustedSneakSpeed", true)
     { eagle == "Silent" && scaffoldMode != "GodBridge" }
     private val eagleSpeed by float("EagleSpeed", 0.3f, 0.3f..1.0f) { eagle != "Off" && scaffoldMode != "GodBridge" }
@@ -233,13 +249,56 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Eagle
     private var placedBlocksWithoutEagle = 0
+    private var lastEagleTime = 0L
+    private var eagleSneakStartTime = 0L
+    private var eagleRandomDelay = 0f
 
     var eagleSneaking = false
-
     private var requestedStopSneak = false
+    private var predictedEdgeDanger = false
 
     private val isEagleEnabled
         get() = eagle != "Off" && !shouldGoDown && scaffoldMode != "GodBridge"
+
+    private fun checkSmartEdge(): Boolean {
+        val player = mc.thePlayer ?: return false
+        val world = mc.theWorld ?: return false
+
+        val yaw = player.rotationYaw
+        val x = -sin(yaw.toRadians()).toDouble()
+        val z = cos(yaw.toRadians()).toDouble()
+
+        for (i in 1..eagleSmartPrediction) {
+            val pos = BlockPos(
+                player.posX + x * i,
+                player.posY - 1,
+                player.posZ + z * i
+            )
+            if (world.isAirBlock(pos)) return true
+        }
+        return false
+    }
+
+    private fun shouldLegitSneak(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        
+        if (eagleSneaking) {
+            val sneakDuration = currentTime - eagleSneakStartTime
+            if (sneakDuration >= (eagleSneakTiming.random() * 1000)) {
+                eagleRandomDelay = eagleSneakTiming.random()
+                return false
+            }
+            return true
+        }
+        
+        if (currentTime - lastEagleTime <= (eagleRandomDelay * 1000)) {
+            return false
+        }
+        
+        eagleSneakStartTime = currentTime
+        lastEagleTime = currentTime
+        return true
+    }
 
     // Downwards
     val shouldGoDown
@@ -267,10 +326,96 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     private val isBreezilyEnabled
         get() = scaffoldMode == "Breezily"
+        
+    private val isDynamicEnabled
+        get() = scaffoldMode == "Dynamic"
+        
+    private fun checkVoidDanger(): Boolean {
+        if (!dynamicVoidCheck) return false
+        val player = mc.thePlayer ?: return false
+        val world = mc.theWorld ?: return false
+        
+        // Check blocks below in the movement direction
+        val yaw = player.rotationYaw
+        val x = -sin(yaw.toRadians()).toDouble()
+        val z = cos(yaw.toRadians()).toDouble()
+        
+        var dangerBlocks = 0
+        for (i in 1..dynamicVoidDistance) {
+            val checkPos = BlockPos(
+                player.posX + x * i,
+                player.posY - 1,
+                player.posZ + z * i
+            )
+            if (world.isAirBlock(checkPos)) dangerBlocks++
+            if (dangerBlocks > 2) return true
+        }
+        return false
+    }
+    
+    private fun calculateDynamicRotation(current: Rotation): Rotation {
+        val player = mc.thePlayer ?: return current
+        val currentTime = System.currentTimeMillis()
+        
+        // Update acceleration/deceleration
+        if (currentTime - lastDynamicUpdate > 50) {
+            if (dynamicAccelerating) {
+                dynamicSpeed += dynamicAcceleration * (dynamicSmoothness.random() * 0.1f)
+                if (dynamicSpeed > 1f) {
+                    dynamicSpeed = 1f
+                    dynamicAccelerating = false
+                }
+            } else {
+                dynamicSpeed -= dynamicDeceleration * (dynamicSmoothness.random() * 0.1f)
+                if (dynamicSpeed < 0.1f) {
+                    dynamicSpeed = 0.1f
+                    dynamicAccelerating = true
+                }
+            }
+            lastDynamicUpdate = currentTime
+        }
+        
+        // Add randomization
+        val baseSpeed = dynamicSpeed * (if (dynamicRandomization) (0.9f..1.1f).random() else 1f)
+        
+        // Calculate target rotation
+        val moveDir = player.movementInput.moveForward
+        val targetYaw = when {
+            moveDir > 0 -> MovementUtils.direction.toDegreesF()
+            moveDir < 0 -> MovementUtils.direction.toDegreesF() + 180f
+            else -> current.yaw
+        }
+        
+        // Adjust for void checking
+        if (currentTime - lastDynamicEdgeCheck > 100) {
+            inDangerZone = checkVoidDanger()
+            lastDynamicEdgeCheck = currentTime
+        }
+        
+        // Calculate pitch based on conditions
+        val targetPitch = when {
+            inDangerZone -> 82.5f
+            dynamicPitchAdjust -> (78f..83f).random()
+            else -> 79.5f
+        }
+        
+        return Rotation(
+            MathHelper.wrapAngleTo180_float(targetYaw + ((-2f..2f).random() * baseSpeed)),
+            targetPitch + ((-1f..1f).random() * baseSpeed)
+        ).fixedSensitivity()
+    }
 
     private var godBridgeTargetRotation: Rotation? = null
     private var breezilyRotation: Rotation? = null
     private var lastBreezilySwitch: Long = 0
+    
+    // Dynamic mode tracking
+    private var dynamicRotation: Rotation? = null
+    private var lastDynamicUpdate = 0L
+    private var dynamicSpeed = 0f
+    private var dynamicAccelerating = true
+    private var lastDynamicEdgeCheck = 0L
+    private var inDangerZone = false
 
     private val isLookingDiagonally: Boolean
         get() {
@@ -394,14 +539,32 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 val eagleCondition = when (eagleMode) {
                     "OnGround" -> player.onGround
                     "InAir" -> !player.onGround
+                    "Smart" -> {
+                        val shouldCheck = player.onGround || (!player.onGround && player.motionY < 0)
+                        if (shouldCheck) {
+                            predictedEdgeDanger = checkSmartEdge()
+                        }
+                        predictedEdgeDanger
+                    }
                     else -> true
                 }
 
                 // For better sneak support we could move this to MovementInputEvent
                 val pressedOnKeyboard = Keyboard.isKeyDown(options.keyBindSneak.keyCode)
+                
+                val isLegitMode = eagle == "Legit"
 
-                var shouldEagle =
+                var shouldEagle = if (isLegitMode) {
+                    if (eagleCondition && (blockPos.isReplaceable || dif < edgeDistance)) {
+                        shouldLegitSneak()
+                    } else false
+                } else {
                     eagleCondition && (blockPos.isReplaceable || dif < edgeDistance) || pressedOnKeyboard
+                }
+
+                if (eagleRandomization && isLegitMode && shouldEagle) {
+                    shouldEagle = shouldEagle && Math.random() > 0.1 // 10% chance to skip sneaking for more natural feel
+                }
 
                 val shouldSchedule = !requestedStopSneak
 
@@ -503,6 +666,13 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (isBreezilyEnabled && options.rotationsActive) {
             breezilyRotation?.let { setRotation(it, ticks) }
+            return@handler
+        }
+        
+        if (isDynamicEnabled && options.rotationsActive) {
+            val current = currentRotation ?: mc.thePlayer.rotation
+            dynamicRotation = calculateDynamicRotation(current)
+            dynamicRotation?.let { setRotation(it, ticks) }
             return@handler
         }
 
