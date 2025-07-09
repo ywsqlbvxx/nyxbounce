@@ -46,36 +46,6 @@ import net.minecraftforge.event.ForgeEventFactory
 import org.lwjgl.input.Keyboard
 import java.awt.Color
 import kotlin.math.*
-import net.minecraft.network.Packet
-import net.minecraft.network.play.client.C03PacketPlayer
-import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
-import net.minecraft.util.Vec3
-import net.minecraft.network.play.server.S12PacketEntityVelocity
-import net.ccbluex.liquidbounce.utils.client.BlinkUtils
-import net.ccbluex.liquidbounce.event.EventState
-import org.lwjgl.opengl.GL11
-import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
-import net.ccbluex.liquidbounce.event.Listenable
-
-private fun isServerPacket(packet: Packet<*>): Boolean = packet.javaClass.name.startsWith("net.minecraft.network.play.server")
-
-private fun isEntityMovementPacket(packet: Packet<*>): Boolean {
-    return packet is S12PacketEntityVelocity || 
-           packet.javaClass.simpleName.startsWith("S1") && 
-           packet.javaClass.simpleName.contains("Entity")
-}
-
-private fun unblink() {
-    packetBuffer.forEach { sendPacket(it) }
-    packetBuffer.clear()
-    positions.clear()
-    packetsReceived = 0
-}
-
-private val limitBlockPlacements = true
-private val positions = mutableListOf<Vec3>()
-private val packetBuffer = mutableListOf<Packet<*>>()
-private var packetsReceived = 0
 
 object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
@@ -255,17 +225,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // Visuals
     private val mark by boolean("Mark", false).subjective()
     private val trackCPS by boolean("TrackCPS", false).subjective()
-    
-    // GrimBlink options
-    private val grimBlink by boolean("GrimBlink", false)
-    private val visibleLimit by int("VisibleBlocks", 4, 0..10) { grimBlink }
-    private val renderBlinkTrail by boolean("RenderBlinkTrail", true) { grimBlink }
-    private val blinkTrailColor by color("BlinkTrailColor", Color(150, 200, 255, 180)) { grimBlink && renderBlinkTrail }
-
-    private var placedCount = 0
-    private val positions = mutableListOf<Vec3>()
-    private val packetBuffer = mutableListOf<Packet<*>>()
-    private var packetsReceived = 0
 
     // Target placement
     var placeRotation: PlaceRotation? = null
@@ -530,58 +489,15 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         launchY = player.posY.roundToInt()
         blocksUntilAxisChange = 0
-        placedCount = 0
     }
 
     // Events
-    val onPacket = handler<PacketEvent> { event ->
-        if (!grimBlink) return@handler
-
-        val packet = event.packet
-        if (mc.thePlayer == null || mc.thePlayer!!.isDead) return@handler
-
-        if (event.eventType == EventState.SEND) {
-            when (packet) {
-                is C03PacketPlayer -> {
-                    event.cancelEvent()
-                    packetBuffer.add(packet)
-                }
-                is C08PacketPlayerBlockPlacement -> {
-                    if (limitBlockPlacements) {
-                        if (placedCount < visibleLimit) {
-                            placedCount++
-                        } else {
-                            event.cancelEvent()
-                            packetBuffer.add(packet)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (event.eventType == EventState.RECEIVE) {
-            if (isServerPacket(packet) && !isEntityMovementPacket(packet)) {
-                packetsReceived++
-            }
-        }
-    }
-
     val onUpdate = loopSequence {
         val player = mc.thePlayer ?: return@loopSequence
 
         if (mc.playerController.currentGameType == WorldSettings.GameType.SPECTATOR) return@loopSequence
 
         mc.timer.timerSpeed = timer
-        
-        if (grimBlink) {
-            if (player.isDead || player.ticksExisted <= 10) {
-                unblink()
-            } else {
-                // Sync received packets
-                packetsReceived = 0
-                positions.add(player.getPositionVector())
-            }
-        }
 
         // Breezily mode logic
         if (isBreezilyEnabled && player.onGround) {
@@ -983,13 +899,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (!delayTimer.hasTimePassed() || shouldKeepLaunchPosition && launchY - 1 != placeInfo.vec3.yCoord.toInt() && scaffoldMode != "Expand") return
 
-        if (limitBlockPlacements) {
-            if (placedCount >= visibleLimit) {
-                return
-            }
-            placedCount++
-        }
-
         val currentSlot = SilentHotbar.currentSlot
 
         var stack = player.hotBarSlot(currentSlot).stack
@@ -1081,12 +990,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // Disabling module
     override fun onDisable() {
         val player = mc.thePlayer ?: return
-
-        if (grimBlink) {
-            unblink()
-        }
-        
-        placedCount = 0
 
         if (!GameSettings.isKeyDown(mc.gameSettings.keyBindSneak)) {
             mc.gameSettings.keyBindSneak.pressed = false

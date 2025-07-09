@@ -68,7 +68,6 @@ jobs:
     if: ${{ needs.build.outputs.lb_version != '' }}
     outputs:
       release_url: ${{ steps.create_release.outputs.release_url }}
-      commit_message: ${{ steps.get_commit_message.outputs.commit_message }}
 
     steps:
       - name: Checkout full history
@@ -85,12 +84,6 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Get latest commit message
-        id: get_commit_message
-        run: |
-          COMMIT_MESSAGE=$(git log -1 --pretty=%B | jq -R -s .)
-          echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
 
       - name: Download built artifacts
         uses: actions/download-artifact@v4
@@ -114,7 +107,7 @@ jobs:
           TAG_NAME="v$VERSION-${{ github.run_number }}"
           gh release create $TAG_NAME \
             --title "Build $VERSION (Run #${{ github.run_number }})" \
-            --notes "Automated build by GitHub Actions\n\nChangelog:\n${{ steps.get_commit_message.outputs.commit_message }}" \
+            --notes "Automated build by GitHub Actions" \
             ./artifacts/*.jar
           
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
