@@ -68,6 +68,7 @@ jobs:
     if: ${{ needs.build.outputs.lb_version != '' }}
     outputs:
       release_url: ${{ steps.create_release.outputs.release_url }}
+      commit_message: ${{ steps.get_commit_message.outputs.commit_message }}
 
     steps:
       - name: Checkout full history
@@ -84,6 +85,12 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get latest commit message
+        id: get_commit_message
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B | jq -R -s .)
+          echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
 
       - name: Download built artifacts
         uses: actions/download-artifact@v4
@@ -104,129 +111,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.build.outputs.lb_version }}
         run: |
-          # Tạo tag và release
           TAG_NAME="v$VERSION-${{ github.run_number }}"
           gh release create $TAG_NAME \
             --title "Build $VERSION (Run #${{ github.run_number }})" \
-            --notes "Automated build by GitHub Actions" \
+            --notes "Automated build by GitHub Actions\n\nChangelog:\n${{ steps.get_commit_message.outputs.commit_message }}" \
             ./artifacts/*.jar
           
-          # Lấy URL release
-          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
-          echo "release_url=$RELEASE_URL" >> $GITHUB_OUTPUT
-name: Build
-
-on:
-  push:
-    branches: [ "main" ]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    outputs:
-      lb_version: ${{ steps.version.outputs.LB_VERSION }}
-      jar_name: ${{ steps.prep.outputs.jar_name }}
-
-    steps:
-      - name: Checkout repository and submodules
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup Java 8 (AdoptOpenJDK)
-        uses: actions/setup-java@v4
-        with:
-          distribution: "adopt"
-          java-version: 8
-          cache: "gradle"
-
-      - name: Read version from src/main/resources/version.txt
-        id: version
-        run: |
-          LB_VERSION=$(cat src/main/resources/version.txt | tr -d ' \n\r')
-          echo "LB_VERSION=$LB_VERSION" >> $GITHUB_OUTPUT
-          echo "LB_VERSION=$LB_VERSION" >> $GITHUB_ENV
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
-      - name: Delete old build JARs
-        run: rm -f ./build/libs/*.jar || true
-
-      - name: Build (no tests, parallel, daemon)
-        run: ./gradlew build --stacktrace
-
-      - name: Prepare artifact and get jar name
-        id: prep
-        run: |
-          cd build/libs
-          JAR=$(find . -name "*.jar" | grep "liquidbounce" | head -n1)
-          if [ -z "$JAR" ]; then
-            echo "No .jar file found! Build failed."
-            exit 1
-          fi
-          MINECRAFT_VERSION="1.8.9"
-          ARTIFACT_NAME="liquidbounce-${{ env.LB_VERSION }}-mc$MINECRAFT_VERSION.jar"
-          mkdir -p ../../artifacts
-          cp "$JAR" "../../artifacts/$ARTIFACT_NAME"
-          echo "jar_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
-
-      - name: Upload all artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: LiquidBounce-Artifacts
-          path: artifacts
-          retention-days: 1
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ needs.build.outputs.lb_version != '' }}
-    outputs:
-      release_url: ${{ steps.create_release.outputs.release_url }}
-
-    steps:
-      - name: Checkout full history
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install GitHub CLI
-        run: |
-          sudo apt update
-          sudo apt install gh -y
-
-      - name: Setup git identity
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Download built artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: LiquidBounce-Artifacts
-          path: ./artifacts
-
-      - name: Check artifacts exist
-        run: |
-          if [ ! -d "./artifacts" ] || [ -z "$(ls -A ./artifacts)" ]; then
-            echo "Artifacts directory is empty!"
-            exit 1
-          fi
-
-      - name: Create GitHub Release
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ needs.build.outputs.lb_version }}
-        run: |
-          # Tạo tag và release
-          TAG_NAME="v$VERSION-${{ github.run_number }}"
-          gh release create $TAG_NAME \
-            --title "Build $VERSION (Run #${{ github.run_number }})" \
-            --notes "Automated build by GitHub Actions" \
-            ./artifacts/*.jar
-          
-          # Lấy URL release
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
           echo "release_url=$RELEASE_URL" >> $GITHUB_OUTPUT
