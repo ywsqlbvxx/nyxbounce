@@ -225,6 +225,13 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // Visuals
     private val mark by boolean("Mark", false).subjective()
     private val trackCPS by boolean("TrackCPS", false).subjective()
+    
+    // Blink options
+    private val blinkMode by boolean("Blink", false)
+    private val visibleLimit by int("VisibleBlocks", 4, 0..10) { blinkMode }
+
+    private var placedCount = 0
+    private var limitBlock = true
 
     // Target placement
     var placeRotation: PlaceRotation? = null
@@ -489,6 +496,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         launchY = player.posY.roundToInt()
         blocksUntilAxisChange = 0
+        placedCount = 0
     }
 
     // Events
@@ -899,6 +907,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (!delayTimer.hasTimePassed() || shouldKeepLaunchPosition && launchY - 1 != placeInfo.vec3.yCoord.toInt() && scaffoldMode != "Expand") return
 
+        if (blinkMode) {
+            if (limitBlock) {
+                if (placedCount >= visibleLimit) {
+                    BlinkUtils.blink(placeInfo, null, true, false)
+                    return
+                }
+                placedCount++
+            }
+        }
+
         val currentSlot = SilentHotbar.currentSlot
 
         var stack = player.hotBarSlot(currentSlot).stack
@@ -990,6 +1008,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // Disabling module
     override fun onDisable() {
         val player = mc.thePlayer ?: return
+
+        if (blinkMode) {
+            BlinkUtils.unblink()
+        }
 
         if (!GameSettings.isKeyDown(mc.gameSettings.keyBindSneak)) {
             mc.gameSettings.keyBindSneak.pressed = false
