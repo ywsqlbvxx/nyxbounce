@@ -71,13 +71,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     val scaffoldMode by choices(
         "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily"), "Normal"
     )
-    
-    private val breezilyTiming by floatRange("BreezilyTiming", 0.12f..0.18f, 0.1f..0.5f) { scaffoldMode == "Breezily" }
-    private val breezilyStrafe by float("BreezilyStrafe", 0.08f, 0.05f..0.15f) { scaffoldMode == "Breezily" }
-    private val breezilyRotSpeed by float("BreezilyRotSpeed", 35f, 20f..50f) { scaffoldMode == "Breezily" }
-    private val breezilyRandomization by float("BreezilyRandom", 0.15f, 0f..0.3f) { scaffoldMode == "Breezily" }
-    private val breezilyDelay by intRange("BreezilyDelay", 2..4, 1..8) { scaffoldMode == "Breezily" }
-    private val legitPlace by boolean("LegitPlace", true) { scaffoldMode == "Breezily" }
 
     // Expand
     private val omniDirectionalExpand by boolean("OmniDirectionalExpand", false) { scaffoldMode == "Expand" }
@@ -116,6 +109,12 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val ticksUntilRotation by intRange("TicksUntilRotation", 3..3, 1..8) {
         scaffoldMode == "Telly"
     }
+
+    // Breezily mode sub-values
+    private val breezilyTiming by floatRange("BreezilyTiming", 0.1f..0.15f, 0.05f..0.3f) { scaffoldMode == "Breezily" }
+    private val breezilyStrafe by float("BreezilyStrafe", 0.2f, 0.1f..0.5f) { scaffoldMode == "Breezily" }
+    private val breezilyStabilize by boolean("BreezilyStabilize", true) { scaffoldMode == "Breezily" }
+    private val breezilyPitch by float("BreezilyPitch", 82.5f, 75f..85f) { scaffoldMode == "Breezily" }
 
     // GodBridge mode sub-values
     private val waitForRots by boolean("WaitForRotations", false) { isGodBridgeEnabled }
@@ -266,7 +265,12 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val isGodBridgeEnabled
         get() = scaffoldMode == "GodBridge" || scaffoldMode == "Normal" && options.rotationMode == "GodBridge"
 
+    private val isBreezilyEnabled
+        get() = scaffoldMode == "Breezily"
+
     private var godBridgeTargetRotation: Rotation? = null
+    private var breezilyRotation: Rotation? = null
+    private var lastBreezilySwitch: Long = 0
 
     private val isLookingDiagonally: Boolean
         get() {
@@ -301,12 +305,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         launchY = player.posY.roundToInt()
         blocksUntilAxisChange = 0
-        lastJumpTime = 0L
     }
-
-    private var initialRotationSetup = false
-    private var startWaitTicks = 0
-    private var lastJumpTime = 0L
 
     // Events
     val onUpdate = loopSequence {
@@ -315,6 +314,25 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         if (mc.playerController.currentGameType == WorldSettings.GameType.SPECTATOR) return@loopSequence
 
         mc.timer.timerSpeed = timer
+
+        // Breezily mode logic
+        if (isBreezilyEnabled && player.onGround) {
+            // Switch rotations based on timing
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastBreezilySwitch > (breezilyTiming.random() * 1000)) {
+                val baseYaw = MovementUtils.direction.toDegreesF()
+                val side = if ((currentTime / 100) % 2 == 0L) breezilyStrafe else -breezilyStrafe
+                val rotation = Rotation(baseYaw + side, breezilyPitch).fixedSensitivity()
+                
+                if (breezilyStabilize) {
+                    player.motionX *= 0.7
+                    player.motionZ *= 0.7
+                }
+
+                breezilyRotation = rotation
+                lastBreezilySwitch = currentTime
+            }
+        }
 
         // Telly
         if (player.onGround) ticksUntilJump++
@@ -480,7 +498,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (!Tower.isTowering && isGodBridgeEnabled && options.rotationsActive) {
             generateGodBridgeRotations(ticks)
+            return@handler
+        }
 
+        if (isBreezilyEnabled && options.rotationsActive) {
+            breezilyRotation?.let { setRotation(it, ticks) }
             return@handler
         }
 
@@ -553,54 +575,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         event.strafe *= eagleSpeed / 0.3f
     }
 
-    private var breezilyTicks = 0
-    
     val onMovementInput = handler<MovementInputEvent> { event ->
         val player = mc.thePlayer ?: return@handler
 
-        when (scaffoldMode) {
-            "Breezily" -> {
-                if (!player.onGround) return@handler
-                
-                breezilyTicks++
-                
-                if (breezilyTicks >= breezilyDelay.random()) {
-                    // Server-side rotation calculation
-                    val random = RandomUtils.nextFloat() * breezilyRandomization
-                    val direction = if (breezilyTicks % 2 == 0) 
-                        breezilyStrafe * (1 + random) 
-                    else 
-                        -breezilyStrafe * (1 + random)
-                        
-                    val rotationSpeed = breezilyRotSpeed * (0.8f + RandomUtils.nextFloat() * 0.4f)
-                    
-                    // Keep client visual movement natural while sending server rotations
-                    val serverRotation = RotationUtils.serverRotation.copy(
-                        yaw = RotationUtils.serverRotation.yaw + rotationSpeed * direction
-                    )
-                    setTargetRotation(serverRotation, options, 1)
-                    
-                    // Apply strafe based on player's movement direction
-                    val movementYaw = MovementUtils.direction.toDegreesF()
-                    val normalizedYaw = MathHelper.wrapAngleTo180_float(movementYaw)
-                    val isDiagonal = abs(normalizedYaw % 90) > 10
-                    
-                    // Adjust strafe for diagonal/straight movement
-                    val strafeMultiplier = if (isDiagonal) 0.7f else 1f
-                    event.originalInput.moveStrafe = direction * strafeMultiplier * 
-                        if (player.isCollidedHorizontally) 0.8f else 1f
-                    
-                    if (breezilyTicks > breezilyTiming.endInclusive.toInt() * 20) {
-                        breezilyTicks = 0
-                        if (RandomUtils.nextFloat() < 0.3f) breezilyTicks -= 2
-                    }
-                }
-            }
-            
-            else -> {
-                if (!isGodBridgeEnabled || !player.onGround) return@handler
-            }
-        }
+        if (!isGodBridgeEnabled || !player.onGround) return@handler
 
         if (waitForRots) {
             godBridgeTargetRotation?.run {
@@ -991,11 +969,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     /**
      * For expand scaffold, fixes vector values that should match according to direction vector
      */
-    private fun lerp(start: Float, end: Float, fraction: Float): Float {
-        return start + (end - start) * fraction
-    }
-
-private fun modifyVec(original: Vec3, direction: EnumFacing, pos: Vec3, shouldModify: Boolean): Vec3 {
+    private fun modifyVec(original: Vec3, direction: EnumFacing, pos: Vec3, shouldModify: Boolean): Vec3 {
         if (!shouldModify) {
             return original
         }
@@ -1181,24 +1155,10 @@ private fun modifyVec(original: Vec3, direction: EnumFacing, pos: Vec3, shouldMo
             return
         }
 
-        // Handle initial setup period for GodBridge
-        if (!initialRotationSetup && isGodBridgeEnabled) {
-            input.moveStrafe = 0f
-            input.moveForward = 0f
-            return
-        }
-
         if (!slow && speedLimiter && MovementUtils.speed > speedLimit) {
             input.moveStrafe = 0f
             input.moveForward = 0f
             return
-        }
-
-        // Stabilize diagonal movement
-        if (isGodBridgeEnabled && abs(input.moveStrafe) > 0.1f && abs(input.moveForward) > 0.1f) {
-            val factor = 0.7f // Reduce speed for diagonal movement
-            input.moveStrafe *= factor
-            input.moveForward *= factor
         }
 
         when (zitterMode.lowercase()) {
@@ -1274,19 +1234,6 @@ private fun modifyVec(original: Vec3, direction: EnumFacing, pos: Vec3, shouldMo
     private fun generateGodBridgeRotations(ticks: Int) {
         val player = mc.thePlayer ?: return
 
-        // During initial setup, use more precise rotations
-        if (!initialRotationSetup) {
-            val direction = if (options.applyServerSide) {
-                MovementUtils.direction.toDegreesF() + 180f
-            } else MathHelper.wrapAngleTo180_float(player.rotationYaw)
-            
-            val preciseYaw = direction
-            val precisePitch = if (useOptimizedPitch) 73.5f else customGodPitch
-            
-            setRotation(Rotation(preciseYaw, precisePitch).fixedSensitivity(), ticks)
-            return
-        }
-
         val direction = if (options.applyServerSide) {
             MovementUtils.direction.toDegreesF() + 180f
         } else MathHelper.wrapAngleTo180_float(player.rotationYaw)
@@ -1299,8 +1246,7 @@ private fun modifyVec(original: Vec3, direction: EnumFacing, pos: Vec3, shouldMo
             movingYaw % 90 == 0f
         } else movingYaw in steps45 && player.movementInput.isSideways
 
-        // Improved edge detection for more stable bridging
-        if (!player.isNearEdge(if (initialRotationSetup) 2.5f else 0.5f)) return
+        if (!player.isNearEdge(2.5f)) return
 
         if (!player.isMoving) {
             placeRotation?.run {
