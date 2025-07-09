@@ -60,7 +60,7 @@ class GuiMainMenu : AbstractScreen() {
         +GuiButton(2, leftMargin, startY + 25, buttonWidth, buttonHeight, I18n.format("menu.multiplayer"))
         +GuiButton(100, leftMargin, startY + 50, buttonWidth, buttonHeight, translationMenu("altManager"))
         +GuiButton(0, leftMargin, startY + 75, buttonWidth, buttonHeight, I18n.format("menu.options"))
-        +GuiButton(4, leftMargin, startY + 100, buttonWidth, buttonHeight, I18n.format("menu.quit"))
+        +GuiButton(4, leftMargin, startY + 100, buttonHeight, buttonHeight, I18n.format("menu.quit"))
         
         // Additional buttons
         +GuiButton(103, leftMargin, startY + 125, buttonWidth, buttonHeight, translationMenu("mods"))
@@ -105,7 +105,7 @@ class GuiMainMenu : AbstractScreen() {
 
     private fun drawMenuBackground() {
         // Draw menu background full height
-        val menuWidth = 180 // Keep same width
+        val menuWidth = 180
         
         // Lighter semi-transparent background
         val bgColor = 0x40000000.toInt() // More transparent black
@@ -176,17 +176,17 @@ class GuiMainMenu : AbstractScreen() {
 
     private fun showDiscontinuedWarning() {
         popup = PopupScreen {
-            title("§c§lUnsupported version")
+            title("§b§lWelcome to RinBounce !")
             message("""
-                §6§lThis version is discontinued and unsupported.§r
+                §e§lThank you for choosing RinBounce !§r
                 
                 §eWe strongly recommend switching to §bRinBounce Nextgen§e, 
                 which offers the following benefits:
                 
-                §a- §fSupports all Minecraft versions from §71.7§f to §71.21+§f.
-                §a- §fFrequent updates with the latest bypasses and features.
-                §a- §fActive development and official support.
-                §a- §fImproved performance and compatibility.
+                §6Want to stay updated?§r
+                §a- §fJoin our Discord community
+                §a- §fGet the latest configs and updates
+                §a- §fShare your experiences with other users
                 
                 §cWhy upgrade?§r
                 - No new bypasses or features will be introduced in this version.
@@ -195,8 +195,7 @@ class GuiMainMenu : AbstractScreen() {
         
                 §9Upgrade to RinBounce Nextgen today for a better experience!§r
             """.trimIndent())
-            button("§aDownload Nextgen") { MiscUtils.showURL("https://liquidbounce.net/download") }
-            button("§eInstallation Tutorial") { MiscUtils.showURL("https://www.youtube.com/watch?v=i_r1i4m-NZc") }
+            button("§b§lJoin Discord") { MiscUtils.showURL("https://discord.gg/BRckHDB9G8") }
             onClose {
                 popup = null
                 lastWarningTime = Instant.now().toEpochMilli()
@@ -222,15 +221,15 @@ class GuiMainMenu : AbstractScreen() {
 
     private fun showJava11Warning() {
         popup = PopupScreen {
-            title("§c§lInappropriate Java Runtime Environment")
+            title("§b§lJava Version Notice")
             message("""
                 §6§lThis version of RinBounce is designed for Java 8 environment.§r
                 
-                §fHigher versions of Java might cause bug or crash.
-                You can get JRE 8 from the Internet.
+                §fFor optimal performance and stability,
+                we recommend using Java 8 (1.8.0_351 or newer)
             """.trimIndent())
-            button("§aDownload Java") { MiscUtils.showURL(JavaVersion.DOWNLOAD_PAGE) }
-            button("§eI realized")
+            button("§aDownload Java 8") { MiscUtils.showURL(JavaVersion.DOWNLOAD_PAGE) }
+            button("§eI understand")
             onClose { popup = null }
         }
     }
@@ -243,7 +242,7 @@ class GuiMainMenu : AbstractScreen() {
 
         // b1.0.1 in top left corner (white color)
         mc.fontRendererObj.drawStringWithShadow(
-            "b1.0.1",
+            "b1.1",
             10f,
             10f,
             0xFFFFFF // White color
@@ -260,7 +259,7 @@ class GuiMainMenu : AbstractScreen() {
         val scaledX = (width * 0.65f - mc.fontRendererObj.getStringWidth(rinbounceTitle) * titleScale / 2f) / titleScale
         val scaledY = (height / 2f - mc.fontRendererObj.FONT_HEIGHT * titleScale / 2f) / titleScale
         
-        mc.fontRendererObj.drawStringWithShadow(rinbounceTitle, scaledX, scaledY, 0xFFFFFF) // White color
+        mc.fontRendererObj.drawStringWithShadow(rinbounceTitle, scaledX, scaledY, 0x0000FF) // Blue color
         GlStateManager.popMatrix()
 
         // "credit" text in bottom right corner (white color)
