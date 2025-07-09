@@ -783,24 +783,4 @@ object RotationUtils : MinecraftInstance, Listenable {
             else -> point
         }
     }
-
-    /**
-     * Check if the rotation is safe to use
-     */
-    fun checkRotationSafety(rotation: Rotation): Boolean {
-        val mc = Minecraft.getMinecraft()
-        val player = mc.thePlayer ?: return false
-        val world = mc.theWorld ?: return false
-        
-        val eyePos = player.getPositionEyes(1f)
-        val lookVec = getVectorForRotation(rotation)
-        val reachVec = eyePos.addVector(
-            lookVec.xCoord * 4.5,
-            lookVec.yCoord * 4.5,
-            lookVec.zCoord * 4.5
-        )
-        
-        val raytrace = world.rayTraceBlocks(eyePos, reachVec, false, true, false)
-        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK
-    }
 }
