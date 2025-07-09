@@ -117,6 +117,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val intaveSilentVertical by float("SilentVertical", 0.6f, 0f..1f) { mode == "Intave" && intaveSilent }
     private val intaveSilentHorizontal by float("SilentHorizontal", 0.8f, 0f..1f) { mode == "Intave" && intaveSilent }
 
+    // GrimReduce parameters
+    private val grimReduceTicks by int("GrimReduceTicks", 4, 1..10) { mode == "grimreduce" }
+    private val grimReduceAirOnly by boolean("GrimReduceAirOnly", true) { mode == "grimreduce" }
+    private val grimReduceHorizontal by float("GrimReduceHorizontal", 0.62f, 0f..1f) { mode == "grimreduce" }
+    private val grimReduceVertical by float("GrimReduceVertical", 0.62f, 0f..1f) { mode == "grimreduce" }
+
     private val intaveSmart by boolean("IntaveSmart", true) { mode == "Intave" }
     private val intaveSmartFallDistance by float("SmartFallDistance", 0.5f, 0f..1f) { mode == "Intave" && intaveSmart }
     private val intaveSmartInAir by boolean("SmartInAir", true) { mode == "Intave" && intaveSmart }
