@@ -3,7 +3,7 @@
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
  * https://github.com/CCBlueX/LiquidBounce/
  */
-package net.ccbluex.liquidbounce.features.module.modules.combat
+package net.ccbluex.liquidbounce.features.module.modules.legit
 
 import net.ccbluex.liquidbounce.event.EventState
 import net.ccbluex.liquidbounce.event.MotionEvent
@@ -26,7 +26,7 @@ import net.minecraft.entity.Entity
 import java.util.*
 import kotlin.math.atan
 
-object Aimbot : Module("Aimbot", Category.COMBAT) {
+object Aimbot : Module("Aimbot", Category.LEGIT) {
 
     private val range by float("Range", 4.4F, 1F..8F)
     private val horizontalAim by boolean("HorizontalAim", true)

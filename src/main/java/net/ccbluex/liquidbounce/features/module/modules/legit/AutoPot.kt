@@ -3,7 +3,7 @@
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
  * https://github.com/CCBlueX/LiquidBounce/
  */
-package net.ccbluex.liquidbounce.features.module.modules.combat
+package net.ccbluex.liquidbounce.features.module.modules.legit
 
 import net.ccbluex.liquidbounce.event.RotationUpdateEvent
 import net.ccbluex.liquidbounce.event.handler
@@ -28,7 +28,7 @@ import net.minecraft.client.gui.inventory.GuiInventory
 import net.minecraft.item.ItemPotion
 import net.minecraft.potion.Potion
 
-object AutoPot : Module("AutoPot", Category.COMBAT) {
+object AutoPot : Module("AutoPot", Category.LEGIT) {
 
     private val health by float("Health", 15F, 1F..20F) { healPotion || regenerationPotion }
     private val delay by int("Delay", 500, 500..1000)
