@@ -19,7 +19,6 @@ import net.ccbluex.liquidbounce.utils.inventory.SilentHotbar
 import net.ccbluex.liquidbounce.utils.inventory.hotBarSlot
 import net.ccbluex.liquidbounce.utils.kotlin.RandomUtils
 import net.ccbluex.liquidbounce.utils.movement.MovementUtils
-import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.ccbluex.liquidbounce.utils.render.RenderUtils
 import net.ccbluex.liquidbounce.utils.rotation.PlaceRotation
 import net.ccbluex.liquidbounce.utils.rotation.Rotation
@@ -40,10 +39,14 @@ import net.minecraft.item.ItemBlock
 import net.minecraft.item.ItemStack
 import net.minecraft.network.play.client.C0APacketAnimation
 import net.minecraft.network.play.client.C0BPacketEntityAction
+import net.minecraft.network.play.client.C03PacketPlayer
+import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
 import net.minecraft.util.*
+import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.world.WorldSettings
 import net.minecraftforge.event.ForgeEventFactory
 import org.lwjgl.input.Keyboard
+import org.lwjgl.opengl.GL11
 import java.awt.Color
 import kotlin.math.*
 
@@ -72,6 +75,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     val scaffoldMode by choices(
         "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily", "Dynamic"), "Normal"
     )
+    
+    // HMCBlinkFly
+    private val hmcBlinkFlyEnabled by boolean("HMCBlinkFly", false)
+    private val hmcBlinkVisibleLimit by int("HMCBlinkVisibleBlocks", 4, 0..10) { hmcBlinkFlyEnabled }
+    private var hmcBlinkPlacedCount = 0
 
     // Expand
     private val omniDirectionalExpand by boolean("OmniDirectionalExpand", false) { scaffoldMode == "Expand" }
@@ -485,6 +493,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Enabling module
     override fun onEnable() {
+        hmcBlinkPlacedCount = 0
         val player = mc.thePlayer ?: return
 
         launchY = player.posY.roundToInt()
@@ -666,6 +675,86 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 MovementUtils.strafe(0.2F)
                 player.motionY = 0.0
             }
+        }
+    }
+    
+    val onHMCBlinkPacket = handler<PacketEvent> { event ->
+        if (!hmcBlinkFlyEnabled) return@handler
+
+        val packet = event.packet
+        val player = mc.thePlayer ?: return@handler
+
+        if (player.isDead) return@handler
+
+        if (event.eventType == EventState.SEND) {
+            when (packet) {
+                is C03PacketPlayer -> {
+                    net.ccbluex.liquidbounce.utils.client.BlinkUtils.blink(packet, event, true, false)
+                }
+                is C08PacketPlayerBlockPlacement -> {
+                    if (hmcBlinkPlacedCount < hmcBlinkVisibleLimit) {
+                        hmcBlinkPlacedCount++
+                    } else {
+                        net.ccbluex.liquidbounce.utils.client.BlinkUtils.blink(packet, event, true, false)
+                    }
+                }
+            }
+        }
+
+        if (event.eventType == EventState.RECEIVE) {
+            if (isServerPacket(packet) && !isEntityMovementPacket(packet)) {
+                net.ccbluex.liquidbounce.utils.client.BlinkUtils.blink(packet, event, false, true)
+            }
+        }
+    }
+
+    val onHMCBlinkMotion = handler<MotionEvent> { event ->
+        if (!hmcBlinkFlyEnabled) return@handler
+        val player = mc.thePlayer ?: return@handler
+        if (event.eventState == EventState.POST) {
+            if (player.isDead || player.ticksExisted <= 10) {
+                net.ccbluex.liquidbounce.utils.client.BlinkUtils.unblink()
+            } else {
+                net.ccbluex.liquidbounce.utils.client.BlinkUtils.syncReceived()
+            }
+        }
+    }
+
+    val onHMCBlinkRender3D = handler<Render3DEvent> {
+        if (!hmcBlinkFlyEnabled) return@handler
+
+        val positions = net.ccbluex.liquidbounce.utils.client.BlinkUtils.positions
+        val color = Color(150, 200, 255, 180)
+
+        synchronized(positions) {
+            GL11.glPushMatrix()
+            GL11.glDisable(GL11.GL_TEXTURE_2D)
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA)
+            GL11.glEnable(GL11.GL_LINE_SMOOTH)
+            GL11.glEnable(GL11.GL_BLEND)
+            GL11.glDisable(GL11.GL_DEPTH_TEST)
+            mc.entityRenderer.disableLightmap()
+            GL11.glBegin(GL11.GL_LINE_STRIP)
+            RenderUtils.glColor(color)
+
+            val renderPosX = mc.renderManager.renderPosX
+            val renderPosY = mc.renderManager.renderPosY
+            val renderPosZ = mc.renderManager.renderPosZ
+
+            for (vec in positions) {
+                GL11.glVertex3d(
+                    vec.xCoord - renderPosX,
+                    vec.yCoord - renderPosY,
+                    vec.zCoord - renderPosZ
+                )
+            }
+
+            GL11.glEnd()
+            GL11.glEnable(GL11.GL_DEPTH_TEST)
+            GL11.glDisable(GL11.GL_LINE_SMOOTH)
+            GL11.glDisable(GL11.GL_BLEND)
+            GL11.glEnable(GL11.GL_TEXTURE_2D)
+            GL11.glPopMatrix()
         }
     }
 
@@ -989,6 +1078,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Disabling module
     override fun onDisable() {
+        net.ccbluex.liquidbounce.utils.client.BlinkUtils.unblink()
         val player = mc.thePlayer ?: return
 
         if (!GameSettings.isKeyDown(mc.gameSettings.keyBindSneak)) {
@@ -1509,6 +1599,26 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         godBridgeTargetRotation = rotation
         setRotation(rotation, ticks)
+    }
+    
+    private fun isServerPacket(packet: Any): Boolean {
+        return packet.javaClass.simpleName.startsWith("S")
+    }
+    private fun isEntityMovementPacket(packet: Any): Boolean {
+        return when (packet) {
+            is net.minecraft.network.play.server.S14PacketEntity,
+            is net.minecraft.network.play.server.S18PacketEntityTeleport,
+            is net.minecraft.network.play.server.S19PacketEntityHeadLook,
+            is net.minecraft.network.play.server.S0BPacketAnimation,
+            is net.minecraft.network.play.server.S0CPacketSpawnPlayer,
+            is net.minecraft.network.play.server.S1CPacketEntityMetadata -> true
+            else -> {
+                val name = packet.javaClass.simpleName
+                name == "S15PacketEntityRelMove" ||
+                        name == "S17PacketEntityLookMove" ||
+                        name == "S16PacketEntityLook"
+            }
+        }
     }
 
     private fun calculateOptimalPitch(): Float {
