@@ -53,6 +53,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             AtAllProvider,
             AttackEffects,
             AutoAccount,
+            AutoArmor,
             AutoBow,
             AutoBreak,
             AutoClicker,
@@ -120,6 +121,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             HitBox,
             IceSpeed,
             Ignite,
+            InventoryCleaner,
             InventoryMove,
             ItemESP,
             ItemPhysics,
@@ -214,8 +216,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             ClickRecorder,
             ChineseHat,
             SnakeGame,
-            AutoPlace,
-            InvManager
+            AutoPlace
         )
 
         registerModules(modules = modules)

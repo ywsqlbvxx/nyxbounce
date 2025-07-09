@@ -188,6 +188,12 @@ class GuiMainMenu : AbstractScreen() {
                 §a- §fGet the latest configs and updates
                 §a- §fShare your experiences with other users
                 
+                §cWhy upgrade?§r
+                - No new bypasses or features will be introduced in this version.
+                - Auto config support will not be actively maintained.
+                - Unofficial forks of this version are discouraged as they lack the full feature set of Nextgen and cannot be trusted.
+        
+                §9Upgrade to RinBounce Nextgen today for a better experience!§r
             """.trimIndent())
             button("§b§lJoin Discord") { MiscUtils.showURL("https://discord.gg/BRckHDB9G8") }
             onClose {
