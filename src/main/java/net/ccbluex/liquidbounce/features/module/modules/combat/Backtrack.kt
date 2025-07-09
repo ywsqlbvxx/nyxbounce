@@ -43,18 +43,15 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 object Backtrack : Module("Backtrack", Category.COMBAT) {
 
-    private val adaptivePing by boolean("AdaptivePing", true) { mode == "Modern" }
-    private val nextBacktrackDelay by int("NextBacktrackDelay", 50, 0..10000) { mode == "Modern" }
-    private val maxDelay: Value<Int> = int("MaxDelay", 120, 0..10000).onChange { _, new ->
+    private val nextBacktrackDelay by int("NextBacktrackDelay", 0, 0..10000) { mode == "Modern" }
+    private val maxDelay: Value<Int> = int("MaxDelay", 80, 0..10000).onChange { _, new ->
         new.coerceAtLeast(minDelay.get())
     }
-    private val minDelay: Value<Int> = int("MinDelay", 60, 0..10000) {
+    private val minDelay: Value<Int> = int("MinDelay", 80, 0..10000) {
         mode == "Modern"
     }.onChange { _, new ->
         new.coerceAtMost(maxDelay.get())
     }
-    private val smoothTransition by boolean("SmoothTransition", true) { mode == "Modern" }
-    private val legitMovement by boolean("LegitMovement", true) { mode == "Modern" }
 
     val mode by choices("Mode", arrayOf("Legacy", "Modern"), "Modern").onChanged {
         clearPackets()
@@ -246,31 +243,16 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                     val trueDist = mc.thePlayer.getDistance(targetMixin.trueX, targetMixin.trueY, targetMixin.trueZ)
                     val dist = mc.thePlayer.getDistance(target.posX, target.posY, target.posZ)
 
-                    // Enhanced smart targeting with improved distance checks
-                    if (trueDist <= 6f && (!smart || trueDist >= dist) && (style == "Smooth" || !globalTimer.hasTimePassed(supposedDelay))) {
-                        val targetDistToBox = mc.thePlayer.getDistanceToEntityBox(target)
-                        val isInRange = targetDistToBox in distance
-                        
+                    if (trueDist <= 6f && (!smart || trueDist >= dist) && (style == "Smooth" || !globalTimer.hasTimePassed(
+                            supposedDelay
+                        ))
+                    ) {
                         shouldRender = true
 
-                        if (legitMovement) {
-                            // More natural movement checks
-                            val movementSpeed = mc.thePlayer.motionX * mc.thePlayer.motionX + mc.thePlayer.motionZ * mc.thePlayer.motionZ
-                            val isMovingNaturally = movementSpeed > 0.01 
-                            
-                            if (isInRange && isMovingNaturally) {
-                                handlePackets()
-                            } else if (smoothTransition) {
-                                handlePacketsRange()
-                            } else {
-                                clear()
-                            }
+                        if (mc.thePlayer.getDistanceToEntityBox(target) in distance) {
+                            handlePackets()
                         } else {
-                            if (isInRange) {
-                                handlePackets()
-                            } else {
-                                handlePacketsRange()
-                            }
+                            handlePacketsRange()
                         }
                     } else clear()
                 }
@@ -457,32 +439,14 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
     }
 
     private fun handlePackets() {
-        val currentTime = System.currentTimeMillis()
-        val effectiveDelay = if (adaptivePing) {
-            val ping = mc.thePlayer?.let { player ->
-                mc.netHandler?.getPlayerInfo(player.uniqueID)?.responseTime
-            } ?: 0
-            (ping * 0.8).coerceIn(minDelay.get().toDouble(), maxDelay.get().toDouble()).toLong()
-        } else {
-            supposedDelay.toLong()
-        }
-
         packetQueue.removeAll { (packet, timestamp) ->
-            if (timestamp <= currentTime - effectiveDelay) {
-                if (smoothTransition && legitMovement) {
-                    // Gradually process packets for smoother transitions
-                    PacketUtils.schedulePacketProcess(packet)
-                    Thread.sleep(5) // Add small delay between packets for smoother transitions
-                } else {
-                    PacketUtils.schedulePacketProcess(packet)
-                }
+            if (timestamp <= System.currentTimeMillis() - supposedDelay) {
+                PacketUtils.schedulePacketProcess(packet)
                 true
             } else false
         }
 
-        positions.removeAll { (_, timestamp) -> 
-            timestamp < currentTime - effectiveDelay
-        }
+        positions.removeAll { (_, timestamp) -> timestamp < System.currentTimeMillis() - supposedDelay }
     }
 
     private fun handlePacketsRange() {
