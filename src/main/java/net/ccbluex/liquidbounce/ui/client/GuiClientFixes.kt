@@ -18,9 +18,14 @@ import net.ccbluex.liquidbounce.ui.font.Fonts
 import net.ccbluex.liquidbounce.utils.ui.AbstractScreen
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiScreen
+import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.renderer.Tessellator
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import org.lwjgl.input.Keyboard
+import org.lwjgl.opengl.GL11
 import java.io.IOException
 import java.util.*
+import kotlin.math.sin
 
 class GuiClientFixes(private val prevGui: GuiScreen) : AbstractScreen() {
 
@@ -30,6 +35,7 @@ class GuiClientFixes(private val prevGui: GuiScreen) : AbstractScreen() {
     private lateinit var payloadButton: GuiButton
     private lateinit var customBrandButton: GuiButton
     private lateinit var resourcePackButton: GuiButton
+    private var animationTime = 0f
 
     override fun initGui() {
         enabledButton = +GuiButton(
@@ -63,6 +69,38 @@ class GuiClientFixes(private val prevGui: GuiScreen) : AbstractScreen() {
         +GuiButton(0, width / 2 - 100, height / 4 + 55 + 25 * 6 + 5, "Back")
     }
 
+    private fun drawGradientBackground() {
+        animationTime += 0.02f
+        
+        val tessellator = Tessellator.getInstance()
+        val worldRenderer = tessellator.worldRenderer
+        
+        GlStateManager.disableTexture2D()
+        GlStateManager.enableBlend()
+        GlStateManager.disableAlpha()
+        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0)
+        GlStateManager.shadeModel(GL11.GL_SMOOTH)
+        
+        worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
+        
+        val time = animationTime
+        val topR = (0.15f + 0.25f * sin(time * 0.5f)).coerceIn(0f, 1f)
+        val topG = (0.25f + 0.35f * sin(time * 0.7f + 1f)).coerceIn(0f, 1f)
+        val topB = (0.75f + 0.25f * sin(time * 0.3f + 2f)).coerceIn(0f, 1f)
+        
+        worldRenderer.pos(width.toDouble(), 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
+        worldRenderer.pos(0.0, 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
+        worldRenderer.pos(0.0, height.toDouble(), zLevel.toDouble()).color(0.9f, 0.95f, 1.0f, 1.0f).endVertex()
+        worldRenderer.pos(width.toDouble(), height.toDouble(), zLevel.toDouble()).color(0.9f, 0.95f, 1.0f, 1.0f).endVertex()
+        
+        tessellator.draw()
+        
+        GlStateManager.shadeModel(GL11.GL_FLAT)
+        GlStateManager.disableBlend()
+        GlStateManager.enableAlpha()
+        GlStateManager.enableTexture2D()
+    }
+
     public override fun actionPerformed(button: GuiButton) {
         when (button.id) {
             1 -> {
@@ -87,10 +125,7 @@ class GuiClientFixes(private val prevGui: GuiScreen) : AbstractScreen() {
 
             5 -> {
                 val brands = listOf(*ClientFixes.possibleBrands)
-
-                // Switch to next client brand
                 clientBrand = brands[(brands.indexOf(clientBrand) + 1) % brands.size]
-
                 customBrandButton.displayString = "Brand ($clientBrand)"
             }
 
@@ -105,8 +140,16 @@ class GuiClientFixes(private val prevGui: GuiScreen) : AbstractScreen() {
     }
 
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
-        drawBackground(0)
-        Fonts.fontBold180.drawCenteredString("Fixes", width / 2f, height / 8f + 5f, 4673984, true)
+        drawGradientBackground()
+        
+        // Animated title
+        val titleTime = animationTime * 1.5f
+        val titleR = (0.2f + 0.4f * sin(titleTime)).coerceIn(0f, 1f)
+        val titleG = (0.3f + 0.5f * sin(titleTime + 1f)).coerceIn(0f, 1f)
+        val titleB = (0.8f + 0.2f * sin(titleTime + 2f)).coerceIn(0f, 1f)
+        val titleColor = ((titleR * 255).toInt() shl 16) or ((titleG * 255).toInt() shl 8) or (titleB * 255).toInt()
+        
+        Fonts.fontBold180.drawCenteredString("Fixes", width / 2f, height / 8f + 5f, titleColor, true)
 
         super.drawScreen(mouseX, mouseY, partialTicks)
     }

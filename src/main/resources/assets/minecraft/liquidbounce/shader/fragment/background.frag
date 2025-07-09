@@ -1,18 +1,18 @@
 /*
- * Original shader from: https://www.shadertoy.com/view/ddKSDd
- * Slightly modified to match the client's atmosphere.
+ * RinBounce Background Shader
+ * Blue to white gradient without circular animations
  */
+
 #version 120
 
 #ifdef GL_ES
 precision lowp float;
 #endif
 
-// glslsandbox uniforms
 uniform float iTime;
 uniform vec2 iResolution;
 
-// Simple hash function
+// Simple hash function for noise
 float hash(float n) {
     return fract(sin(n) * 43758.5453);
 }
@@ -23,77 +23,54 @@ float noise(vec2 p) {
     vec2 f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
     return mix(mix(hash(i.x + hash(i.y)), hash(i.x + 1.0 + hash(i.y)), u.x),
-    mix(hash(i.x + hash(i.y + 1.0)), hash(i.x + 1.0 + hash(i.y + 1.0)), u.x), u.y);
+               mix(hash(i.x + hash(i.y + 1.0)), hash(i.x + 1.0 + hash(i.y + 1.0)), u.x), u.y);
 }
 
-// Mountain range function
-float mountainRange(vec2 uv) {
-    float mountainHeight = 0.0;
-    float frequency = 2.0;
-    float amplitude = 0.5;
-    for (int i = 0; i < 5; i++) {
-        mountainHeight += noise(uv * frequency) * amplitude;
-        frequency *= 2.0;
-        amplitude *= 0.5;
-    }
-    return mountainHeight;
-}
-
-// Aurora layer function
-vec3 auroraLayer(vec2 uv, float speed, float intensity, vec3 color) {
+// Simple gradient layer without circular effects
+vec3 gradientLayer(vec2 uv, float speed, float intensity, vec3 color1, vec3 color2) {
     float t = iTime * speed;
-    vec2 scaleXY = vec2(2.0, 2.0);
-    vec2 movement = vec2(2.0, -2.0);
-    vec2 p = uv * scaleXY + t * movement;
-    float n = noise(p + noise(color.xy + p + t));
-
-    float topEdgeSharpness = 0.0; //the smaller this value, the crispier the edge
-    float bottomFadeOut = 0.3; //the higher this value, the more solid the aurora appears
-    float aurora = smoothstep(0.0, topEdgeSharpness, n - uv.y) * (1.0 - smoothstep(0.0, bottomFadeOut, n - uv.y));
-
-    aurora = (n - uv.y * 0.6) ;
-
-    return aurora * intensity * color * 0.5;
-
+    
+    // Simple vertical gradient with subtle horizontal wave
+    float gradient = uv.y + sin(uv.x * 3.0 + t) * 0.05;
+    gradient = smoothstep(0.0, 1.0, gradient);
+    
+    return mix(color1, color2, gradient) * intensity;
 }
 
+// Subtle wave effect
+float waves(vec2 uv, float time) {
+    float wave1 = sin(uv.x * 6.0 + time * 1.0) * 0.05;
+    float wave2 = sin(uv.x * 10.0 - time * 0.8) * 0.03;
+    
+    return (wave1 + wave2) * smoothstep(0.0, 0.2, uv.y) * smoothstep(1.0, 0.8, uv.y);
+}
 
-// Main image function
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
-    uv.x *= iResolution.x / iResolution.y;
-
-    // Create multiple aurora layers with varying colors, speeds, and intensities
-    vec3 color = vec3(0.0);
-    color += auroraLayer(uv, 0.05, 0.3, vec3(0.0, 1.0, 0.3));
-    color += auroraLayer(uv, 0.1, 0.4, vec3(0.1, 0.5, 0.9));
-    color += auroraLayer(uv, 0.15, 0.3, vec3(0.4, 0.1, 0.8));
-    color += auroraLayer(uv, 0.07, 0.2, vec3(0.8, 0.1, 0.6));
-
-    vec3 skyColor1 = vec3(0.2, 0.0, 0.4);
-    vec3 skyColor2 = vec3(0.15, 0.2, 0.35);
-    // Add a gradient to simulate the night sky
-    color += skyColor2 * (1.0 - smoothstep(1.0, 1.0, uv.y));
-    color += skyColor1 * (1.0 - smoothstep(0.0, 0.5, uv.y));
-
-    int numLayers = 5;
-    for (int i = 0; i < numLayers; i++) {
-        // Calculate the height of the mountain range
-        float height = float(numLayers-i) * 0.1
-        * smoothstep(1.0, 0.0,
-        mountainRange(
-        vec2(iTime * 0.03 * (float(i) + 1.0) + float(i) * 4.0, 0.0)
-        + uv * vec2( 1.0 + float(numLayers - i) * 0.05 , 0.23 )
-        )
-        );
-
-        // Create the black silhouette of the mountain range
-        float mountain = smoothstep(0.0, 0.0, height - uv.y);
-
-        // Combine the mountain range and sky
-        color = mix(color, skyColor2 * float(numLayers - i)/4.0, mountain);
-    }
-
+    
+    // Base gradient colors (blue to white)
+    vec3 topColor = vec3(0.055, 0.482, 0.788);    // Blue
+    vec3 bottomColor = vec3(0.737, 0.749, 0.761); // White
+    
+    // Create simple animated gradient
+    vec3 color = gradientLayer(uv, 0.05, 1.0, topColor, bottomColor);
+    
+    // Add secondary gradient layer for depth
+    vec3 secondaryTop = vec3(0.15, 0.35, 0.85);
+    vec3 secondaryBottom = vec3(0.9, 0.95, 1.0);
+    color += gradientLayer(uv, 0.03, 0.2, secondaryTop, secondaryBottom);
+    
+    // Add subtle wave distortion
+    float waveEffect = waves(uv, iTime);
+    color += vec3(waveEffect * 0.1, waveEffect * 0.15, waveEffect * 0.2);
+    
+    // Add very subtle noise for texture
+    float noiseEffect = noise(uv * 3.0 + iTime * 0.05) * 0.03;
+    color += vec3(noiseEffect);
+    
+    // Ensure colors stay in valid range
+    color = clamp(color, 0.0, 1.0);
+    
     fragColor = vec4(color, 1.0);
 }
 
