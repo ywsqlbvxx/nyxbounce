@@ -119,7 +119,6 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             HUD,
             HighJump,
             HitBox,
-            HMCBlinkFly,
             IceSpeed,
             Ignite,
             InventoryCleaner,
