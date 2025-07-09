@@ -47,6 +47,32 @@ import org.lwjgl.input.Keyboard
 import java.awt.Color
 import kotlin.math.*
 
+import net.minecraft.network.Packet
+import net.minecraft.network.play.client.C03PacketPlayer
+import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
+import net.minecraft.util.Vec3
+import net.minecraft.network.play.server.S12PacketEntityVelocity
+
+private fun isServerPacket(packet: Packet<*>): Boolean = packet.javaClass.name.startsWith("net.minecraft.network.play.server")
+
+private fun isEntityMovementPacket(packet: Packet<*>): Boolean {
+    return packet is S12PacketEntityVelocity || 
+           packet.javaClass.simpleName.startsWith("S1") && 
+           packet.javaClass.simpleName.contains("Entity")
+}
+
+private fun unblink() {
+    packetBuffer.forEach { sendPacket(it) }
+    packetBuffer.clear()
+    positions.clear()
+    packetsReceived = 0
+}
+
+private val limitBlockPlacements = true
+private val positions = mutableListOf<Vec3>()
+private val packetBuffer = mutableListOf<Packet<*>>()
+private var packetsReceived = 0
+
 object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     /**
