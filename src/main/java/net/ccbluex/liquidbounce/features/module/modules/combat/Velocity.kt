@@ -60,14 +60,13 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     )
 
     private val horizontal by float("Horizontal", 0F, -1F..1F) { mode in arrayOf("Simple", "AAC", "Legit", "GrimReduce") }
+    private val vertical by float("Vertical", 0F, -1F..1F) { mode in arrayOf("Simple", "Legit") }
+    
     private val grimReduceVertical by float("GrimReduceVertical", 0.4F, 0F..1F) { mode == "GrimReduce" }
     private val grimReduceHorizontal by float("GrimReduceHorizontal", 0.4F, 0F..1F) { mode == "GrimReduce" }
     private val grimReduceAirOnly by boolean("GrimReduceAirOnly", false) { mode == "GrimReduce" }
     private val grimReduceTicks by int("GrimReduceTicks", 2, 1..10) { mode == "GrimReduce" }
     private val grimSmartReduce by boolean("GrimSmartReduce", true) { mode == "GrimReduce" }
-
-    private val horizontal by float("Horizontal", 0F, -1F..1F) { mode in arrayOf("Simple", "AAC", "Legit") }
-    private val vertical by float("Vertical", 0F, -1F..1F) { mode in arrayOf("Simple", "Legit") }
 
     // Reverse
     private val reverseStrength by float("ReverseStrength", 1F, 0.1F..1F) { mode == "Reverse" }
@@ -212,10 +211,9 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         reset()
     }
     
-    override fun onEnable() {
-        if (mode.equals("3FMC")) {
-            ClientUtils.displayChatMessage("[Velocity] 3FMC chưa hoàn thiện, có thể flag hoặc lỗi, cẩn trọng!")
-        }
+    override fun onEnable() {            if (mode == "3FMC") {
+                ClientUtils.displayChatMessage("[Velocity] 3FMC chưa hoàn thiện, có thể flag hoặc lỗi, cẩn trọng!")
+            }
     }
 
     val onUpdate = handler<UpdateEvent> {
@@ -337,12 +335,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     return@handler
 
                 if (nextInt(endExclusive = 100) < chance) {
-                    val horizontal = horizontal / 100f
-                    val vertical = vertical / 100f
+                    val horizontalMod = horizontal / 100f
+                    val verticalMod = vertical / 100f
 
-                    thePlayer.motionX *= horizontal.toDouble()
-                    thePlayer.motionZ *= horizontal.toDouble()
-                    thePlayer.motionY *= vertical.toDouble()
+                    thePlayer.motionX *= horizontalMod
+                    thePlayer.motionZ *= horizontalMod 
+                    thePlayer.motionY *= verticalMod
                 }
             }
 
@@ -556,7 +554,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                         }
                     }
                     val degreePlayer = getDirection()
-                    val degreePacket = Math.floorMod(packetDirection.toDegrees().toInt(), 360).toDouble()
+                    val degreePacket = Math.floorMod(Math.toDegrees(packetDirection).toInt(), 360).toDouble()
                     var angle = abs(degreePacket + degreePlayer)
                     val threshold = 120.0
                     angle = Math.floorMod(angle.toInt(), 360).toDouble()
