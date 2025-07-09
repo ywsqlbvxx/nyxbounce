@@ -113,21 +113,14 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
 
     // GodBridge mode sub-values
-    private val waitForRots by boolean("WaitForRotations", true) { isGodBridgeEnabled }
-    private val useOptimizedPitch by boolean("UseOptimizedPitch", true) { isGodBridgeEnabled }
-    private val dynamicPitch by boolean("DynamicPitch", true) { isGodBridgeEnabled }
+    private val waitForRots by boolean("WaitForRotations", false) { isGodBridgeEnabled }
+    private val useOptimizedPitch by boolean("UseOptimizedPitch", false) { isGodBridgeEnabled }
+    private val dynamicPitch by boolean("DynamicPitch", false) { isGodBridgeEnabled }
     private val customGodPitch by float(
         "GodBridgePitch", 73.5f, 0f..90f
     ) { isGodBridgeEnabled && !useOptimizedPitch }
     private val stabilizeSpeed by boolean("StabilizeSpeed", true) { isGodBridgeEnabled }
     private val autoAdjust by boolean("AutoAdjust", true) { isGodBridgeEnabled }
-    
-    // Legit mode specific values
-    private val randomizePitch by boolean("RandomizePitch", true) { scaffoldMode == "Legit" }
-    private val pitchRandomRange by floatRange("PitchRandomRange", 0.3f..1.2f, 0f..3f) { scaffoldMode == "Legit" && randomizePitch }
-    private val smoothPlace by boolean("SmoothPlace", true) { scaffoldMode == "Legit" }
-    private val legitRotationSpeed by floatRange("LegitRotationSpeed", 0.8f..1.2f, 0.1f..2f) { scaffoldMode == "Legit" }
-    private val humanizedDelay by intRange("HumanizedDelay", 2..4, 0..10) { scaffoldMode == "Legit" }
 
     val jumpAutomatically by boolean("JumpAutomatically", true) { scaffoldMode == "GodBridge" }
     private val blocksToJumpRange by intRange("BlocksToJumpRange", 4..4, 1..8) {  scaffoldMode == "GodBridge" && !jumpAutomatically }
@@ -1037,11 +1030,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         pos: BlockPos, offsetPos: BlockPos, vec3: Vec3, side: EnumFacing, eyes: Vec3, maxReach: Float, raycast: Boolean,
     ): PlaceRotation? {
         val world = mc.theWorld ?: return null
-        
-        // Add humanized delay for Legit mode
-        if (scaffoldMode == "Legit" && !delayTimer.hasTimePassed(humanizedDelay.random().toLong())) {
-            return null
-        }
 
         val vec = (Vec3(pos) + vec3).addVector(
             side.directionVec.x * vec3.xCoord, side.directionVec.y * vec3.yCoord, side.directionVec.z * vec3.zCoord
@@ -1067,24 +1055,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         val roundYaw90 = round(rotation.yaw / 90f) * 90f
         val roundYaw45 = round(rotation.yaw / 45f) * 45f
-        
-        // Add randomized pitch for Legit mode
-        if (scaffoldMode == "Legit" && randomizePitch) {
-            rotation = rotation.copy(
-                pitch = rotation.pitch + pitchRandomRange.random()
-            )
-        }
 
-        rotation = when {
-            scaffoldMode == "Legit" -> {
-                val speed = legitRotationSpeed.random()
-                rotation.copy(
-                    yaw = interpolateRotation(currRotation.yaw, rotation.yaw, speed),
-                    pitch = interpolateRotation(currRotation.pitch, rotation.pitch, speed)
-                )
-            }
-            options.rotationMode == "Stabilized" -> Rotation(roundYaw45, rotation.pitch)
-            options.rotationMode == "ReverseYaw" -> Rotation(if (!isLookingDiagonally) roundYaw90 else roundYaw45, rotation.pitch)
+        rotation = when (options.rotationMode) {
+            "Stabilized" -> Rotation(roundYaw45, rotation.pitch)
+            "ReverseYaw" -> Rotation(if (!isLookingDiagonally) roundYaw90 else roundYaw45, rotation.pitch)
             else -> rotation
         }.fixedSensitivity()
 
