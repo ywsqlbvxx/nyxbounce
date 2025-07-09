@@ -52,6 +52,7 @@ import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
 import net.minecraft.util.Vec3
 import net.minecraft.network.play.server.S12PacketEntityVelocity
 import net.ccbluex.liquidbounce.utils.BlinkUtils
+import net.ccbluex.liquidbounce.utils.client.BlinkUtils
 import net.ccbluex.liquidbounce.event.EventState
 import org.lwjgl.opengl.GL11
 

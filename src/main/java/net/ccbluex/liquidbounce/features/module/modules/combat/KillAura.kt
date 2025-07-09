@@ -198,16 +198,18 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val maxSwingProgress by int("MaxOpponentSwingProgress", 1, 0..5) { smartAutoBlock }
 
     // Rotations
-    private val options = RotationSettings(this).withoutKeepRotation()
+    private val rotationModeValue = choices("RotationMode", arrayOf("Normal", "Smooth", "BackTrack", "Dynamic"), "Normal")
+    private val options = RotationSettings(this).withRotationMode(rotationModeValue).withoutKeepRotation()
+    private val rotationMode by rotationModeValue
     
     // Dynamic rotation settings
-    private val dynamicSpeed by float("DynamicSpeed", 0.3f, 0.1f..1.0f)
-    private val dynamicAccel by float("DynamicAcceleration", 0.3f, 0.1f..1.0f)
-    private val dynamicDecel by float("DynamicDeceleration", 0.7f, 0.1f..1.0f)
-    private val dynamicJitter by float("DynamicJitter", 1.0f, 0f..5f)
-    private val dynamicAimHeight by float("DynamicAimHeight", 0.5f, 0f..1f)
-    private val randomize by boolean("Randomize", true)
-    private val adaptiveSpeed by boolean("AdaptiveSpeed", true)
+    private val dynamicSpeed by float("DynamicSpeed", 0.3f, 0.1f..1.0f) { rotationMode == "Dynamic" }
+    private val dynamicAccel by float("DynamicAcceleration", 0.3f, 0.1f..1.0f) { rotationMode == "Dynamic" }
+    private val dynamicDecel by float("DynamicDeceleration", 0.7f, 0.1f..1.0f) { rotationMode == "Dynamic" }
+    private val dynamicJitter by float("DynamicJitter", 1.0f, 0f..5f) { rotationMode == "Dynamic" }
+    private val dynamicAimHeight by float("DynamicAimHeight", 0.5f, 0f..1f) { rotationMode == "Dynamic" }
+    private val randomize by boolean("Randomize", true) { rotationMode == "Dynamic" }
+    private val adaptiveSpeed by boolean("AdaptiveSpeed", true) { rotationMode == "Dynamic" }
     
     // Dynamic state tracking
     private var dynamicCurrentSpeed = 0f
@@ -957,18 +959,20 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
         if (!options.rotationsActive) {
             return player.getDistanceToEntityBox(entity) <= range
-        }            val prediction = entity.currPos.subtract(entity.prevPos).times(2 + predictEnemyPosition.toDouble())
-            val boundingBox = entity.hitBox.offset(prediction)
-            val (currPos, oldPos) = player.currPos to player.prevPos
+        }
 
-            // Use dynamic rotations if enabled
-            if (options.rotationMode == "Dynamic") {
-                val currentRot = currentRotation ?: player.rotation
-                val dynamicRot = calculateDynamicRotation(currentRot, entity)
-                
-                setTargetRotation(dynamicRot, options)
-                return true
-            }
+        val prediction = entity.currPos.subtract(entity.prevPos).times(2 + predictEnemyPosition.toDouble())
+        val boundingBox = entity.hitBox.offset(prediction)
+        val (currPos, oldPos) = player.currPos to player.prevPos
+
+        // Use dynamic rotations if enabled
+        if (rotationMode == "Dynamic") {
+            val currentRot = currentRotation ?: player.rotation
+            val dynamicRot = calculateDynamicRotation(currentRot, entity)
+            
+            setTargetRotation(dynamicRot, options)
+            return true
+        }
 
         val simPlayer = SimulatedPlayer.fromClientPlayer(RotationUtils.modifiedInput)
 
