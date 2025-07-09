@@ -198,24 +198,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val maxSwingProgress by int("MaxOpponentSwingProgress", 1, 0..5) { smartAutoBlock }
 
     // Rotations
-    private val rotationModeValue = choices("RotationMode", arrayOf("Normal", "Smooth", "BackTrack", "Dynamic"), "Normal")
-    private val options = RotationSettings(this).withRotationMode(rotationModeValue).withoutKeepRotation()
-    private val rotationMode by rotationModeValue
-    
-    // Dynamic rotation settings
-    private val dynamicSpeed by float("DynamicSpeed", 0.3f, 0.1f..1.0f) { rotationMode == "Dynamic" }
-    private val dynamicAccel by float("DynamicAcceleration", 0.3f, 0.1f..1.0f) { rotationMode == "Dynamic" }
-    private val dynamicDecel by float("DynamicDeceleration", 0.7f, 0.1f..1.0f) { rotationMode == "Dynamic" }
-    private val dynamicJitter by float("DynamicJitter", 1.0f, 0f..5f) { rotationMode == "Dynamic" }
-    private val dynamicAimHeight by float("DynamicAimHeight", 0.5f, 0f..1f) { rotationMode == "Dynamic" }
-    private val randomize by boolean("Randomize", true) { rotationMode == "Dynamic" }
-    private val adaptiveSpeed by boolean("AdaptiveSpeed", true) { rotationMode == "Dynamic" }
-    
-    // Dynamic state tracking
-    private var dynamicCurrentSpeed = 0f
-    private var dynamicAccelerating = true
-    private var lastDynamicUpdate = 0L
-    private var dynamicInDanger = false
+    private val options = RotationSettings(this).withoutKeepRotation()
 
     // Raycast
     private val raycastValue = boolean("RayCast", true) { options.rotationsActive }
@@ -899,59 +882,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     /**
      * Update rotations to enemy
      */
-    private fun calculateDynamicRotation(current: Rotation, target: Entity): Rotation {
-        val player = mc.thePlayer ?: return current
-        val currentTime = System.currentTimeMillis()
-        
-        // Update acceleration/deceleration
-        if (currentTime - lastDynamicUpdate > 50) {
-            if (dynamicAccelerating) {
-                dynamicCurrentSpeed += dynamicAccel * (if (randomize) (0.8f..1.2f).random() else 1f)
-                if (dynamicCurrentSpeed > 1f) {
-                    dynamicCurrentSpeed = 1f
-                    dynamicAccelerating = false
-                }
-            } else {
-                dynamicCurrentSpeed -= dynamicDecel * (if (randomize) (0.8f..1.2f).random() else 1f)
-                if (dynamicCurrentSpeed < 0.1f) {
-                    dynamicCurrentSpeed = 0.1f
-                    dynamicAccelerating = true
-                }
-            }
-            lastDynamicUpdate = currentTime
-        }
-        
-        // Calculate base speed with optional adaptiveness
-        val baseSpeed = dynamicCurrentSpeed * when {
-            adaptiveSpeed -> {
-                val dist = player.getDistanceToEntityBox(target)
-                when {
-                    dist > range * 0.8f -> 1.2f  // Speed up when far
-                    dist < range * 0.3f -> 0.7f  // Slow down when close
-                    else -> 1.0f
-                }
-            }
-            else -> 1.0f
-        }
-
-        // Calculate target rotation
-        val (targetYaw, targetPitch) = toRotation(target.hitBox.center.addVector(
-            0.0,
-            (target.eyeHeight * dynamicAimHeight).toDouble(),
-            0.0
-        ), true)
-
-        // Apply randomization and jitter
-        val jitterAmount = ((-dynamicJitter)..dynamicJitter).random() * baseSpeed
-        val randomYaw = if (randomize) (-2f..2f).random() * baseSpeed else 0f
-        val randomPitch = if (randomize) (-1f..1f).random() * baseSpeed else 0f
-
-        val yaw = current.yaw + MathHelper.wrapAngleTo180_float(targetYaw - current.yaw + jitterAmount + randomYaw) * (dynamicSpeed * baseSpeed)
-        val pitch = current.pitch + MathHelper.wrapAngleTo180_float(targetPitch - current.pitch + randomPitch) * (dynamicSpeed * baseSpeed)
-
-        return Rotation(yaw, pitch).fixedSensitivity()
-    }
-
     private fun updateRotations(entity: Entity): Boolean {
         val player = mc.thePlayer ?: return false
 
@@ -962,17 +892,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         }
 
         val prediction = entity.currPos.subtract(entity.prevPos).times(2 + predictEnemyPosition.toDouble())
+
         val boundingBox = entity.hitBox.offset(prediction)
         val (currPos, oldPos) = player.currPos to player.prevPos
-
-        // Use dynamic rotations if enabled
-        if (rotationMode == "Dynamic") {
-            val currentRot = currentRotation ?: player.rotation
-            val dynamicRot = calculateDynamicRotation(currentRot, entity)
-            
-            setTargetRotation(dynamicRot, options)
-            return true
-        }
 
         val simPlayer = SimulatedPlayer.fromClientPlayer(RotationUtils.modifiedInput)
 

@@ -51,10 +51,11 @@ import net.minecraft.network.play.client.C03PacketPlayer
 import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
 import net.minecraft.util.Vec3
 import net.minecraft.network.play.server.S12PacketEntityVelocity
-import net.ccbluex.liquidbounce.utils.BlinkUtils
 import net.ccbluex.liquidbounce.utils.client.BlinkUtils
 import net.ccbluex.liquidbounce.event.EventState
 import org.lwjgl.opengl.GL11
+import net.ccbluex.liquidbounce.utils.MinecraftInstance
+import net.ccbluex.liquidbounce.event.Listenable
 
 private fun isServerPacket(packet: Packet<*>): Boolean = packet.javaClass.name.startsWith("net.minecraft.network.play.server")
 
@@ -542,14 +543,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         if (event.eventType == EventState.SEND) {
             when (packet) {
                 is C03PacketPlayer -> {
-                    BlinkUtils.blink(packet, event, true, false)
+                    event.cancelEvent()
+                    packetBuffer.add(packet)
                 }
                 is C08PacketPlayerBlockPlacement -> {
                     if (limitBlockPlacements) {
                         if (placedCount < visibleLimit) {
                             placedCount++
                         } else {
-                            BlinkUtils.blink(packet, event, true, false)
+                            event.cancelEvent()
+                            packetBuffer.add(packet)
                         }
                     }
                 }
@@ -558,7 +561,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (event.eventType == EventState.RECEIVE) {
             if (isServerPacket(packet) && !isEntityMovementPacket(packet)) {
-                BlinkUtils.blink(packet, event, false, true)
+                packetsReceived++
             }
         }
     }
@@ -572,9 +575,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         
         if (grimBlink) {
             if (player.isDead || player.ticksExisted <= 10) {
-                BlinkUtils.unblink()
+                unblink()
             } else {
-                BlinkUtils.syncReceived()  // credit : DeletedUser , BeoPhiMan
+                // Sync received packets
+                packetsReceived = 0
+                positions.add(player.getPositionVector())
             }
         }
 
