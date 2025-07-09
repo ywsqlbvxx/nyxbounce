@@ -46,12 +46,14 @@ import net.minecraftforge.event.ForgeEventFactory
 import org.lwjgl.input.Keyboard
 import java.awt.Color
 import kotlin.math.*
-
 import net.minecraft.network.Packet
 import net.minecraft.network.play.client.C03PacketPlayer
 import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
 import net.minecraft.util.Vec3
 import net.minecraft.network.play.server.S12PacketEntityVelocity
+import net.ccbluex.liquidbounce.utils.BlinkUtils
+import net.ccbluex.liquidbounce.event.EventState
+import org.lwjgl.opengl.GL11
 
 private fun isServerPacket(packet: Packet<*>): Boolean = packet.javaClass.name.startsWith("net.minecraft.network.play.server")
 
@@ -532,22 +534,22 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // Events
     val onPacket = handler<PacketEvent> { event ->
         if (!grimBlink) return@handler
-        
-        val packet = event.packet
-        val player = mc.thePlayer ?: return@handler
 
-        if (player.isDead) return@handler
+        val packet = event.packet
+        if (mc.thePlayer == null || mc.thePlayer!!.isDead) return@handler
 
         if (event.eventType == EventState.SEND) {
             when (packet) {
                 is C03PacketPlayer -> {
-                    event.cancelEvent()
-                    packetBuffer.add(packet)
+                    BlinkUtils.blink(packet, event, true, false)
                 }
                 is C08PacketPlayerBlockPlacement -> {
-                    if (placedCount >= visibleLimit) {
-                        event.cancelEvent()
-                        packetBuffer.add(packet)
+                    if (limitBlockPlacements) {
+                        if (placedCount < visibleLimit) {
+                            placedCount++
+                        } else {
+                            BlinkUtils.blink(packet, event, true, false)
+                        }
                     }
                 }
             }
@@ -555,7 +557,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (event.eventType == EventState.RECEIVE) {
             if (isServerPacket(packet) && !isEntityMovementPacket(packet)) {
-                packetsReceived++
+                BlinkUtils.blink(packet, event, false, true)
             }
         }
     }
@@ -569,9 +571,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         
         if (grimBlink) {
             if (player.isDead || player.ticksExisted <= 10) {
-                unblink()
+                BlinkUtils.unblink()
             } else {
-                positions.add(player.getPositionVector())
+                BlinkUtils.syncReceived()  // credit : DeletedUser , BeoPhiMan
             }
         }
 
