@@ -3,7 +3,7 @@
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
  * https://github.com/CCBlueX/LiquidBounce/
  */
-package net.ccbluex.liquidbounce.features.module.modules.legit
+package net.ccbluex.liquidbounce.features.module.modules.combat
 
 import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.event.handler
@@ -17,7 +17,7 @@ import net.ccbluex.liquidbounce.utils.timing.MSTimer
 import net.minecraft.init.Items.egg
 import net.minecraft.init.Items.snowball
 
-object AutoProjectile : Module("AutoProjectile", Category.LEGIT) {
+object AutoProjectile : Module("AutoProjectile", Category.COMBAT) {
     private val facingEnemy by boolean("FacingEnemy", true)
 
     private val range by float("Range", 8F, 1F..20F)

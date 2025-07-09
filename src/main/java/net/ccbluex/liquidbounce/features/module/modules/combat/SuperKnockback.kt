@@ -3,7 +3,7 @@
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
  * https://github.com/CCBlueX/LiquidBounce/
  */
-package net.ccbluex.liquidbounce.features.module.modules.legit
+package net.ccbluex.liquidbounce.features.module.modules.combat
 
 import net.ccbluex.liquidbounce.config.Value
 import net.ccbluex.liquidbounce.event.*
@@ -22,7 +22,7 @@ import net.minecraft.network.play.client.C0BPacketEntityAction
 import net.minecraft.network.play.client.C0BPacketEntityAction.Action.*
 import kotlin.math.abs
 
-object SuperKnockback : Module("SuperKnockback", Category.LEGIT) {
+object SuperKnockback : Module("SuperKnockback", Category.COMBAT) {
 
     private val chance by int("Chance", 100, 0..100)
     private val delay by int("Delay", 0, 0..500)

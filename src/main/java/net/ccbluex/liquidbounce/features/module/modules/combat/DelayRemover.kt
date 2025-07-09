@@ -1,4 +1,4 @@
-package net.ccbluex.liquidbounce.features.module.modules.legit
+package net.ccbluex.liquidbounce.features.module.modules.combat
 
 import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.event.handler
@@ -8,7 +8,7 @@ import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
 import net.minecraft.item.ItemBlock
 import net.minecraft.item.ItemSword
 
-object DelayRemover : Module("DelayRemover", Category.LEGIT) {
+object DelayRemover : Module("DelayRemover", Category.COMBAT) {
 
     private val left by boolean("Left", true)
     private val right by boolean("Right", true)

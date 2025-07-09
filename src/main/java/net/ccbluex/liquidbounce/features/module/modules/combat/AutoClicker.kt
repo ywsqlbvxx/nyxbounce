@@ -3,7 +3,7 @@
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
  * https://github.com/CCBlueX/LiquidBounce/
  */
-package net.ccbluex.liquidbounce.features.module.modules.legit
+package net.ccbluex.liquidbounce.features.module.modules.combat
 
 import net.ccbluex.liquidbounce.event.AttackEvent
 import net.ccbluex.liquidbounce.event.Render3DEvent
@@ -28,7 +28,7 @@ import net.minecraft.item.EnumAction
 import net.minecraft.item.ItemBlock
 import kotlin.random.Random.Default.nextBoolean
 
-object AutoClicker : Module("AutoClicker", Category.LEGIT) {
+object AutoClicker : Module("AutoClicker", Category.COMBAT) {
 
     private val simulateDoubleClicking by boolean("SimulateDoubleClicking", false)
     private val cps by intRange("CPS", 5..8, 1..50)
