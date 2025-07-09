@@ -127,12 +127,12 @@ jobs:
                -d '{
                  "embeds": [{
                    "title": "🚀 RinBounce Beta Build Successful!",
-                   "description": "A new version of RinBounce has been built and released.",
+                   "description": "A new beta version of RinBounce has been built and released.",
                    "color": 5814783,
                    "fields": [
                      {
                        "name": "Version",
-                       "value": Beta "'"$VERSION"'",
+                       "value": "'"$VERSION"'",
                        "inline": true
                      },
                      {
