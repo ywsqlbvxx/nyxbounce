@@ -56,9 +56,11 @@ class GuiMainMenu : AbstractScreen() {
                 hasUpdate() -> showUpdatePopup()
                 shouldShowWarning() -> showDiscontinuedWarning()
             }
+
             popupOnce = true
         }
     }
+
 
     override fun initGui() {
         val defaultHeight = height / 4 + 48
