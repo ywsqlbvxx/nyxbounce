@@ -24,15 +24,11 @@ object Criticals : Module("Criticals", Category.COMBAT) {
         "Mode",
         arrayOf(
             "Packet",
-            "NCPPacket",
-            "BlocksMC",
-            "BlocksMC2",
             "NoGround",
-            "Hop",
-            "TPHop",
             "Jump",
             "LowJump",
-            "CustomMotion",
+            "Grim",
+            "BlocksMC",
             "Visual"
         ),
         "Packet"
@@ -71,48 +67,41 @@ object Criticals : Module("Criticals", Category.COMBAT) {
                     thePlayer.onCriticalHit(entity)
                 }
 
-                "ncppacket" -> {
-                    sendPackets(
-                        C04PacketPlayerPosition(x, y + 0.11, z, false),
-                        C04PacketPlayerPosition(x, y + 0.1100013579, z, false),
-                        C04PacketPlayerPosition(x, y + 0.0000013579, z, false)
-                    )
-                    mc.thePlayer.onCriticalHit(entity)
+                "grim" -> {
+                    if (!thePlayer.onGround) {
+                        // If player is in air, go down a little bit
+                        // Small enough to bypass simulation checks
+                        sendPackets(
+                            C04PacketPlayerPosition(x, y - 0.000001, z, false)
+                        )
+                        thePlayer.onCriticalHit(entity)
+                    }
                 }
 
                 "blocksmc" -> {
-                    sendPackets(
-                        C04PacketPlayerPosition(x, y + 0.001091981, z, true),
-                        C04PacketPlayerPosition(x, y, z, false)
-                    )
-                }
-
-                "blocksmc2" -> {
                     if (thePlayer.ticksExisted % 4 == 0) {
                         sendPackets(
                             C04PacketPlayerPosition(x, y + 0.0011, z, true),
                             C04PacketPlayerPosition(x, y, z, false)
                         )
+                        thePlayer.onCriticalHit(entity)
                     }
                 }
 
-                "hop" -> {
+                "jump" -> {
+                    // Regular jump motion (0.42) copied from Minecraft vanilla
+                    thePlayer.motionY = 0.42
+                    thePlayer.onCriticalHit(entity)
+                }
+
+                "lowjump" -> {
+                    // Smaller jump height to stay close to ground
                     thePlayer.motionY = 0.1
                     thePlayer.fallDistance = 0.1f
                     thePlayer.onGround = false
+                    thePlayer.onCriticalHit(entity)
                 }
 
-                "tphop" -> {
-                    sendPackets(
-                        C04PacketPlayerPosition(x, y + 0.02, z, false),
-                        C04PacketPlayerPosition(x, y + 0.01, z, false)
-                    )
-                    thePlayer.setPosition(x, y + 0.01, z)
-                }
-
-                "jump" -> thePlayer.motionY = 0.42
-                "lowjump" -> thePlayer.motionY = 0.3425
-                "custommotion" -> thePlayer.motionY = customMotionY.toDouble()
                 "visual" -> thePlayer.onCriticalHit(entity)
             }
 
