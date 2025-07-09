@@ -54,7 +54,7 @@ import net.minecraft.network.play.server.S12PacketEntityVelocity
 import net.ccbluex.liquidbounce.utils.client.BlinkUtils
 import net.ccbluex.liquidbounce.event.EventState
 import org.lwjgl.opengl.GL11
-import net.ccbluex.liquidbounce.utils.MinecraftInstance
+import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
 import net.ccbluex.liquidbounce.event.Listenable
 
 private fun isServerPacket(packet: Packet<*>): Boolean = packet.javaClass.name.startsWith("net.minecraft.network.play.server")
