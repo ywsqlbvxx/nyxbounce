@@ -571,7 +571,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                         }
 
                         if (intaveJump && thePlayer.onGround && thePlayer.hurtTime == intaveJumpDelay) {
-                            if (Random().nextInt(100) <= intaveJumpChance) {
+                            if (nextInt(endExclusive = 100) <= intaveJumpChance) {
                                 thePlayer.jump()
                             }
                         }
