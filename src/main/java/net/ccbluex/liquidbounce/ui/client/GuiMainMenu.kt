@@ -140,27 +140,24 @@ class GuiMainMenu : AbstractScreen() {
 
     private fun showDiscontinuedWarning() {
         popup = PopupScreen {
-            title("§c§lUnsupported version")
+            title("§b§lWelcome to RinBounce !")
             message("""
-                §6§lThis version is discontinued and unsupported.§r
+                §e§lThank you for choosing RinBounce !§r
                 
-                §eWe strongly recommend switching to §bLiquidBounce Nextgen§e, 
-                which offers the following benefits:
+                §6Special Features:§r
+                §a- §fAdvanced §cGrimAC§f bypass system
+                §a- §fPowerful §bIntave§f bypass features
+                §a- §fRegularly updated with new features
+                §a- §fOptimized performance for both anticheats
                 
-                §a- §fSupports all Minecraft versions from §71.7§f to §71.21+§f.
-                §a- §fFrequent updates with the latest bypasses and features.
-                §a- §fActive development and official support.
-                §a- §fImproved performance and compatibility.
+                §6Want to stay updated?§r
+                §a- §fJoin our Discord community
+                §a- §fGet the latest configs and updates
+                §a- §fShare your experiences with other users
                 
-                §cWhy upgrade?§r
-                - No new bypasses or features will be introduced in this version.
-                - Auto config support will not be actively maintained.
-                - Unofficial forks of this version are discouraged as they lack the full feature set of Nextgen and cannot be trusted.
-        
-                §9Upgrade to LiquidBounce Nextgen today for a better experience!§r
+                §9Join our Discord community for support and updates!§r
             """.trimIndent())
-            button("§aDownload Nextgen") { MiscUtils.showURL("https://liquidbounce.net/download") }
-            button("§eInstallation Tutorial") { MiscUtils.showURL("https://www.youtube.com/watch?v=i_r1i4m-NZc") }
+            button("§b§lJoin Discord") { MiscUtils.showURL("https://discord.gg/BRckHDB9G8") }
             onClose {
                 popup = null
                 lastWarningTime = Instant.now().toEpochMilli()
@@ -186,15 +183,15 @@ class GuiMainMenu : AbstractScreen() {
 
     private fun showJava11Warning() {
         popup = PopupScreen {
-            title("§c§lInappropriate Java Runtime Environment")
+            title("§b§lJava Version Notice")
             message("""
-                §6§lThis version of $CLIENT_NAME is designed for Java 8 environment.§r
+                §e§lThis version of Rin Fork works best with Java 8§r
                 
-                §fHigher versions of Java might cause bug or crash.
-                You can get JRE 8 from the Internet.
+                §fFor optimal performance and stability,
+                we recommend using Java 8 (1.8.0_351 or newer)
             """.trimIndent())
-            button("§aDownload Java") { MiscUtils.showURL(JavaVersion.DOWNLOAD_PAGE) }
-            button("§eI realized")
+            button("§aDownload Java 8") { MiscUtils.showURL(JavaVersion.DOWNLOAD_PAGE) }
+            button("§eI understand")
             onClose { popup = null }
         }
     }
