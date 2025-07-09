@@ -104,13 +104,47 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.build.outputs.lb_version }}
         run: |
-          # Tạo tag và release
           TAG_NAME="v$VERSION-${{ github.run_number }}"
           gh release create $TAG_NAME \
             --title "Build $VERSION (Run #${{ github.run_number }})" \
             --notes "Automated build by GitHub Actions" \
             ./artifacts/*.jar
           
-          # Lấy URL release
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
           echo "release_url=$RELEASE_URL" >> $GITHUB_OUTPUT
+
+  discord_webhook:
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord notification
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
+          VERSION: ${{ needs.build.outputs.lb_version }}
+          RELEASE_URL: ${{ needs.release.outputs.release_url }}
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d '{
+                 "embeds": [{
+                   "title": "🚀 LiquidBounce Build Successful!",
+                   "description": "A new version of LiquidBounce has been built and released.",
+                   "color": 5814783,
+                   "fields": [
+                     {
+                       "name": "Version",
+                       "value": "'"$VERSION"'",
+                       "inline": true
+                     },
+                     {
+                       "name": "Release",
+                       "value": "[Download here]('"$RELEASE_URL"')",
+                       "inline": true
+                     }
+                   ],
+                   "footer": {
+                     "text": "Automated build by GitHub Actions"
+                   },
+                   "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+                 }]
+               }' \
+               "$WEBHOOK_URL"
