@@ -459,7 +459,9 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
     private fun handlePackets() {
         val currentTime = System.currentTimeMillis()
         val effectiveDelay = if (adaptivePing) {
-            val ping = mc.netHandler?.playerInfo?.get(mc.thePlayer?.uniqueID)?.responseTime ?: 0
+            val ping = mc.thePlayer?.let { player ->
+                mc.netHandler?.getPlayerInfo(player.uniqueID)?.responseTime
+            } ?: 0
             (ping * 0.8).coerceIn(minDelay.get().toDouble(), maxDelay.get().toDouble()).toLong()
         } else {
             supposedDelay.toLong()
@@ -467,9 +469,10 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
 
         packetQueue.removeAll { (packet, timestamp) ->
             if (timestamp <= currentTime - effectiveDelay) {
-                if (smoothTransition) {
+                if (smoothTransition && legitMovement) {
                     // Gradually process packets for smoother transitions
-                    PacketUtils.schedulePacketProcess(packet, legitMovement)
+                    PacketUtils.schedulePacketProcess(packet)
+                    Thread.sleep(5) // Add small delay between packets for smoother transitions
                 } else {
                     PacketUtils.schedulePacketProcess(packet)
                 }
