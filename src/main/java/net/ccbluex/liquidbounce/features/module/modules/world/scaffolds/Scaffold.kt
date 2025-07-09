@@ -226,11 +226,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val mark by boolean("Mark", false).subjective()
     private val trackCPS by boolean("TrackCPS", false).subjective()
     
-    // Blink options
-    private val limitBlockPlacements by boolean("LimitBlocks", false)
-    private val visibleLimit by int("VisibleBlocks", 4, 0..10) { limitBlockPlacements }
+    // GrimBlink options
+    private val grimBlink by boolean("GrimBlink", false)
+    private val visibleLimit by int("VisibleBlocks", 4, 0..10) { grimBlink }
+    private val renderBlinkTrail by boolean("RenderBlinkTrail", true) { grimBlink }
+    private val blinkTrailColor by color("BlinkTrailColor", Color(150, 200, 255, 180)) { grimBlink && renderBlinkTrail }
 
     private var placedCount = 0
+    private val positions = mutableListOf<Vec3>()
+    private val packetBuffer = mutableListOf<Packet<*>>()
+    private var packetsReceived = 0
 
     // Target placement
     var placeRotation: PlaceRotation? = null
@@ -499,12 +504,50 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     }
 
     // Events
+    val onPacket = handler<PacketEvent> { event ->
+        if (!grimBlink) return@handler
+        
+        val packet = event.packet
+        val player = mc.thePlayer ?: return@handler
+
+        if (player.isDead) return@handler
+
+        if (event.eventType == EventState.SEND) {
+            when (packet) {
+                is C03PacketPlayer -> {
+                    event.cancelEvent()
+                    packetBuffer.add(packet)
+                }
+                is C08PacketPlayerBlockPlacement -> {
+                    if (placedCount >= visibleLimit) {
+                        event.cancelEvent()
+                        packetBuffer.add(packet)
+                    }
+                }
+            }
+        }
+
+        if (event.eventType == EventState.RECEIVE) {
+            if (isServerPacket(packet) && !isEntityMovementPacket(packet)) {
+                packetsReceived++
+            }
+        }
+    }
+
     val onUpdate = loopSequence {
         val player = mc.thePlayer ?: return@loopSequence
 
         if (mc.playerController.currentGameType == WorldSettings.GameType.SPECTATOR) return@loopSequence
 
         mc.timer.timerSpeed = timer
+        
+        if (grimBlink) {
+            if (player.isDead || player.ticksExisted <= 10) {
+                unblink()
+            } else {
+                positions.add(player.getPositionVector())
+            }
+        }
 
         // Breezily mode logic
         if (isBreezilyEnabled && player.onGround) {
@@ -1005,6 +1048,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     override fun onDisable() {
         val player = mc.thePlayer ?: return
 
+        if (grimBlink) {
+            unblink()
+        }
+        
         placedCount = 0
 
         if (!GameSettings.isKeyDown(mc.gameSettings.keyBindSneak)) {
