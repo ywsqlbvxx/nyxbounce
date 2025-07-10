@@ -13,7 +13,7 @@ import net.minecraft.entity.player.EntityPlayer
 abstract class TargetStyle(
     val name: String, 
     val targetInstance: Target
-) : MinecraftInstance() {
+) {
 
     protected var easingHealth = 0F
     protected val decimalFormat2 = java.text.DecimalFormat("##0")
