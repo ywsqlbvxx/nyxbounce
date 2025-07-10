@@ -7,7 +7,7 @@ package net.ccbluex.liquidbounce.ui.client.hud.element.elements.targets
 
 import net.ccbluex.liquidbounce.ui.client.hud.element.Border
 import net.ccbluex.liquidbounce.ui.client.hud.element.elements.Target
-import net.ccbluex.liquidbounce.utils.MinecraftInstance
+import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
 import net.minecraft.entity.player.EntityPlayer
 
 abstract class TargetStyle(
