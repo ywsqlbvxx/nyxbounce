@@ -501,10 +501,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     }
 
     // Events
-    // Timer for bedwars-style jumping
-    private var jumpTicks = 0
-    private var fastPlaceDelay = 0
-    
     val onUpdate = loopSequence {
         val player = mc.thePlayer ?: return@loopSequence
 
@@ -512,17 +508,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         mc.timer.timerSpeed = timer
 
-        if (fastPlaceDelay > 0) fastPlaceDelay--
-
-        if (autoJump && player.onGround && player.isMoving) {
-            jumpTicks++
-            if (jumpTicks >= 2) { 
-                player.jump()
-                jumpTicks = 0
-            }
-        }
-
+        // Breezily mode logic
         if (isBreezilyEnabled && player.onGround) {
+            // Switch rotations based on timing
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastBreezilySwitch > (breezilyTiming.random() * 1000)) {
                 val baseYaw = MovementUtils.direction.toDegreesF()
@@ -1420,10 +1408,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         onSuccess: () -> Unit = { }
     ): Boolean {
         val thePlayer = mc.thePlayer ?: return false
-
-        // Fast place for bedwars
-        if (fastPlaceDelay > 0) return false
-        fastPlaceDelay = 1 // Minimal delay for stability
 
         val prevSize = stack.stackSize
 
