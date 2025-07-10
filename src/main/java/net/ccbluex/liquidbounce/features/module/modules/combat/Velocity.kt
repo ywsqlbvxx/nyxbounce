@@ -52,12 +52,18 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         "Mode", arrayOf(
             "Simple", "AAC", "AACPush", "AACZero", "AACv4",
             "Reverse", "SmoothReverse", "JumpReset", "Glitch", "Legit",
-            "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce",
+            "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce", 
             "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
-            "Click", "BlocksMC", "3FMC", "3FMC2", 
-            "Intave"
+            "Click", "BlocksMC", "3FMC", "3FMC2", "GrimReduce", "Intave",
+            "IntaveTest"
         ), "Simple"
     )
+
+    // GrimReduce Options
+    private val GrimReduceFactor by float("GrimReduceFactor", 0.6f, 0f..1f) { mode == "GrimReduce" }
+    private val GrimMinHurtTime by int("GrimMinHurtTime", 5, 0..10) { mode == "GrimReduce" }
+    private val GrimMaxHurtTime by int("GrimMaxHurtTime", 10, 0..20) { mode == "GrimReduce" }
+    private val GrimOnGround by boolean("OnlyGround", false) { mode == "GrimReduce" }
 
     private val horizontal by float("Horizontal", 0F, -1F..1F) { mode in arrayOf("Simple", "AAC", "Legit") }
     private val vertical by float("Vertical", 0F, -1F..1F) { mode in arrayOf("Simple", "Legit") }
@@ -223,6 +229,35 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             return@handler
 
         when (mode.lowercase()) {
+            "grimreduce" -> {
+                if (hasReceivedVelocity && thePlayer.hurtTime in GrimMinHurtTime..GrimMaxHurtTime) {
+                    thePlayer.motionX *= GrimReduceFactor
+                    thePlayer.motionY *= GrimReduceFactor
+                    thePlayer.motionZ *= GrimReduceFactor
+                    
+                    if (GrimOnGround && !thePlayer.onGround) {
+                        hasReceivedVelocity = false
+                    }
+                }
+            }
+            
+            "intavetest" -> {
+                if (hasReceivedVelocity) {
+                    intaveTick++
+                    if (thePlayer.hurtTime == 2) {
+                        intaveDamageTick++
+                        if (thePlayer.onGround && intaveTick % 2 == 0 && intaveDamageTick <= 10) {
+                            thePlayer.jump()
+                            intaveTick = 0
+                            
+                            thePlayer.motionX *= reduceFactor
+                            thePlayer.motionZ *= reduceFactor
+                        }
+                        hasReceivedVelocity = false
+                    }
+                }
+            }
+            
             "glitch" -> {
                 thePlayer.noClip = hasReceivedVelocity
 
@@ -851,9 +886,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
         if (mode == "jumpreset" && hasReceivedVelocity) {
             if (!player.isJumping && nextInt(endExclusive = 100) < chance && shouldJump() && player.onGround && player.hurtTime > 0) {
-                // Sử dụng legit jump để giảm knockback một cách tự nhiên
                 player.tryJump()
-                // Giảm một phần velocity thay vì set về 0
                 player.motionX *= 0.6
                 player.motionZ *= 0.6
                 limitUntilJump = 0

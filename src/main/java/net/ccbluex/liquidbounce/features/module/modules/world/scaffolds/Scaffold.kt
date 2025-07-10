@@ -124,6 +124,8 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val breezilyStrafe by float("BreezilyStrafe", 0.2f, 0.1f..0.5f) { scaffoldMode == "Breezily" }
     private val breezilyStabilize by boolean("BreezilyStabilize", true) { scaffoldMode == "Breezily" }
     private val breezilyPitch by float("BreezilyPitch", 82.5f, 75f..85f) { scaffoldMode == "Breezily" }
+    private val breezilyRotationSpeed by float("BreezilyRotationSpeed", 0.4f, 0.1f..1.0f) { scaffoldMode == "Breezily" }
+    private val breezilyRandomization by boolean("BreezilyRandomization", true) { scaffoldMode == "Breezily" }
 
     // Dynamic mode sub-values
     private val dynamicRandomization by boolean("DynamicRandomization", true) { scaffoldMode == "Dynamic" }
@@ -361,7 +363,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         }
         return false
     }
-    
+
     private fun checkRotationSafety(rotation: Rotation): Boolean {
         val player = mc.thePlayer ?: return false
         val world = mc.theWorld ?: return false
@@ -375,7 +377,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         )
         
         val raytrace = world.rayTraceBlocks(eyePos, reachVec, false, true, false)
-        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK // MovingObjectType.BLOCK represents hitting a block
+        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK
     }
 
     private fun smoothRotation(from: Rotation, to: Rotation, speed: Float): Rotation {
@@ -386,6 +388,36 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             from.yaw + diffYaw * speed,
             from.pitch + diffPitch * speed
         ).fixedSensitivity()
+    }
+
+    private fun updateBreezilyMode() {
+        val player = mc.thePlayer ?: return
+        val currentTime = System.currentTimeMillis()
+
+        if (player.onGround && currentTime - lastBreezilySwitch > (breezilyTiming.random() * 1000)) {
+            val baseYaw = MovementUtils.direction.toDegreesF()
+            val side = if ((currentTime / 100) % 2 == 0L) breezilyStrafe else -breezilyStrafe
+            
+            // Add randomization to rotations if enabled
+            val randomYaw = if (breezilyRandomization) (-1f..1f).random() else 0f
+            val randomPitch = if (breezilyRandomization) (-0.5f..0.5f).random() else 0f
+            
+            val rotation = Rotation(
+                baseYaw + side + randomYaw, 
+                breezilyPitch + randomPitch
+            ).fixedSensitivity()
+
+            if (checkRotationSafety(rotation)) {
+                if (breezilyStabilize) {
+                    player.motionX *= 0.7
+                    player.motionZ *= 0.7
+                }
+                
+                val smoothSpeed = breezilyRotationSpeed * (if (breezilyRandomization) (0.9f..1.1f).random() else 1f)
+                breezilyRotation = smoothRotation(currRotation, rotation, smoothSpeed)
+                lastBreezilySwitch = currentTime
+            }
+        }
     }
 
     private fun calculateDynamicRotation(current: Rotation): Rotation {
@@ -508,22 +540,32 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         mc.timer.timerSpeed = timer
 
-        // Breezily mode logic
-        if (isBreezilyEnabled && player.onGround) {
-            // Switch rotations based on timing
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastBreezilySwitch > (breezilyTiming.random() * 1000)) {
-                val baseYaw = MovementUtils.direction.toDegreesF()
-                val side = if ((currentTime / 100) % 2 == 0L) breezilyStrafe else -breezilyStrafe
-                val rotation = Rotation(baseYaw + side, breezilyPitch).fixedSensitivity()
-                
-                if (breezilyStabilize) {
+        // Update Breezily mode
+        if (isBreezilyEnabled) {
+            updateBreezilyMode()
+        }
+
+        // Update Dynamic mode
+        if (isDynamicEnabled) {
+            if (System.currentTimeMillis() - lastDynamicEdgeCheck > 100) {
+                inDangerZone = checkVoidDanger()
+                lastDynamicEdgeCheck = System.currentTimeMillis()
+            }
+            
+            // Apply dynamic speed modifications
+            if (dynamicPitchAdjust) {
+                val speed = dynamicSpeed * (if (dynamicRandomization) (0.9f..1.1f).random() else 1f)
+                player.motionX *= speed
+                player.motionZ *= speed
+            }
+            
+            // Handle edge distance checks
+            if (inDangerZone || dynamicEdgeDistance > 0f) {
+                val blockPos = BlockPos(player.posX, player.posY - 1, player.posZ)
+                if (mc.theWorld?.isAirBlock(blockPos) == true) {
                     player.motionX *= 0.7
                     player.motionZ *= 0.7
                 }
-
-                breezilyRotation = rotation
-                lastBreezilySwitch = currentTime
             }
         }
 
