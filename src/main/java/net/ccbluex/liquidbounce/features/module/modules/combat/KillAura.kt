@@ -1343,4 +1343,3 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 }
 
 data class SwingFailData(val vec3: Vec3, val startTime: Long)
-
