@@ -330,29 +330,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val isGodBridgeEnabled
         get() = scaffoldMode == "GodBridge" || scaffoldMode == "Normal" && options.rotationMode == "GodBridge"
         
-    private fun checkVoidDanger(): Boolean {
-        if (!dynamicVoidCheck) return false
-        val player = mc.thePlayer ?: return false
-        val world = mc.theWorld ?: return false
-        
-        // Check blocks below in the movement direction
-        val yaw = player.rotationYaw
-        val x = -sin(yaw.toRadians()).toDouble()
-        val z = cos(yaw.toRadians()).toDouble()
-        
-        var dangerBlocks = 0
-        for (i in 1..dynamicVoidDistance) {
-            val checkPos = BlockPos(
-                player.posX + x * i,
-                player.posY - 1,
-                player.posZ + z * i
-            )
-            if (world.isAirBlock(checkPos)) dangerBlocks++
-            if (dangerBlocks > 2) return true
-        }
-        return false
-    }
-    
     private fun checkRotationSafety(rotation: Rotation): Boolean {
         val player = mc.thePlayer ?: return false
         val world = mc.theWorld ?: return false
@@ -366,7 +343,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         )
         
         val raytrace = world.rayTraceBlocks(eyePos, reachVec, false, true, false)
-        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK // MovingObjectType.BLOCK represents hitting a block
+        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK
     }
 
     private fun smoothRotation(from: Rotation, to: Rotation, speed: Float): Rotation {
@@ -377,70 +354,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             from.yaw + diffYaw * speed,
             from.pitch + diffPitch * speed
         ).fixedSensitivity()
-    }
-
-    private fun calculateDynamicRotation(current: Rotation): Rotation {
-        val player = mc.thePlayer ?: return current
-        val currentTime = System.currentTimeMillis()
-        
-        // Update acceleration/deceleration
-        if (currentTime - lastDynamicUpdate > 50) {
-            if (dynamicAccelerating) {
-                dynamicSpeed += dynamicAcceleration * (dynamicSmoothness.random() * 0.1f)
-                if (dynamicSpeed > 1f) {
-                    dynamicSpeed = 1f
-                    dynamicAccelerating = false
-                }
-            } else {
-                dynamicSpeed -= dynamicDeceleration * (dynamicSmoothness.random() * 0.1f)
-                if (dynamicSpeed < 0.1f) {
-                    dynamicSpeed = 0.1f
-                    dynamicAccelerating = true
-                }
-            }
-            lastDynamicUpdate = currentTime
-        }
-        
-        // Add randomization
-        val baseSpeed = dynamicSpeed * (if (dynamicRandomization) (0.9f..1.1f).random() else 1f)
-        
-        // Calculate target rotation
-        val moveDir = player.movementInput.moveForward
-        val targetYaw = when {
-            moveDir > 0 -> MovementUtils.direction.toDegreesF()
-            moveDir < 0 -> MovementUtils.direction.toDegreesF() + 180f
-            else -> current.yaw
-        }
-        
-        // Adjust for void checking
-        if (currentTime - lastDynamicEdgeCheck > 100) {
-            inDangerZone = checkVoidDanger()
-            lastDynamicEdgeCheck = currentTime
-        }
-        
-        // Calculate pitch based on conditions
-        val targetPitch = when {
-            inDangerZone -> 82.5f
-            dynamicPitchAdjust -> (78f..83f).random()
-            else -> 79.5f
-        }
-        
-        val newRotation = Rotation(
-            MathHelper.wrapAngleTo180_float(targetYaw + ((-2f..2f).random() * baseSpeed)),
-            targetPitch + ((-1f..1f).random() * baseSpeed)
-        ).fixedSensitivity()
-        
-        if (!checkRotationSafety(newRotation)) {
-            return current 
-        }
-
-        val smoothSpeed = when {
-            inDangerZone -> 0.6f 
-            player.onGround -> 0.3f 
-            else -> 0.4f 
-        }
-
-        return smoothRotation(current, newRotation, smoothSpeed)
     }
 
     private var godBridgeTargetRotation: Rotation? = null
@@ -488,25 +401,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         if (mc.playerController.currentGameType == WorldSettings.GameType.SPECTATOR) return@loopSequence
 
         mc.timer.timerSpeed = timer
-
-        // Breezily mode logic
-        if (isBreezilyEnabled && player.onGround) {
-            // Switch rotations based on timing
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastBreezilySwitch > (breezilyTiming.random() * 1000)) {
-                val baseYaw = MovementUtils.direction.toDegreesF()
-                val side = if ((currentTime / 100) % 2 == 0L) breezilyStrafe else -breezilyStrafe
-                val rotation = Rotation(baseYaw + side, breezilyPitch).fixedSensitivity()
-                
-                if (breezilyStabilize) {
-                    player.motionX *= 0.7
-                    player.motionZ *= 0.7
-                }
-
-                breezilyRotation = rotation
-                lastBreezilySwitch = currentTime
-            }
-        }
 
         // Telly
         if (player.onGround) ticksUntilJump++
