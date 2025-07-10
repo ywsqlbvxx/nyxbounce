@@ -51,9 +51,9 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val mode by choices(
         "Mode", arrayOf(
             "Simple", "AAC", "AACPush", "AACZero", "AACv4",
-            "Reverse", "SmoothReverse", "JumpReset", "Glitch", "Legit",
+            "Reverse", "SmoothReverse", "Jump", "Glitch", "Legit",
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce",
-            "IntaveReduce", "Delay", "GrimC03", "GrimReduce", "Hypixel", "HypixelAir",
+            "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
             "Click", "BlocksMC", "3FMC", "3FMC2", 
             "Intave"
         ), "Simple"
@@ -118,11 +118,10 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val intaveSilentHorizontal by float("SilentHorizontal", 0.8f, 0f..1f) { mode == "Intave" && intaveSilent }
 
     // GrimReduce parameters
-    private val grimReduceTicks by int("GrimReduceTicks", 4, 1..10) { mode == "GrimReduce" }
-    private val grimReduceAirOnly by boolean("GrimReduceAirOnly", true) { mode == "GrimReduce" }
-    private val grimReduceHorizontal by float("GrimReduceHorizontal", 0.62f, 0f..1f) { mode == "GrimReduce" }
-    private val grimReduceVertical by float("GrimReduceVertical", 0.62f, 0f..1f) { mode == "GrimReduce" }
-    private val grimReduceDelay by int("GrimReduceDelay", 115, 0..500) { mode == "GrimReduce" }
+    private val grimReduceTicks by int("GrimReduceTicks", 4, 1..10) { mode == "grimreduce" }
+    private val grimReduceAirOnly by boolean("GrimReduceAirOnly", true) { mode == "grimreduce" }
+    private val grimReduceHorizontal by float("GrimReduceHorizontal", 0.62f, 0f..1f) { mode == "grimreduce" }
+    private val grimReduceVertical by float("GrimReduceVertical", 0.62f, 0f..1f) { mode == "grimreduce" }
 
     private val intaveSmart by boolean("IntaveSmart", true) { mode == "Intave" }
     private val intaveSmartFallDistance by float("SmartFallDistance", 0.5f, 0f..1f) { mode == "Intave" && intaveSmart }
@@ -363,17 +362,13 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 if (!hasReceivedVelocity) return@handler
 
                 if (thePlayer.hurtTime > 0) {
-                    if (velocityTimer.hasTimePassed(grimReduceDelay.toLong())) {
-                        if (thePlayer.hurtTime <= grimReduceTicks) {
-                            if (!grimReduceAirOnly || !thePlayer.onGround) {
-                                thePlayer.motionX *= grimReduceHorizontal
-                                thePlayer.motionZ *= grimReduceHorizontal
-                                if (thePlayer.motionY > 0) {
-                                    thePlayer.motionY *= grimReduceVertical
-                                }
-                            }
+                    // Apply gradual reduction over multiple ticks to bypass prediction checks
+                    if (thePlayer.hurtTime <= grimReduceTicks) {
+                        if (!grimReduceAirOnly || !thePlayer.onGround) {
+                            thePlayer.motionX *= grimReduceHorizontal
+                            thePlayer.motionY *= grimReduceVertical 
+                            thePlayer.motionZ *= grimReduceHorizontal
                         }
-                        velocityTimer.reset()
                     }
                 } else {
                     hasReceivedVelocity = false
@@ -536,14 +531,36 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             when (mode.lowercase()) {
                 "simple" -> handleVelocity(event)
 
-                "aac", "reverse", "smoothreverse", "aaczero", "ghostblock", "intavereduce" -> hasReceivedVelocity = true            "jumpreset" -> {
-                if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
-                    if (thePlayer.onGround && nextInt(endExclusive = 100) <= chance) {
-                        hasReceivedVelocity = true
-                        packet.motionX = (packet.getMotionX() * 0.6).toInt()
-                        packet.motionZ = (packet.getMotionZ() * 0.6).toInt()
+                "aac", "reverse", "smoothreverse", "aaczero", "ghostblock", "intavereduce" -> hasReceivedVelocity = true
+
+                "jump" -> {
+                    // TODO: Recode and make all velocity modes support velocity direction checks
+                    var packetDirection = 0.0
+                    when (packet) {
+                        is S12PacketEntityVelocity -> {
+                            if (packet.entityID != thePlayer.entityId) return@handler
+
+                            val motionX = packet.motionX.toDouble()
+                            val motionZ = packet.motionZ.toDouble()
+
+                            packetDirection = atan2(motionX, motionZ)
+                        }
+
+                        is S27PacketExplosion -> {
+                            val motionX = thePlayer.motionX + packet.field_149152_f
+                            val motionZ = thePlayer.motionZ + packet.field_149159_h
+
+                            packetDirection = atan2(motionX, motionZ)
+                        }
                     }
-                }
+                    val degreePlayer = getDirection()
+                    val degreePacket = Math.floorMod(Math.toDegrees(packetDirection).toInt(), 360).toDouble()
+                    var angle = abs(degreePacket + degreePlayer)
+                    val threshold = 120.0
+                    angle = Math.floorMod(angle.toInt(), 360).toDouble()
+                    val inRange = angle in 180 - threshold / 2..180 + threshold / 2
+                    if (inRange)
+                        hasReceivedVelocity = true
                 }
 
                 "intave" -> {
@@ -825,15 +842,16 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
             "aaczero" ->
                 if (thePlayer.hurtTime > 0)
-                    event.cancelEvent()            if (mode == "JumpReset" && hasReceivedVelocity) {
-                if (player.onGround && player.hurtTime > 0) {
-                    player.tryJump()
-                    player.motionX *= 0.6
-                    player.motionZ *= 0.6
-                }
-                hasReceivedVelocity = false
-                return@handler
-            }       player.tryJump()
+                    event.cancelEvent()
+        }
+    }
+
+    val onStrafe = handler<StrafeEvent> {
+        val player = mc.thePlayer ?: return@handler
+
+        if (mode == "Jump" && hasReceivedVelocity) {
+            if (!player.isJumping && nextInt(endExclusive = 100) < chance && shouldJump() && player.isSprinting && player.onGround && player.hurtTime == 9) {
+                player.tryJump()
                 limitUntilJump = 0
             }
             hasReceivedVelocity = false

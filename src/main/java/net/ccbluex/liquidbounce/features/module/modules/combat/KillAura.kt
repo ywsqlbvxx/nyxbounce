@@ -289,12 +289,13 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     ).subjective()
 
     // Visuals 
-    private val mark by choices("Mark", arrayOf("None", "Platform", "Box"), "Platform", subjective = true)
-    private val boxOutline by boolean("Outline", true, subjective = true) { mark == "Box" }
-    private val fakeSharp by boolean("FakeSharp", true, subjective = true)
-    private val renderMode by choices("RenderEffect", arrayOf("Capsule", "Nursultan"), "Capsule")
-    private val fadeSpeed = float("FadeSpeed", 0.1f, 0.01f..0.2f) { renderMode == "Capsule" }
-    private val circle by boolean("Circle", false)
+    private val mark by choices("Mark", arrayOf("None", "Platform", "Box"), "Platform")
+    private val boxOutline by boolean("Outline", true) { mark == "Box" } 
+    private val fakeSharp by boolean("FakeSharp", true)
+    private val renderMode by choices("RenderMode", arrayOf("Default", "Jello"), "Default")
+    private val jelloGradientValue by boolean("JelloGradient", true) { renderMode == "Jello" }
+    private val jelloAlphaValue by float("JelloAlpha", 0.3f, 0f..1f) { renderMode == "Jello" }
+    private val jelloThicknessValue by float("JelloThickness", 3f, 0.1f..5f) { renderMode == "Jello" }
     private val circleAccuracy by int("Accuracy", 59, 0..59) { circle }
     private val circleThickness by float("Thickness", 2f, 0f..20f) { circle }
     private val circleRed by int("Red", 255, 0..255) { circle }
@@ -569,34 +570,45 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     /**
      * Render event
      */
-    @EventTarget
-    fun onRender3D(event: Render3DEvent) {
+    val onRender3D = handler<Render3DEvent> {
         if (cancelRun) {
             target = null
             hittable = false
-            return
+            return@handler
         }
 
-        val currentTarget = target
+        val currentTarget = target ?: return@handler
 
-        if (renderMode == "Capsule" && currentTarget != null) {
-            val color = Color(currentRed, currentGreen, currentBlue, 255)
-            drawTargetCapsule(currentTarget, 0.5, true, color)
-        } else if(renderMode == "Nursultan" && currentTarget != null) {
-            drawTextureOnEntity(-24, -24, 48, 48, 48F, 48F, currentTarget, ResourceLocation("liquidbounce/target.png"), true, Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE)
+        when (renderMode.lowercase()) {
+            "jello" -> {
+                val bb = currentTarget.entityBoundingBox
+                val radius = bb.maxX - bb.minX
+                val height = bb.maxY - bb.minY
+                val posX = currentTarget.lastTickPosX + (currentTarget.posX - currentTarget.lastTickPosX) * mc.timer.renderPartialTicks
+                val posY = currentTarget.lastTickPosY + (currentTarget.posY - currentTarget.lastTickPosY) * mc.timer.renderPartialTicks
+                val posZ = currentTarget.lastTickPosZ + (currentTarget.posZ - currentTarget.lastTickPosZ) * mc.timer.renderPartialTicks
+
+                RenderUtils.drawCircle(posX, posY + height, posZ, radius, jelloAlphaValue, jelloThicknessValue)
+                if (jelloGradientValue) {
+                    RenderUtils.drawGradientSidewaysH(posX - radius, posY, posX + radius, posY + height, 
+                        Color(255, 50, 50, 100).rgb, Color(50, 50, 255, 100).rgb)
+                }
+            }
+            "default" -> {
+                val color = if (hittable) Color(37, 126, 255, 70) else Color(255, 0, 0, 70)
+                when (mark.lowercase()) {
+                    "platform" -> RenderUtils.drawPlatform(currentTarget, color, 1f)
+                    "box" -> RenderUtils.drawEntityBox(currentTarget, color, boxOutline)
+                }
+            }
         }
 
-        if (circle) {
-            drawRangeCircle()
-        }
-
-        handleFailedSwings()
-
-        if (noInventoryAttack && (mc.currentScreen is GuiContainer || System.currentTimeMillis() - containerOpen < noInventoryDelay)) {
+        if (noInventoryAttack && (mc.currentScreen is GuiContainer || 
+            System.currentTimeMillis() - containerOpen < noInventoryDelay)) {
             target = null
             hittable = false
             if (mc.currentScreen is GuiContainer) containerOpen = System.currentTimeMillis()
-            return
+            return@handler
         }
 
         if (currentTarget == null) return
@@ -616,34 +628,19 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         }
     }
 
-    private fun drawRangeCircle() {
-        GL11.glPushMatrix()
-        GL11.glTranslated(
-            mc.thePlayer.lastTickPosX + (mc.thePlayer.posX - mc.thePlayer.lastTickPosX) * mc.timer.renderPartialTicks - mc.renderManager.renderPosX,
-            mc.thePlayer.lastTickPosY + (mc.thePlayer.posY - mc.thePlayer.lastTickPosY) * mc.timer.renderPartialTicks - mc.renderManager.renderPosY,
-            mc.thePlayer.lastTickPosZ + (mc.thePlayer.posZ - mc.thePlayer.lastTickPosZ) * mc.timer.renderPartialTicks - mc.renderManager.renderPosZ
-        )
-        GL11.glEnable(GL11.GL_BLEND)
-        GL11.glEnable(GL11.GL_LINE_SMOOTH)
-        GL11.glDisable(GL11.GL_TEXTURE_2D)
-        GL11.glDisable(GL11.GL_DEPTH_TEST)
-        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA)
+    private fun drawJelloEffect(entity: Entity) {
+        val bb = entity.entityBoundingBox
+        val radius = (bb.maxX - bb.minX) / 2
+        val height = bb.maxY - bb.minY
+        val posX = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * mc.timer.renderPartialTicks
+        val posY = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * mc.timer.renderPartialTicks
+        val posZ = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * mc.timer.renderPartialTicks
 
-        GL11.glLineWidth(circleThickness)
-        GL11.glColor4f(circleRed / 255.0F, circleGreen / 255.0F, circleBlue / 255.0F, circleAlpha / 255.0F)
-        GL11.glRotatef(90F, 1F, 0F, 0F)
-        GL11.glBegin(GL11.GL_LINE_STRIP)
-
-        for (i in 0..360 step (60 - circleAccuracy).coerceAtLeast(1)) {
-            GL11.glVertex2f(cos(i * PI / 180.0).toFloat() * range, sin(i * PI / 180.0).toFloat() * range)
+        RenderUtils.drawCircle(posX, posY + height, posZ, radius, jelloAlphaValue, jelloThicknessValue)
+        if (jelloGradientValue) {
+            RenderUtils.drawGradientSidewaysH(posX - radius, posY, posX + radius, posY + height,
+                Color(255, 50, 50, 100).rgb, Color(50, 50, 255, 100).rgb)
         }
-
-        GL11.glEnd()
-        GL11.glEnable(GL11.GL_TEXTURE_2D)
-        GL11.glEnable(GL11.GL_DEPTH_TEST)
-        GL11.glDisable(GL11.GL_BLEND)
-        GL11.glDisable(GL11.GL_LINE_SMOOTH)
-        GL11.glPopMatrix()
     }
 
     /**
