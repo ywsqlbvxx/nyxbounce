@@ -288,20 +288,12 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         "NoConsumeAttack", arrayOf("Off", "NoHits", "NoRotation"), "Off"
     ).subjective()
 
-    // Visuals 
-    private val mark by choices("Mark", arrayOf("None", "Platform", "Box"), "Platform")
-    private val boxOutline by boolean("Outline", true) { mark == "Box" } 
-    private val fakeSharp by boolean("FakeSharp", true)
-    private val renderMode by choices("RenderMode", arrayOf("Default", "Jello"), "Default")
-    private val jelloGradientValue by boolean("JelloGradient", true) { renderMode == "Jello" }
-    private val jelloAlphaValue by float("JelloAlpha", 0.3f, 0f..1f) { renderMode == "Jello" }
-    private val jelloThicknessValue by float("JelloThickness", 3f, 0.1f..5f) { renderMode == "Jello" }
-    private val circleAccuracy by int("Accuracy", 59, 0..59) { circle }
-    private val circleThickness by float("Thickness", 2f, 0f..20f) { circle }
-    private val circleRed by int("Red", 255, 0..255) { circle }
-    private val circleGreen by int("Green", 255, 0..255) { circle }
-    private val circleBlue by int("Blue", 255, 0..255) { circle }
-    private val circleAlpha by int("Alpha", 255, 0..255) { circle }
+    // Visuals
+    private val mark by choices("Mark", arrayOf("None", "Platform", "Box", "Circle"), "Circle").subjective()
+    private val fakeSharp by boolean("FakeSharp", true).subjective()
+    private val renderAimPointBox by boolean("RenderAimPointBox", false).subjective()
+    private val aimPointBoxColor by color("AimPointBoxColor", Color.CYAN) { renderAimPointBox }.subjective()
+    private val aimPointBoxSize by float("AimPointBoxSize", 0.1f, 0f..0.2F) { renderAimPointBox }.subjective()
 
     // Circle options
     private val circleStartColor by color("CircleStartColor", Color.BLUE) { mark == "Circle" }.subjective()
@@ -321,52 +313,27 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val boxOutline by boolean("Outline", true) { mark == "Box" }.subjective()
 
     /**
-     * MODULE STATE
+     * MODULE
      */
+
     // Target
     var target: EntityLivingBase? = null
     private var hittable = false
     private val prevTargetEntities = mutableListOf<Int>()
 
-    // Attack
+    // Attack delay
     private val attackTimer = MSTimer()
     private var attackDelay = 0
     private var clicks = 0
     private var attackTickTimes = mutableListOf<Pair<MovingObjectPosition, Int>>()
-    var attack = 0 // Used by BlocksMC modes
-
-    // AutoBlock
-    var renderBlocking = false
-    var blockStatus = false
-    var slotChangeAutoBlock = false
-
-    // AutoBlock (BlocksMC modes)
-    private var blocksmcJohnState = false
-    private var blocksmcClickCounter = 0
-    private var asw = 0 // BlocksMC_A state
-    private var blockTickB = 0 // BlocksMC_B state
-    private var blockTick: Int = 0 // Also for BlocksMC_A
-
-    // AutoBlock (HypixelFull mode)
-    private var hypixelBlinking = false
-
-    // AutoBlock (Blink mode)
-    var blinking: Boolean = false
-    val blinkedPackets: ArrayList<Packet<*>?> = ArrayList()
-    private var blinked = false
-
-    // Switch Delay
-    private val switchTimer = MSTimer()
 
     // Container Delay
     private var containerOpen = -1L
 
-    // Visuals
-    private val swingFails = mutableListOf<SwingFailData>()
-    private var lastHealth = 0f
-    private var currentRed = 255
-    private var currentGreen = 255
-    private var currentBlue = 255
+    // Block status
+    var renderBlocking = false
+    var blockStatus = false
+    private var blockStopInDead = false
 
     // Switch Delay
     private val switchTimer = MSTimer()
@@ -571,75 +538,51 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Render event
      */
     val onRender3D = handler<Render3DEvent> {
+        handleFailedSwings()
+
+        drawAimPointBox()
+
         if (cancelRun) {
             target = null
             hittable = false
             return@handler
         }
 
-        val currentTarget = target ?: return@handler
-
-        when (renderMode.lowercase()) {
-            "jello" -> {
-                val bb = currentTarget.entityBoundingBox
-                val radius = bb.maxX - bb.minX
-                val height = bb.maxY - bb.minY
-                val posX = currentTarget.lastTickPosX + (currentTarget.posX - currentTarget.lastTickPosX) * mc.timer.renderPartialTicks
-                val posY = currentTarget.lastTickPosY + (currentTarget.posY - currentTarget.lastTickPosY) * mc.timer.renderPartialTicks
-                val posZ = currentTarget.lastTickPosZ + (currentTarget.posZ - currentTarget.lastTickPosZ) * mc.timer.renderPartialTicks
-
-                RenderUtils.drawCircle(posX, posY + height, posZ, radius, jelloAlphaValue, jelloThicknessValue)
-                if (jelloGradientValue) {
-                    RenderUtils.drawGradientSidewaysH(posX - radius, posY, posX + radius, posY + height, 
-                        Color(255, 50, 50, 100).rgb, Color(50, 50, 255, 100).rgb)
-                }
-            }
-            "default" -> {
-                val color = if (hittable) Color(37, 126, 255, 70) else Color(255, 0, 0, 70)
-                when (mark.lowercase()) {
-                    "platform" -> RenderUtils.drawPlatform(currentTarget, color, 1f)
-                    "box" -> RenderUtils.drawEntityBox(currentTarget, color, boxOutline)
-                }
-            }
-        }
-
-        if (noInventoryAttack && (mc.currentScreen is GuiContainer || 
-            System.currentTimeMillis() - containerOpen < noInventoryDelay)) {
+        if (noInventoryAttack && (mc.currentScreen is GuiContainer || System.currentTimeMillis() - containerOpen < noInventoryDelay)) {
             target = null
             hittable = false
             if (mc.currentScreen is GuiContainer) containerOpen = System.currentTimeMillis()
             return@handler
         }
 
-        if (currentTarget == null) return
+        target ?: return@handler
 
         if (attackTimer.hasTimePassed(attackDelay)) {
-            if (maxCPS > 0) clicks++
+            if (cps.last > 0) clicks++
             attackTimer.reset()
-            attackDelay = randomClickDelay(minCPS, maxCPS)
+
+            attackDelay = randomClickDelay(cps.first, cps.last)
         }
+
+        val hittableColor = if (hittable) Color(37, 126, 255, 70) else Color(255, 0, 0, 70)
 
         if (targetMode != "Multi") {
-            val color = if (hittable) Color(37, 126, 255, 70) else Color(255, 0, 0, 70)
             when (mark.lowercase()) {
-                "platform" -> drawPlatform(currentTarget, color)
-                "box" -> drawEntityBox(currentTarget, color, boxOutline)
+                "none" -> return@handler
+                "platform" -> drawPlatform(target!!, hittableColor)
+                "box" -> drawEntityBox(target!!, hittableColor, boxOutline)
+                "circle" -> drawCircle(
+                    target!!,
+                    duration * 1000F,
+                    heightRange.takeIf { animateHeight } ?: heightRange.endInclusive..heightRange.endInclusive,
+                    extraWidth,
+                    fillInnerCircle,
+                    withHeight,
+                    circleYRange.takeIf { animateCircleY },
+                    circleStartColor.rgb,
+                    circleEndColor.rgb
+                )
             }
-        }
-    }
-
-    private fun drawJelloEffect(entity: Entity) {
-        val bb = entity.entityBoundingBox
-        val radius = (bb.maxX - bb.minX) / 2
-        val height = bb.maxY - bb.minY
-        val posX = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * mc.timer.renderPartialTicks
-        val posY = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * mc.timer.renderPartialTicks
-        val posZ = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * mc.timer.renderPartialTicks
-
-        RenderUtils.drawCircle(posX, posY + height, posZ, radius, jelloAlphaValue, jelloThicknessValue)
-        if (jelloGradientValue) {
-            RenderUtils.drawGradientSidewaysH(posX - radius, posY, posX + radius, posY + height,
-                Color(255, 50, 50, 100).rgb, Color(50, 50, 255, 100).rgb)
         }
     }
 
@@ -1400,4 +1343,3 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 }
 
 data class SwingFailData(val vec3: Vec3, val startTime: Long)
-
