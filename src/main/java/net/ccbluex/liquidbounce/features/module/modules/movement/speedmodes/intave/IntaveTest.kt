@@ -1,9 +1,9 @@
 package net.ccbluex.liquidbounce.features.module.modules.movement.speedmodes.intave
 
 import net.ccbluex.liquidbounce.features.module.modules.movement.speedmodes.SpeedMode
-import net.ccbluex.liquidbounce.ui.utils.extensions.isInLiquid
-import net.ccbluex.liquidbounce.ui.utils.extensions.isMoving
-import net.ccbluex.liquidbounce.ui.utils.extensions.tryJump
+import net.ccbluex.liquidbounce.utils.extensions.isInLiquid
+import net.ccbluex.liquidbounce.utils.extensions.isMoving
+import net.ccbluex.liquidbounce.utils.extensions.tryJump
 import net.minecraft.util.MathHelper
 
 object IntaveTest : SpeedMode("IntaveTest") {
