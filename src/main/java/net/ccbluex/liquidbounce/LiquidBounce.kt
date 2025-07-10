@@ -69,8 +69,8 @@ object LiquidBounce {
      *
      * This has all the basic information.
      */
-    const val CLIENT_NAME = "LiquidBounce"
-    const val CLIENT_AUTHOR = "CCBlueX, thamturin, idlevi29"
+    const val CLIENT_NAME = "RinBounce"
+    const val CLIENT_AUTHOR = "CCBlueX, thamturin, idlevi29, DeletedUser"
     const val CLIENT_CLOUD = "https://cloud.liquidbounce.net/LiquidBounce"
     const val CLIENT_WEBSITE = "liquidbounce.net"
     const val CLIENT_GITHUB = "https://github.com/VuGiaBao1337/rinbounce69/"
@@ -88,7 +88,7 @@ object LiquidBounce {
      */
     const val IN_DEV = false
 
-    val clientTitle = CLIENT_NAME + " RINFORK " + clientVersionText + " " + clientCommit + "  ( dev ) | " + MINECRAFT_VERSION + if (IN_DEV) " | DEVELOPMENT BUILD" else ""
+    val clientTitle = CLIENT_NAME + clientVersionText + "( dev ) | " + MINECRAFT_VERSION + if (IN_DEV) " | DEVELOPMENT BUILD" else ""
 
     var isStarting = true
 

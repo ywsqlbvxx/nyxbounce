@@ -18,12 +18,11 @@ import net.minecraft.network.play.client.C03PacketPlayer
 
 object FastUse : Module("FastUse", Category.PLAYER) {
 
-    private val mode by choices("Mode", arrayOf("Instant", "NCP", "AAC", "Custom"), "NCP")
+    private val mode by choices("Mode", arrayOf("Instant", "NCP", "AAC", "Custom", "3fmc"), "NCP")
 
     private val delay by int("CustomDelay", 0, 0..300) { mode == "Custom" }
     private val customSpeed by int("CustomSpeed", 2, 1..35) { mode == "Custom" }
     private val customTimer by float("CustomTimer", 1.1f, 0.5f..2f) { mode == "Custom" }
-
     private val noMove by boolean("NoMove", false)
 
     private val msTimer = MSTimer()
@@ -47,23 +46,18 @@ object FastUse : Module("FastUse", Category.PLAYER) {
                 repeat(35) {
                     sendPacket(C03PacketPlayer(serverOnGround))
                 }
-
                 mc.playerController.onStoppedUsingItem(thePlayer)
             }
-
             "ncp" -> if (thePlayer.itemInUseDuration > 14) {
                 repeat(20) {
                     sendPacket(C03PacketPlayer(serverOnGround))
                 }
-
                 mc.playerController.onStoppedUsingItem(thePlayer)
             }
-
             "aac" -> {
                 mc.timer.timerSpeed = 1.22F
                 usedTimer = true
             }
-
             "custom" -> {
                 mc.timer.timerSpeed = customTimer
                 usedTimer = true
@@ -74,8 +68,16 @@ object FastUse : Module("FastUse", Category.PLAYER) {
                 repeat(customSpeed) {
                     sendPacket(C03PacketPlayer(serverOnGround))
                 }
-
                 msTimer.reset()
+            }
+            "3fmc" -> {
+                mc.timer.timerSpeed = 0.5F
+                usedTimer = true
+                if ((mc.thePlayer.ticksExisted % 2) == 0) {
+                    repeat(2) {
+                        sendPacket(C03PacketPlayer(serverOnGround))
+                    }
+                }
             }
         }
     }
