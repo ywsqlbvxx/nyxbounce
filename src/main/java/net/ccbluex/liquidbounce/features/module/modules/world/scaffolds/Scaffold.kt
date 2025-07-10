@@ -810,9 +810,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                     // Smart mode adjusts pitch based on edge distance
                     val edgeDistance = player.position.down().getDistanceToEdge(player.horizontalFacing)
                     if (edgeDistance < tellySmartEdgeDistance) {
-                        max // Near edge - use higher pitch for safety
+                        maxPitch 
                     } else {
-                        basePitch + (if (player.isSprinting) 1.5f else 0f) // Safe distance - use normal range
+                        basePitch + (if (player.isSprinting) 1.5f else 0f) 
                     }
                 } else {
                     // Legacy mode uses simpler pitch calculation
