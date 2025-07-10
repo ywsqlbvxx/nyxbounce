@@ -73,7 +73,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // -->
 
     val scaffoldMode by choices(
-        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge"), "Normal"
+        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily", "Dynamic"), "Normal"
     )
     
     // HMCBlinkFly
@@ -115,20 +115,41 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val autoJump by boolean("AutoJump", false)
     private val jumpYWhenUserInput by boolean("JumpYWhenUserInput", false) { sameY }
 
-    // Telly mode sub-values for optimized bridging
-    private val tellyOptimizedMode by choices("TellyOptimizedMode", arrayOf("Smart", "Legacy"), "Smart") { scaffoldMode == "Telly" }
-    private val tellySmartEdgeDistance by float("TellySmartEdgeDistance", 0.3f, 0.1f..0.5f) { scaffoldMode == "Telly" && tellyOptimizedMode == "Smart" }
-    private val tellyPitchMode by choices("TellyPitchMode", arrayOf("Dynamic", "Fixed"), "Dynamic") { scaffoldMode == "Telly" }
-    private val tellyFixedPitch by float("TellyFixedPitch", 82.5f, 75f..85f) { scaffoldMode == "Telly" && tellyPitchMode == "Fixed" }
-    private val tellyDynamicPitchRange by floatRange("TellyDynamicPitchRange", 78f..83f, 70f..90f) { scaffoldMode == "Telly" && tellyPitchMode == "Dynamic" }
-    private val tellyYawOffset by float("TellyYawOffset", 45f, 0f..90f) { scaffoldMode == "Telly" }
-    private val tellyStabilize by boolean("TellyStabilize", true) { scaffoldMode == "Telly" }
-
     private val ticksUntilRotation by intRange("TicksUntilRotation", 3..3, 1..8) {
         scaffoldMode == "Telly"
     }
 
+    // Breezily mode sub-values
+    private val breezilyTiming by floatRange("BreezilyTiming", 0.1f..0.15f, 0.05f..0.3f) { scaffoldMode == "Breezily" }
+    private val breezilyStrafe by float("BreezilyStrafe", 0.2f, 0.1f..0.5f) { scaffoldMode == "Breezily" }
+    private val breezilyStabilize by boolean("BreezilyStabilize", true) { scaffoldMode == "Breezily" }
+    private val breezilyPitch by float("BreezilyPitch", 82.5f, 75f..85f) { scaffoldMode == "Breezily" }
 
+    // Dynamic mode sub-values
+    private val dynamicRandomization by boolean("DynamicRandomization", true) { scaffoldMode == "Dynamic" }
+    private val dynamicSmoothness by floatRange("DynamicSmoothness", 0.8f..1.2f, 0.1f..2.0f) { scaffoldMode == "Dynamic" }
+    private val dynamicAcceleration by float("DynamicAcceleration", 0.3f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
+    private val dynamicDeceleration by float("DynamicDeceleration", 0.7f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
+    private val dynamicPitchAdjust by boolean("DynamicPitchAdjust", true) { scaffoldMode == "Dynamic" }
+    private val dynamicEdgeDistance by float("DynamicEdgeDistance", 0.3f, 0.1f..0.5f) { scaffoldMode == "Dynamic" }
+    private val dynamicVoidCheck by boolean("DynamicVoidCheck", true) { scaffoldMode == "Dynamic" }
+    private val dynamicVoidDistance by int("DynamicVoidDistance", 5, 1..10) { scaffoldMode == "Dynamic" && dynamicVoidCheck }
+
+    // Breezily mode sub-values
+    private val breezilyTiming by floatRange("BreezilyTiming", 0.1f..0.15f, 0.05f..0.3f) { scaffoldMode == "Breezily" }
+    private val breezilyStrafe by float("BreezilyStrafe", 0.2f, 0.1f..0.5f) { scaffoldMode == "Breezily" }
+    private val breezilyStabilize by boolean("BreezilyStabilize", true) { scaffoldMode == "Breezily" }
+    private val breezilyPitch by float("BreezilyPitch", 82.5f, 75f..85f) { scaffoldMode == "Breezily" }
+
+    // Dynamic mode sub-values
+    private val dynamicRandomization by boolean("DynamicRandomization", true) { scaffoldMode == "Dynamic" }
+    private val dynamicSmoothness by floatRange("DynamicSmoothness", 0.8f..1.2f, 0.1f..2.0f) { scaffoldMode == "Dynamic" }
+    private val dynamicAcceleration by float("DynamicAcceleration", 0.3f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
+    private val dynamicDeceleration by float("DynamicDeceleration", 0.7f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
+    private val dynamicPitchAdjust by boolean("DynamicPitchAdjust", true) { scaffoldMode == "Dynamic" }
+    private val dynamicEdgeDistance by float("DynamicEdgeDistance", 0.3f, 0.1f..0.5f) { scaffoldMode == "Dynamic" }
+    private val dynamicVoidCheck by boolean("DynamicVoidCheck", true) { scaffoldMode == "Dynamic" }
+    private val dynamicVoidDistance by int("DynamicVoidDistance", 5, 1..10) { scaffoldMode == "Dynamic" && dynamicVoidCheck }
 
     // GodBridge mode sub-values
     private val waitForRots by boolean("WaitForRotations", false) { isGodBridgeEnabled }
@@ -145,12 +166,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Telly mode sub-values
     private val startHorizontally by boolean("StartHorizontally", true) { scaffoldMode == "Telly" }
-    private val horizontalPlacementsRange by intRange("HorizontalPlacementsRange", 2..3, 1..10) { scaffoldMode == "Telly" }
-    private val verticalPlacementsRange by intRange("VerticalPlacementsRange", 1..2, 1..10) { scaffoldMode == "Telly" }
-    private val tellyRotationMode by choices("TellyRotation", arrayOf("Smooth", "Snap", "Static"), "Smooth") { scaffoldMode == "Telly" }
-    private val tellyRotationSpeed by float("TellyRotationSpeed", 0.6f, 0.1f..1.0f) { scaffoldMode == "Telly" && tellyRotationMode == "Smooth" }
-    private val tellyStaticPitch by float("TellyStaticPitch", 82.5f, 75f..85f) { scaffoldMode == "Telly" && tellyRotationMode == "Static" }
-    private val jumpTicksRange by intRange("JumpTicksRange", 1..2, 0..10) { scaffoldMode == "Telly" }
+    private val horizontalPlacementsRange by intRange("HorizontalPlacementsRange", 1..1, 1..10) { scaffoldMode == "Telly" }
+    private val verticalPlacementsRange by intRange("VerticalPlacementsRange", 1..1, 1..10) { scaffoldMode == "Telly" }
+
+    private val jumpTicksRange by intRange("JumpTicksRange", 0..0, 0..10) { scaffoldMode == "Telly" }
 
     private val allowClutching by boolean("AllowClutching", true) { scaffoldMode !in arrayOf("Telly", "Expand") }
     private val horizontalClutchBlocks by int("HorizontalClutchBlocks", 3, 1..5) {
@@ -318,6 +337,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Extra clicks
     private var extraClick = ExtraClickInfo(TimeUtils.randomClickDelay(extraClickCPS.first, extraClickCPS.last), 0L, 0)
+    
+    // Breezily and Dynamic state tracking
+    private var breezilyRotation: Rotation? = null
+    private var lastBreezilySwitch = 0L
+    private var dynamicRotation: Rotation? = null
+    private var lastDynamicUpdate = 0L
+    private var dynamicSpeed = 0.5f
+    private var dynamicAccelerating = true
+    private var lastDynamicEdgeCheck = 0L
+    private var inDangerZone = false
 
     // GodBridge
     private var blocksPlacedUntilJump = 0
@@ -329,7 +358,36 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     private val isGodBridgeEnabled
         get() = scaffoldMode == "GodBridge" || scaffoldMode == "Normal" && options.rotationMode == "GodBridge"
+
+    private val isBreezilyEnabled
+        get() = scaffoldMode == "Breezily"
         
+    private val isDynamicEnabled
+        get() = scaffoldMode == "Dynamic"
+        
+    private fun checkVoidDanger(): Boolean {
+        if (!dynamicVoidCheck) return false
+        val player = mc.thePlayer ?: return false
+        val world = mc.theWorld ?: return false
+        
+        // Check blocks below in the movement direction
+        val yaw = player.rotationYaw
+        val x = -sin(yaw.toRadians()).toDouble()
+        val z = cos(yaw.toRadians()).toDouble()
+        
+        var dangerBlocks = 0
+        for (i in 1..dynamicVoidDistance) {
+            val checkPos = BlockPos(
+                player.posX + x * i,
+                player.posY - 1,
+                player.posZ + z * i
+            )
+            if (world.isAirBlock(checkPos)) dangerBlocks++
+            if (dangerBlocks > 2) return true
+        }
+        return false
+    }
+    
     private fun checkRotationSafety(rotation: Rotation): Boolean {
         val player = mc.thePlayer ?: return false
         val world = mc.theWorld ?: return false
@@ -343,7 +401,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         )
         
         val raytrace = world.rayTraceBlocks(eyePos, reachVec, false, true, false)
-        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK
+        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK // MovingObjectType.BLOCK represents hitting a block
     }
 
     private fun smoothRotation(from: Rotation, to: Rotation, speed: Float): Rotation {
@@ -356,7 +414,81 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         ).fixedSensitivity()
     }
 
+    private fun calculateDynamicRotation(current: Rotation): Rotation {
+        val player = mc.thePlayer ?: return current
+        val currentTime = System.currentTimeMillis()
+        
+        // Update acceleration/deceleration
+        if (currentTime - lastDynamicUpdate > 50) {
+            if (dynamicAccelerating) {
+                dynamicSpeed += dynamicAcceleration * (dynamicSmoothness.random() * 0.1f)
+                if (dynamicSpeed > 1f) {
+                    dynamicSpeed = 1f
+                    dynamicAccelerating = false
+                }
+            } else {
+                dynamicSpeed -= dynamicDeceleration * (dynamicSmoothness.random() * 0.1f)
+                if (dynamicSpeed < 0.1f) {
+                    dynamicSpeed = 0.1f
+                    dynamicAccelerating = true
+                }
+            }
+            lastDynamicUpdate = currentTime
+        }
+        
+        // Add randomization
+        val baseSpeed = dynamicSpeed * (if (dynamicRandomization) (0.9f..1.1f).random() else 1f)
+        
+        // Calculate target rotation
+        val moveDir = player.movementInput.moveForward
+        val targetYaw = when {
+            moveDir > 0 -> MovementUtils.direction.toDegreesF()
+            moveDir < 0 -> MovementUtils.direction.toDegreesF() + 180f
+            else -> current.yaw
+        }
+        
+        // Adjust for void checking
+        if (currentTime - lastDynamicEdgeCheck > 100) {
+            inDangerZone = checkVoidDanger()
+            lastDynamicEdgeCheck = currentTime
+        }
+        
+        // Calculate pitch based on conditions
+        val targetPitch = when {
+            inDangerZone -> 82.5f
+            dynamicPitchAdjust -> (78f..83f).random()
+            else -> 79.5f
+        }
+        
+        val newRotation = Rotation(
+            MathHelper.wrapAngleTo180_float(targetYaw + ((-2f..2f).random() * baseSpeed)),
+            targetPitch + ((-1f..1f).random() * baseSpeed)
+        ).fixedSensitivity()
+        
+        if (!checkRotationSafety(newRotation)) {
+            return current 
+        }
+
+        val smoothSpeed = when {
+            inDangerZone -> 0.6f 
+            player.onGround -> 0.3f 
+            else -> 0.4f 
+        }
+
+        return smoothRotation(current, newRotation, smoothSpeed)
+    }
+
     private var godBridgeTargetRotation: Rotation? = null
+    private var breezilyRotation: Rotation? = null
+    private var lastBreezilySwitch: Long = 0
+    
+    // Dynamic mode tracking
+    private var dynamicRotation: Rotation? = null
+    private var lastDynamicUpdate = 0L
+    private var dynamicSpeed = 0f
+    private var dynamicAccelerating = true
+    private var lastDynamicEdgeCheck = 0L
+    private var inDangerZone = false
 
     private val isLookingDiagonally: Boolean
         get() {
@@ -401,6 +533,75 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         if (mc.playerController.currentGameType == WorldSettings.GameType.SPECTATOR) return@loopSequence
 
         mc.timer.timerSpeed = timer
+
+        // Update Breezily mode
+        if (scaffoldMode == "Breezily" && player.onGround) {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastBreezilySwitch > (breezilyTiming.random() * 1000)) {
+                val baseYaw = MovementUtils.direction.toDegreesF()
+                val side = if ((currentTime / 200) % 2 == 0L) breezilyStrafe else -breezilyStrafe
+                
+                breezilyRotation = Rotation(
+                    baseYaw + side,
+                    breezilyPitch
+                ).fixedSensitivity()
+                
+                if (breezilyStabilize) {
+                    player.motionX *= 0.7
+                    player.motionZ *= 0.7
+                }
+
+                lastBreezilySwitch = currentTime
+            }
+        }
+
+        // Update Dynamic mode
+        if (scaffoldMode == "Dynamic" && player.onGround) {
+            val currentTime = System.currentTimeMillis()
+            
+            // Update acceleration/deceleration
+            if (currentTime - lastDynamicUpdate > 50) {
+                if (dynamicAccelerating) {
+                    dynamicSpeed += dynamicAcceleration * (dynamicSmoothness.random() * 0.1f)
+                    if (dynamicSpeed > 1f) {
+                        dynamicSpeed = 1f
+                        dynamicAccelerating = false
+                    }
+                } else {
+                    dynamicSpeed -= dynamicDeceleration * (dynamicSmoothness.random() * 0.1f)
+                    if (dynamicSpeed < 0.1f) {
+                        dynamicSpeed = 0.1f
+                        dynamicAccelerating = true
+                    }
+                }
+                lastDynamicUpdate = currentTime
+            }
+            
+            // Update void check
+            if (currentTime - lastDynamicEdgeCheck > 100) {
+                inDangerZone = checkVoidDanger()
+                lastDynamicEdgeCheck = currentTime
+            }
+        }
+
+        // Breezily mode logic
+        if (isBreezilyEnabled && player.onGround) {
+            // Switch rotations based on timing
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastBreezilySwitch > (breezilyTiming.random() * 1000)) {
+                val baseYaw = MovementUtils.direction.toDegreesF()
+                val side = if ((currentTime / 100) % 2 == 0L) breezilyStrafe else -breezilyStrafe
+                val rotation = Rotation(baseYaw + side, breezilyPitch).fixedSensitivity()
+                
+                if (breezilyStabilize) {
+                    player.motionX *= 0.7
+                    player.motionZ *= 0.7
+                }
+
+                breezilyRotation = rotation
+                lastBreezilySwitch = currentTime
+            }
+        }
 
         // Telly
         if (player.onGround) ticksUntilJump++
@@ -667,6 +868,30 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             return@handler
         }
 
+        if (scaffoldMode == "Breezily" && options.rotationsActive) {
+            breezilyRotation?.let { setRotation(it, ticks) }
+            return@handler
+        }
+        
+        if (scaffoldMode == "Dynamic" && options.rotationsActive) {
+            val currentRot = currRotation
+            dynamicRotation = calculateDynamicRotation(currentRot)
+            dynamicRotation?.let { setRotation(it, ticks) }
+            return@handler
+        }
+
+        if (isBreezilyEnabled && options.rotationsActive) {
+            breezilyRotation?.let { setRotation(it, ticks) }
+            return@handler
+        }
+        
+        if (isDynamicEnabled && options.rotationsActive) {
+            val current = RotationUtils.currentRotation ?: mc.thePlayer.rotation
+            dynamicRotation = calculateDynamicRotation(current)
+            dynamicRotation?.let { setRotation(it, ticks) }
+            return@handler
+        }
+
         if (options.rotationsActive && rotation != null) {
             val placeRotation = this.placeRotation?.rotation ?: rotation
 
@@ -774,78 +999,13 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         findBlock(scaffoldMode == "Expand" && expandLength > 1, searchMode == "Area")
     }
 
-    private fun calculateTellyRotation(current: Rotation): Rotation {
-        val player = mc.thePlayer ?: return current
-        
-        if (!player.isMoving) return current
-
-        val moveDir = player.movementInput.moveForward
-        val baseYaw = when {
-            moveDir > 0 -> MovementUtils.direction.toDegreesF()
-            moveDir < 0 -> MovementUtils.direction.toDegreesF() + 180f
-            else -> current.yaw
-        }
-
-        // Calculate yaw with optimized offset
-        val targetYaw = if (player.onGround) {
-            baseYaw + (if (horizontalPlacements % 2 == 0) tellyYawOffset else -tellyYawOffset)
-        } else baseYaw
-
-        // Calculate optimal pitch based on mode and conditions
-        val targetPitch = when {
-            !player.onGround -> {
-                // Adjust pitch based on fall distance for better landing
-                MathHelper.clamp_float(78f + player.fallDistance * 0.7f, 76f, 85f)
-            }
-            tellyPitchMode == "Fixed" -> {
-                tellyFixedPitch
-            }
-            else -> {
-                // Dynamic pitch adjustments            // Extract min and max from FloatRange explicitly
-            val minPitch = tellyDynamicPitchRange.start
-            val maxPitch = tellyDynamicPitchRange.endInclusive
-            val basePitch = (minPitch + maxPitch) / 2f
-
-                if (tellyOptimizedMode == "Smart") {
-                    // Smart mode adjusts pitch based on edge distance
-                    val edgeDistance = player.position.down().getDistanceToEdge(player.horizontalFacing)
-                    if (edgeDistance < tellySmartEdgeDistance) {
-                        maxPitch 
-                    } else {
-                        basePitch + (if (player.isSprinting) 1.5f else 0f) 
-                    }
-                } else {
-                    // Legacy mode uses simpler pitch calculation
-                    basePitch + (if (player.isSprinting) 1.5f else 0f)
-                }
-            }
-        }
-
-        return Rotation(targetYaw, targetPitch).fixedSensitivity()
-    }
-
     private fun setRotation(rotation: Rotation, ticks: Int) {
         val player = mc.thePlayer ?: return
 
         if (scaffoldMode == "Telly" && player.isMoving) {
-            // Calculate optimized telly rotation
-            val tellyRotation = calculateTellyRotation(currRotation)
-            
-            // Check if we should rotate yet based on jump timing
             if (player.airTicks < ticksUntilRotation.random() && ticksUntilJump >= jumpTicks) {
                 return
             }
-
-            // Apply stabilization if enabled
-            val finalRotation = if (tellyStabilize) {
-                // Smooth out rotations while maintaining optimal angles
-                smoothRotation(currRotation, tellyRotation, 0.6f)
-            } else {
-                tellyRotation
-            }
-            
-            setTargetRotation(finalRotation, options, ticks)
-            return
         }
 
         setTargetRotation(rotation, options, ticks)
@@ -891,25 +1051,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             return
         }
 
-        val horizontalValue = if (scaffoldMode == "Telly") {
-            5
+        val (horizontal, vertical) = if (scaffoldMode == "Telly") {
+            5 to 3
         } else if (allowClutching) {
-            horizontalClutchBlocks
+            horizontalClutchBlocks to verticalClutchBlocks
         } else {
-            1
-        }
-
-        val verticalValue = if (scaffoldMode == "Telly") {
-            3
-        } else if (allowClutching) {
-            verticalClutchBlocks
-        } else {
-            1
+            1 to 1
         }
 
         BlockPos.getAllInBox(
-            blockPosition.add(-horizontalValue, 0, -horizontalValue), 
-            blockPosition.add(horizontalValue, -verticalValue, horizontalValue)
+            blockPosition.add(-horizontal, 0, -horizontal), blockPosition.add(horizontal, -vertical, horizontal)
         ).sortedBy {
             BlockUtils.getCenterDistance(it)
         }.forEach {
@@ -1065,13 +1216,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     val jumpHandler = handler<JumpEvent> { event ->
         if (!jumpStrafe) return@handler
 
-        if (event.eventState == EventState.POST) {                // Convert FloatRange to Float before passing to strafe
-                val strafeValue = if (!isLookingDiagonally) {
-                    jumpStraightStrafe.random()
-                } else {
-                    jumpDiagonalStrafe.random()
-                }
-                MovementUtils.strafe(strafeValue)
+        if (event.eventState == EventState.POST) {
+            MovementUtils.strafe(
+                (if (!isLookingDiagonally) jumpStraightStrafe else jumpDiagonalStrafe).random()
+            )
         }
     }
 
@@ -1541,19 +1689,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         setRotation(rotation, ticks)
     }
     
-    private fun BlockPos.getDistanceToEdge(facing: EnumFacing): Double {
-        val world = mc.theWorld ?: return 0.0
-        var distance = 0.0
-        var pos = this
-        
-        while (!world.isAirBlock(pos) && distance < 5.0) {
-            pos = pos.offset(facing)
-            distance += 1.0
-        }
-        
-        return distance
-    }
-
     private fun isServerPacket(packet: Any): Boolean {
         return packet.javaClass.simpleName.startsWith("S")
     }

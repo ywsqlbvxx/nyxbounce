@@ -51,7 +51,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val mode by choices(
         "Mode", arrayOf(
             "Simple", "AAC", "AACPush", "AACZero", "AACv4",
-            "Reverse", "SmoothReverse", "Jump", "Glitch", "Legit",
+            "Reverse", "SmoothReverse", "JumpReset", "Glitch", "Legit",
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce",
             "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
             "Click", "BlocksMC", "3FMC", "3FMC2", 
@@ -85,19 +85,19 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val legitDisableInAir by boolean("DisableInAir", true) { mode == "Legit" }
 
     // Chance
-    private val chance by int("Chance", 100, 0..100) { mode == "Jump" || mode == "Legit" }
+    private val chance by int("Chance", 100, 0..100) { mode == "JumpReset" || mode == "Legit" }
     //3fmc
     private val enableDelayCancel by boolean("EnableDelayCancel", true) { mode == "3FMC" }
     private val delayCancel by int("DelayCancel", 500, 200..2000) { mode == "3FMC" && enableDelayCancel }
     private val debug3FMC by boolean("Debug3FMC", false) { mode == "3FMC" }
     
-    // Jump
+    // JumpReset
     private val jumpCooldownMode by choices("JumpCooldownMode", arrayOf("Ticks", "ReceivedHits"), "Ticks")
-    { mode == "Jump" }
+    { mode == "JumpReset" }
     private val ticksUntilJump by int("TicksUntilJump", 4, 0..20)
-    { jumpCooldownMode == "Ticks" && mode == "Jump" }
+    { jumpCooldownMode == "Ticks" && mode == "JumpReset" }
     private val hitsUntilJump by int("ReceivedHitsUntilJump", 2, 0..5)
-    { jumpCooldownMode == "ReceivedHits" && mode == "Jump" }
+    { jumpCooldownMode == "ReceivedHits" && mode == "JumpReset" }
 
     // Ghost Block
     private val hurtTimeRange by intRange("HurtTime", 1..9, 1..10) {
@@ -533,7 +533,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
                 "aac", "reverse", "smoothreverse", "aaczero", "ghostblock", "intavereduce" -> hasReceivedVelocity = true
 
-                "jump" -> {
+                "jumpreset" -> {
                     // TODO: Recode and make all velocity modes support velocity direction checks
                     var packetDirection = 0.0
                     when (packet) {
@@ -849,10 +849,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     val onStrafe = handler<StrafeEvent> {
         val player = mc.thePlayer ?: return@handler
 
-        if (mode == "Jump" && hasReceivedVelocity) {
+        if (mode == "jumpreset" && hasReceivedVelocity) {
             if (!player.isJumping && nextInt(endExclusive = 100) < chance && shouldJump() && player.isSprinting && player.onGround && player.hurtTime == 9) {
                 player.tryJump()
                 limitUntilJump = 0
+                player.motionX = 0.0
+                player.motionZ = 0.0
             }
             hasReceivedVelocity = false
             return@handler
