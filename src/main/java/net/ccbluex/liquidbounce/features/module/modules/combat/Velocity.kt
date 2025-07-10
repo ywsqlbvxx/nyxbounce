@@ -55,7 +55,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce", 
             "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
             "Click", "BlocksMC", "3FMC", "3FMC2", "GrimReduce", "Intave",
-            "IntaveA", "Polar"
+            "IntaveTest"
         ), "Simple"
     )
 
@@ -146,9 +146,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val maxXZMotion by float("MaxXZMotion", 0.4f, 0f..1.9f) { limitMaxMotionValue.isActive() }
     private val maxYMotion by float("MaxYMotion", 0.36f, 0f..0.46f) { limitMaxMotionValue.isActive() }
     //0.00075 is added silently
-
-    // Random timing values for Polar mode
-    private var polarHurtTime = Random.nextInt(8, 10)
 
     // Vanilla XZ limits
     // Non-KB: 0.4 (no sprint), 0.9 (sprint)
@@ -244,7 +241,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 }
             }
             
-            "intavea" -> {
+            "intavetest" -> {
                 if (hasReceivedVelocity) {
                     intaveTick++
                     if (thePlayer.hurtTime == 2) {
@@ -261,12 +258,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 }
             }
             
-            "polar" -> {
-                if (thePlayer.hurtTime == polarHurtTime) {
-                    thePlayer.jump()
-                    polarHurtTime = nextInt(8, 10)
-                }
-            }
             "glitch" -> {
                 thePlayer.noClip = hasReceivedVelocity
 
