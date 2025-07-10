@@ -115,6 +115,15 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val autoJump by boolean("AutoJump", false)
     private val jumpYWhenUserInput by boolean("JumpYWhenUserInput", false) { sameY }
 
+    // Telly mode sub-values for optimized bridging
+    private val tellyOptimizedMode by choices("TellyOptimizedMode", arrayOf("Smart", "Legacy"), "Smart") { scaffoldMode == "Telly" }
+    private val tellySmartEdgeDistance by float("TellySmartEdgeDistance", 0.3f, 0.1f..0.5f) { scaffoldMode == "Telly" && tellyOptimizedMode == "Smart" }
+    private val tellyPitchMode by choices("TellyPitchMode", arrayOf("Dynamic", "Fixed"), "Dynamic") { scaffoldMode == "Telly" }
+    private val tellyFixedPitch by float("TellyFixedPitch", 82.5f, 75f..85f) { scaffoldMode == "Telly" && tellyPitchMode == "Fixed" }
+    private val tellyDynamicPitchRange by floatRange("TellyDynamicPitchRange", 78f..83f, 70f..90f) { scaffoldMode == "Telly" && tellyPitchMode == "Dynamic" }
+    private val tellyYawOffset by float("TellyYawOffset", 45f, 0f..90f) { scaffoldMode == "Telly" }
+    private val tellyStabilize by boolean("TellyStabilize", true) { scaffoldMode == "Telly" }
+
     private val ticksUntilRotation by intRange("TicksUntilRotation", 3..3, 1..8) {
         scaffoldMode == "Telly"
     }
@@ -320,12 +329,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     private val isGodBridgeEnabled
         get() = scaffoldMode == "GodBridge" || scaffoldMode == "Normal" && options.rotationMode == "GodBridge"
-
-    private val isBreezilyEnabled
-        get() = scaffoldMode == "Breezily"
-        
-    private val isDynamicEnabled
-        get() = scaffoldMode == "Dynamic"
         
     private fun checkVoidDanger(): Boolean {
         if (!dynamicVoidCheck) return false
@@ -441,16 +444,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     }
 
     private var godBridgeTargetRotation: Rotation? = null
-    private var breezilyRotation: Rotation? = null
-    private var lastBreezilySwitch: Long = 0
-    
-    // Dynamic mode tracking
-    private var dynamicRotation: Rotation? = null
-    private var lastDynamicUpdate = 0L
-    private var dynamicSpeed = 0f
-    private var dynamicAccelerating = true
-    private var lastDynamicEdgeCheck = 0L
-    private var inDangerZone = false
 
     private val isLookingDiagonally: Boolean
         get() {
@@ -780,18 +773,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             return@handler
         }
 
-        if (isBreezilyEnabled && options.rotationsActive) {
-            breezilyRotation?.let { setRotation(it, ticks) }
-            return@handler
-        }
-        
-        if (isDynamicEnabled && options.rotationsActive) {
-            val current = RotationUtils.currentRotation ?: mc.thePlayer.rotation
-            dynamicRotation = calculateDynamicRotation(current)
-            dynamicRotation?.let { setRotation(it, ticks) }
-            return@handler
-        }
-
         if (options.rotationsActive && rotation != null) {
             val placeRotation = this.placeRotation?.rotation ?: rotation
 
@@ -903,7 +884,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         val player = mc.thePlayer ?: return current
         
         if (!player.isMoving) return current
-        
+
         val moveDir = player.movementInput.moveForward
         val baseYaw = when {
             moveDir > 0 -> MovementUtils.direction.toDegreesF()
@@ -911,49 +892,41 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             else -> current.yaw
         }
 
-        // Calculate optimal rotation based on mode
-        return when (tellyRotationMode) {
-            "Smooth" -> {
-                // Smooth interpolation between current and target rotation
-                val targetYaw = if (player.onGround) {
-                    baseYaw + (if (horizontalPlacements % 2 == 0) 45f else -45f)
-                } else {
-                    baseYaw
-                }
-                
-                val targetPitch = if (player.onGround) {
-                    81f + (if (player.isSprinting) 1.5f else 0f)
-                } else {
-                    78f + player.fallDistance * 0.7f
-                }
+        // Calculate yaw with optimized offset
+        val targetYaw = if (player.onGround) {
+            baseYaw + (if (horizontalPlacements % 2 == 0) tellyYawOffset else -tellyYawOffset)
+        } else baseYaw
 
-                smoothRotation(current, Rotation(targetYaw, targetPitch), tellyRotationSpeed)
+        // Calculate optimal pitch based on mode and conditions
+        val targetPitch = when {
+            !player.onGround -> {
+                // Adjust pitch based on fall distance for better landing
+                MathHelper.clamp_float(78f + player.fallDistance * 0.7f, 76f, 85f)
             }
-            "Snap" -> {
-                // Instantly snap to target angles
-                val targetYaw = baseYaw + (if (player.onGround) {
-                    if (horizontalPlacements % 2 == 0) 45f else -45f
-                } else 0f)
-                
-                val targetPitch = if (player.onGround) {
-                    82.5f
-                } else {
-                    77f + player.fallDistance * 0.8f
-                }
+            tellyPitchMode == "Fixed" -> {
+                tellyFixedPitch
+            }
+            else -> {
+                // Dynamic pitch adjustments
+                val (min, max) = tellyDynamicPitchRange
+                val basePitch = (min + max) / 2
 
-                Rotation(targetYaw, targetPitch)
-            }
-            "Static" -> {
-                // Keep static pitch but adjust yaw
-                val targetYaw = if (player.onGround) {
-                    baseYaw + (if (horizontalPlacements % 2 == 0) 45f else -45f) 
+                if (tellyOptimizedMode == "Smart") {
+                    // Smart mode adjusts pitch based on edge distance
+                    val edgeDistance = player.position.down().getDistanceToEdge(player.horizontalFacing)
+                    if (edgeDistance < tellySmartEdgeDistance) {
+                        max // Near edge - use higher pitch for safety
+                    } else {
+                        basePitch + (if (player.isSprinting) 1.5f else 0f) // Safe distance - use normal range
+                    }
                 } else {
-                    baseYaw
+                    // Legacy mode uses simpler pitch calculation
+                    basePitch + (if (player.isSprinting) 1.5f else 0f)
                 }
-                Rotation(targetYaw, tellyStaticPitch)
             }
-            else -> current
-        }.fixedSensitivity()
+        }
+
+        return Rotation(targetYaw, targetPitch).fixedSensitivity()
     }
 
     private fun setRotation(rotation: Rotation, ticks: Int) {
@@ -967,8 +940,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             if (player.airTicks < ticksUntilRotation.random() && ticksUntilJump >= jumpTicks) {
                 return
             }
+
+            // Apply stabilization if enabled
+            val finalRotation = if (tellyStabilize) {
+                // Smooth out rotations while maintaining optimal angles
+                smoothRotation(currRotation, tellyRotation, 0.6f)
+            } else {
+                tellyRotation
+            }
             
-            setTargetRotation(tellyRotation, options, ticks)
+            setTargetRotation(finalRotation, options, ticks)
             return
         }
 
@@ -1653,6 +1634,19 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         setRotation(rotation, ticks)
     }
     
+    private fun BlockPos.getDistanceToEdge(facing: EnumFacing): Double {
+        val world = mc.theWorld ?: return 0.0
+        var distance = 0.0
+        var pos = this
+        
+        while (!world.isAirBlock(pos) && distance < 5.0) {
+            pos = pos.offset(facing)
+            distance += 1.0
+        }
+        
+        return distance
+    }
+
     private fun isServerPacket(packet: Any): Boolean {
         return packet.javaClass.simpleName.startsWith("S")
     }
