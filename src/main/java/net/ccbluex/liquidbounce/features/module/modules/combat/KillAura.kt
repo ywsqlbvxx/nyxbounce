@@ -288,12 +288,19 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         "NoConsumeAttack", arrayOf("Off", "NoHits", "NoRotation"), "Off"
     ).subjective()
 
-    // Visuals
-    private val mark by choices("Mark", arrayOf("None", "Platform", "Box", "Circle"), "Circle").subjective()
-    private val fakeSharp by boolean("FakeSharp", true).subjective()
-    private val renderAimPointBox by boolean("RenderAimPointBox", false).subjective()
-    private val aimPointBoxColor by color("AimPointBoxColor", Color.CYAN) { renderAimPointBox }.subjective()
-    private val aimPointBoxSize by float("AimPointBoxSize", 0.1f, 0f..0.2F) { renderAimPointBox }.subjective()
+    // Visuals 
+    private val mark by choices("Mark", arrayOf("None", "Platform", "Box"), "Platform", subjective = true)
+    private val boxOutline by boolean("Outline", true, subjective = true) { mark == "Box" }
+    private val fakeSharp by boolean("FakeSharp", true, subjective = true)
+    private val renderMode by choices("RenderEffect", arrayOf("Capsule", "Nursultan"), "Capsule")
+    private val fadeSpeed = float("FadeSpeed", 0.1f, 0.01f..0.2f) { renderMode == "Capsule" }
+    private val circle by boolean("Circle", false)
+    private val circleAccuracy by int("Accuracy", 59, 0..59) { circle }
+    private val circleThickness by float("Thickness", 2f, 0f..20f) { circle }
+    private val circleRed by int("Red", 255, 0..255) { circle }
+    private val circleGreen by int("Green", 255, 0..255) { circle }
+    private val circleBlue by int("Blue", 255, 0..255) { circle }
+    private val circleAlpha by int("Alpha", 255, 0..255) { circle }
 
     // Circle options
     private val circleStartColor by color("CircleStartColor", Color.BLUE) { mark == "Circle" }.subjective()
@@ -313,27 +320,52 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val boxOutline by boolean("Outline", true) { mark == "Box" }.subjective()
 
     /**
-     * MODULE
+     * MODULE STATE
      */
-
     // Target
     var target: EntityLivingBase? = null
     private var hittable = false
     private val prevTargetEntities = mutableListOf<Int>()
 
-    // Attack delay
+    // Attack
     private val attackTimer = MSTimer()
     private var attackDelay = 0
     private var clicks = 0
     private var attackTickTimes = mutableListOf<Pair<MovingObjectPosition, Int>>()
+    var attack = 0 // Used by BlocksMC modes
+
+    // AutoBlock
+    var renderBlocking = false
+    var blockStatus = false
+    var slotChangeAutoBlock = false
+
+    // AutoBlock (BlocksMC modes)
+    private var blocksmcJohnState = false
+    private var blocksmcClickCounter = 0
+    private var asw = 0 // BlocksMC_A state
+    private var blockTickB = 0 // BlocksMC_B state
+    private var blockTick: Int = 0 // Also for BlocksMC_A
+
+    // AutoBlock (HypixelFull mode)
+    private var hypixelBlinking = false
+
+    // AutoBlock (Blink mode)
+    var blinking: Boolean = false
+    val blinkedPackets: ArrayList<Packet<*>?> = ArrayList()
+    private var blinked = false
+
+    // Switch Delay
+    private val switchTimer = MSTimer()
 
     // Container Delay
     private var containerOpen = -1L
 
-    // Block status
-    var renderBlocking = false
-    var blockStatus = false
-    private var blockStopInDead = false
+    // Visuals
+    private val swingFails = mutableListOf<SwingFailData>()
+    private var lastHealth = 0f
+    private var currentRed = 255
+    private var currentGreen = 255
+    private var currentBlue = 255
 
     // Switch Delay
     private val switchTimer = MSTimer()
@@ -537,53 +569,81 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     /**
      * Render event
      */
-    val onRender3D = handler<Render3DEvent> {
-        handleFailedSwings()
-
-        drawAimPointBox()
-
+    @EventTarget
+    fun onRender3D(event: Render3DEvent) {
         if (cancelRun) {
             target = null
             hittable = false
-            return@handler
+            return
         }
+
+        val currentTarget = target
+
+        if (renderMode == "Capsule" && currentTarget != null) {
+            val color = Color(currentRed, currentGreen, currentBlue, 255)
+            drawTargetCapsule(currentTarget, 0.5, true, color)
+        } else if(renderMode == "Nursultan" && currentTarget != null) {
+            drawTextureOnEntity(-24, -24, 48, 48, 48F, 48F, currentTarget, ResourceLocation("liquidbounce/target.png"), true, Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE)
+        }
+
+        if (circle) {
+            drawRangeCircle()
+        }
+
+        handleFailedSwings()
 
         if (noInventoryAttack && (mc.currentScreen is GuiContainer || System.currentTimeMillis() - containerOpen < noInventoryDelay)) {
             target = null
             hittable = false
             if (mc.currentScreen is GuiContainer) containerOpen = System.currentTimeMillis()
-            return@handler
+            return
         }
 
-        target ?: return@handler
+        if (currentTarget == null) return
 
         if (attackTimer.hasTimePassed(attackDelay)) {
-            if (cps.last > 0) clicks++
+            if (maxCPS > 0) clicks++
             attackTimer.reset()
-
-            attackDelay = randomClickDelay(cps.first, cps.last)
+            attackDelay = randomClickDelay(minCPS, maxCPS)
         }
-
-        val hittableColor = if (hittable) Color(37, 126, 255, 70) else Color(255, 0, 0, 70)
 
         if (targetMode != "Multi") {
+            val color = if (hittable) Color(37, 126, 255, 70) else Color(255, 0, 0, 70)
             when (mark.lowercase()) {
-                "none" -> return@handler
-                "platform" -> drawPlatform(target!!, hittableColor)
-                "box" -> drawEntityBox(target!!, hittableColor, boxOutline)
-                "circle" -> drawCircle(
-                    target!!,
-                    duration * 1000F,
-                    heightRange.takeIf { animateHeight } ?: heightRange.endInclusive..heightRange.endInclusive,
-                    extraWidth,
-                    fillInnerCircle,
-                    withHeight,
-                    circleYRange.takeIf { animateCircleY },
-                    circleStartColor.rgb,
-                    circleEndColor.rgb
-                )
+                "platform" -> drawPlatform(currentTarget, color)
+                "box" -> drawEntityBox(currentTarget, color, boxOutline)
             }
         }
+    }
+
+    private fun drawRangeCircle() {
+        GL11.glPushMatrix()
+        GL11.glTranslated(
+            mc.thePlayer.lastTickPosX + (mc.thePlayer.posX - mc.thePlayer.lastTickPosX) * mc.timer.renderPartialTicks - mc.renderManager.renderPosX,
+            mc.thePlayer.lastTickPosY + (mc.thePlayer.posY - mc.thePlayer.lastTickPosY) * mc.timer.renderPartialTicks - mc.renderManager.renderPosY,
+            mc.thePlayer.lastTickPosZ + (mc.thePlayer.posZ - mc.thePlayer.lastTickPosZ) * mc.timer.renderPartialTicks - mc.renderManager.renderPosZ
+        )
+        GL11.glEnable(GL11.GL_BLEND)
+        GL11.glEnable(GL11.GL_LINE_SMOOTH)
+        GL11.glDisable(GL11.GL_TEXTURE_2D)
+        GL11.glDisable(GL11.GL_DEPTH_TEST)
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA)
+
+        GL11.glLineWidth(circleThickness)
+        GL11.glColor4f(circleRed / 255.0F, circleGreen / 255.0F, circleBlue / 255.0F, circleAlpha / 255.0F)
+        GL11.glRotatef(90F, 1F, 0F, 0F)
+        GL11.glBegin(GL11.GL_LINE_STRIP)
+
+        for (i in 0..360 step (60 - circleAccuracy).coerceAtLeast(1)) {
+            GL11.glVertex2f(cos(i * PI / 180.0).toFloat() * range, sin(i * PI / 180.0).toFloat() * range)
+        }
+
+        GL11.glEnd()
+        GL11.glEnable(GL11.GL_TEXTURE_2D)
+        GL11.glEnable(GL11.GL_DEPTH_TEST)
+        GL11.glDisable(GL11.GL_BLEND)
+        GL11.glDisable(GL11.GL_LINE_SMOOTH)
+        GL11.glPopMatrix()
     }
 
     /**

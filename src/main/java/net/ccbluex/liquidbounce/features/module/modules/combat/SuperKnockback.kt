@@ -30,7 +30,10 @@ object SuperKnockback : Module("SuperKnockback", Category.COMBAT) {
 
     private val mode by choices(
         "Mode",
-        arrayOf("WTap", "SprintTap", "SprintTap2", "Old", "Silent", "Packet", "SneakPacket"),
+        arrayOf(
+            "WTap", "SprintTap", "SprintTap2", "Old", "Silent", "Packet", "SneakPacket",
+            "Legit Fast", "Legit Test"
+        ),
         "Old"
     )
 
@@ -106,13 +109,13 @@ object SuperKnockback : Module("SuperKnockback", Category.COMBAT) {
         // Is the entity's distance based on motion farther than the normal distance?
         if (onlyWhenTargetGoesBack && distanceBasedOnMotion >= player.getDistanceToEntityBox(target)) return@handler
 
+
         when (mode) {
             "Old" -> {
                 // Users reported that this mode is better than the other ones
                 if (player.isSprinting) {
                     sendPacket(C0BPacketEntityAction(player, STOP_SPRINTING))
                 }
-
                 sendPackets(
                     C0BPacketEntityAction(player, START_SPRINTING),
                     C0BPacketEntityAction(player, STOP_SPRINTING),
@@ -176,6 +179,17 @@ object SuperKnockback : Module("SuperKnockback", Category.COMBAT) {
                     player.serverSprintState = false
 
                     sprintTicks = 0
+                }
+            }
+
+            "Legit Fast", "Legit Test" -> {
+                // "Legit Fast"/"Legit Test" mode: set sprintingTicksLeft to 0 (if available)
+                try {
+                    val sprintingTicksLeftField = player.javaClass.getDeclaredField("sprintingTicksLeft")
+                    sprintingTicksLeftField.isAccessible = true
+                    sprintingTicksLeftField.setInt(player, 0)
+                } catch (e: Exception) {
+                    // Field not found or not accessible, ignore
                 }
             }
         }
