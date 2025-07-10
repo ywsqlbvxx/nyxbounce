@@ -73,7 +73,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // -->
 
     val scaffoldMode by choices(
-        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily", "Dynamic"), "Normal"
+        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge"), "Normal"
     )
     
     // HMCBlinkFly
@@ -119,21 +119,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         scaffoldMode == "Telly"
     }
 
-    // Breezily mode sub-values
-    private val breezilyTiming by floatRange("BreezilyTiming", 0.1f..0.15f, 0.05f..0.3f) { scaffoldMode == "Breezily" }
-    private val breezilyStrafe by float("BreezilyStrafe", 0.2f, 0.1f..0.5f) { scaffoldMode == "Breezily" }
-    private val breezilyStabilize by boolean("BreezilyStabilize", true) { scaffoldMode == "Breezily" }
-    private val breezilyPitch by float("BreezilyPitch", 82.5f, 75f..85f) { scaffoldMode == "Breezily" }
 
-    // Dynamic mode sub-values
-    private val dynamicRandomization by boolean("DynamicRandomization", true) { scaffoldMode == "Dynamic" }
-    private val dynamicSmoothness by floatRange("DynamicSmoothness", 0.8f..1.2f, 0.1f..2.0f) { scaffoldMode == "Dynamic" }
-    private val dynamicAcceleration by float("DynamicAcceleration", 0.3f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
-    private val dynamicDeceleration by float("DynamicDeceleration", 0.7f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
-    private val dynamicPitchAdjust by boolean("DynamicPitchAdjust", true) { scaffoldMode == "Dynamic" }
-    private val dynamicEdgeDistance by float("DynamicEdgeDistance", 0.3f, 0.1f..0.5f) { scaffoldMode == "Dynamic" }
-    private val dynamicVoidCheck by boolean("DynamicVoidCheck", true) { scaffoldMode == "Dynamic" }
-    private val dynamicVoidDistance by int("DynamicVoidDistance", 5, 1..10) { scaffoldMode == "Dynamic" && dynamicVoidCheck }
 
     // GodBridge mode sub-values
     private val waitForRots by boolean("WaitForRotations", false) { isGodBridgeEnabled }
@@ -150,10 +136,12 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Telly mode sub-values
     private val startHorizontally by boolean("StartHorizontally", true) { scaffoldMode == "Telly" }
-    private val horizontalPlacementsRange by intRange("HorizontalPlacementsRange", 1..1, 1..10) { scaffoldMode == "Telly" }
-    private val verticalPlacementsRange by intRange("VerticalPlacementsRange", 1..1, 1..10) { scaffoldMode == "Telly" }
-
-    private val jumpTicksRange by intRange("JumpTicksRange", 0..0, 0..10) { scaffoldMode == "Telly" }
+    private val horizontalPlacementsRange by intRange("HorizontalPlacementsRange", 2..3, 1..10) { scaffoldMode == "Telly" }
+    private val verticalPlacementsRange by intRange("VerticalPlacementsRange", 1..2, 1..10) { scaffoldMode == "Telly" }
+    private val tellyRotationMode by choices("TellyRotation", arrayOf("Smooth", "Snap", "Static"), "Smooth") { scaffoldMode == "Telly" }
+    private val tellyRotationSpeed by float("TellyRotationSpeed", 0.6f, 0.1f..1.0f) { scaffoldMode == "Telly" && tellyRotationMode == "Smooth" }
+    private val tellyStaticPitch by float("TellyStaticPitch", 82.5f, 75f..85f) { scaffoldMode == "Telly" && tellyRotationMode == "Static" }
+    private val jumpTicksRange by intRange("JumpTicksRange", 1..2, 0..10) { scaffoldMode == "Telly" }
 
     private val allowClutching by boolean("AllowClutching", true) { scaffoldMode !in arrayOf("Telly", "Expand") }
     private val horizontalClutchBlocks by int("HorizontalClutchBlocks", 3, 1..5) {
@@ -911,13 +899,77 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         findBlock(scaffoldMode == "Expand" && expandLength > 1, searchMode == "Area")
     }
 
+    private fun calculateTellyRotation(current: Rotation): Rotation {
+        val player = mc.thePlayer ?: return current
+        
+        if (!player.isMoving) return current
+        
+        val moveDir = player.movementInput.moveForward
+        val baseYaw = when {
+            moveDir > 0 -> MovementUtils.direction.toDegreesF()
+            moveDir < 0 -> MovementUtils.direction.toDegreesF() + 180f
+            else -> current.yaw
+        }
+
+        // Calculate optimal rotation based on mode
+        return when (tellyRotationMode) {
+            "Smooth" -> {
+                // Smooth interpolation between current and target rotation
+                val targetYaw = if (player.onGround) {
+                    baseYaw + (if (horizontalPlacements % 2 == 0) 45f else -45f)
+                } else {
+                    baseYaw
+                }
+                
+                val targetPitch = if (player.onGround) {
+                    81f + (if (player.isSprinting) 1.5f else 0f)
+                } else {
+                    78f + player.fallDistance * 0.7f
+                }
+
+                smoothRotation(current, Rotation(targetYaw, targetPitch), tellyRotationSpeed)
+            }
+            "Snap" -> {
+                // Instantly snap to target angles
+                val targetYaw = baseYaw + (if (player.onGround) {
+                    if (horizontalPlacements % 2 == 0) 45f else -45f
+                } else 0f)
+                
+                val targetPitch = if (player.onGround) {
+                    82.5f
+                } else {
+                    77f + player.fallDistance * 0.8f
+                }
+
+                Rotation(targetYaw, targetPitch)
+            }
+            "Static" -> {
+                // Keep static pitch but adjust yaw
+                val targetYaw = if (player.onGround) {
+                    baseYaw + (if (horizontalPlacements % 2 == 0) 45f else -45f) 
+                } else {
+                    baseYaw
+                }
+                Rotation(targetYaw, tellyStaticPitch)
+            }
+            else -> current
+        }.fixedSensitivity()
+    }
+
     private fun setRotation(rotation: Rotation, ticks: Int) {
         val player = mc.thePlayer ?: return
 
         if (scaffoldMode == "Telly" && player.isMoving) {
+            // Calculate optimized telly rotation
+            val tellyRotation = calculateTellyRotation(currRotation)
+            
+            // Check if we should rotate yet based on jump timing
             if (player.airTicks < ticksUntilRotation.random() && ticksUntilJump >= jumpTicks) {
                 return
             }
+            
+            setTargetRotation(tellyRotation, options, ticks)
+            return
         }
 
         setTargetRotation(rotation, options, ticks)
