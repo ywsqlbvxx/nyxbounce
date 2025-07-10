@@ -32,13 +32,14 @@ object Aimbot : Module("Aimbot", Category.COMBAT) {
     private val horizontalAim by boolean("HorizontalAim", true)
     private val verticalAim by boolean("VerticalAim", true)
     private val legitimize by boolean("Legitimize", true) { horizontalAim || verticalAim }
-    private val maxAngleChange by float("MaxAngleChange", 10f, 1F..180F) { horizontalAim || verticalAim }
-    private val inViewMaxAngleChange by float("InViewMaxAngleChange", 35f, 1f..180f) { horizontalAim || verticalAim }
+    private val maxAngleChange by float("MaxAngleChange", 7f, 1F..180F) { horizontalAim || verticalAim }
+    private val inViewMaxAngleChange by float("InViewMaxAngleChange", 25f, 1f..180f) { horizontalAim || verticalAim }
+    private val smoothRotation by float("SmoothRotation", 0.7f, 0.1f..1f) { horizontalAim || verticalAim }
     private val generateSpotBasedOnDistance by boolean(
-        "GenerateSpotBasedOnDistance", false
+        "GenerateSpotBasedOnDistance", true
     ) { horizontalAim || verticalAim }
-    private val predictClientMovement by int("PredictClientMovement", 2, 0..5)
-    private val predictEnemyPosition by float("PredictEnemyPosition", 1.5f, -1f..2f)
+    private val predictClientMovement by int("PredictClientMovement", 3, 0..5)
+    private val predictEnemyPosition by float("PredictEnemyPosition", 1.2f, -1f..2f)
 
     private val highestBodyPointToTargetValue = choices(
         "HighestBodyPointToTarget", arrayOf("Head", "Body", "Feet"), "Head"
@@ -185,19 +186,22 @@ object Aimbot : Module("Aimbot", Category.COMBAT) {
             destinationRotation.pitch -= pitchOffset
         }
 
-        // Figure out the best turn speed suitable for the distance and configured turn speed
+        // Calculate smooth rotation based on distance and FOV
         val rotationDiff = rotationDifference(playerRotation, destinationRotation)
-
-        // is enemy visible to player on screen. Fov is about to be right with that you can actually see on the screen. Still not 100% accurate, but it is fast check.
-        val supposedTurnSpeed = if (rotationDiff < mc.gameSettings.fovSetting) {
+        
+        // Determine turn speed based on whether target is in view
+        val baseTurnSpeed = if (rotationDiff < mc.gameSettings.fovSetting) {
             inViewMaxAngleChange
         } else {
             maxAngleChange
         }
 
-        val gaussian = random.nextGaussian()
-
-        val realisticTurnSpeed = rotationDiff * ((supposedTurnSpeed + (gaussian - 0.5)) / 180)
+        // Apply gaussian randomization with reduced impact
+        val gaussian = (random.nextGaussian() * 0.3)
+        
+        // Calculate smooth turn speed with interpolation
+        val interpolationFactor = (1.0 - smoothRotation).coerceIn(0.1, 1.0)
+        val realisticTurnSpeed = rotationDiff * ((baseTurnSpeed + (gaussian - 0.15)) / 180) * interpolationFactor
 
         // Directly access performAngleChange since this module does not use RotationSettings
         val rotation = performAngleChange(
