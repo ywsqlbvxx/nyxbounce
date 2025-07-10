@@ -41,18 +41,12 @@ import kotlin.math.pow
 @ElementInfo(name = "Target")
 class Target : Element("Target") {
 
-    private val targetMode by choices("Mode", arrayOf("Default", "Moon4"), "Default")
-    
-    private val roundedRectRadius by float("Rounded-Radius", 3F, 0F..5F) { targetMode == "Default" }
+    private val roundedRectRadius by float("Rounded-Radius", 3F, 0F..5F)
 
-    private val borderStrength by float("Border-Strength", 3F, 1F..5F) { targetMode == "Default" }
+    private val borderStrength by float("Border-Strength", 3F, 1F..5F)
 
-    private val backgroundMode by choices("Background-ColorMode", arrayOf("Custom", "Rainbow"), "Custom") { targetMode == "Default" }
-    private val backgroundColor by color("Background-Color", Color.BLACK.withAlpha(150)) { backgroundMode == "Custom" && targetMode == "Default" }
-
-    // Moon4 specific settings
-    private val bgColor by color("Background-Color", Color.BLACK.withAlpha(150)) { targetMode == "Moon4" }
-    private val barColor by color("Bar-Color", Color(3, 169, 244)) { targetMode == "Moon4" }
+    private val backgroundMode by choices("Background-ColorMode", arrayOf("Custom", "Rainbow"), "Custom")
+    private val backgroundColor by color("Background-Color", Color.BLACK.withAlpha(150)) { backgroundMode == "Custom" }
 
     private val healthBarColor1 by color("HealthBar-Gradient1", Color(3, 65, 252))
     private val healthBarColor2 by color("HealthBar-Gradient2", Color(3, 252, 236))
@@ -98,16 +92,6 @@ class Target : Element("Target") {
     private var easingHurtTime = 0F
 
     override fun drawElement(): Border {
-        if (targetMode == "Moon4") {
-            val target = KillAura.target
-            if (target is EntityPlayer) {
-                val moon4 = Moon4(this)
-                moon4.drawTarget(target)
-                return moon4.getBorder(target) ?: Border(0F, 0F, 120F, 36F)
-            }
-            return Border(0F, 0F, 120F, 36F)
-        }
-
         val smoothMode = animation == "Smooth"
         val fadeMode = animation == "Fade"
 
