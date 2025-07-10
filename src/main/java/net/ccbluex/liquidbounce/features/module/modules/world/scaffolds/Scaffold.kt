@@ -801,9 +801,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 tellyFixedPitch
             }
             else -> {
-                // Dynamic pitch adjustments
-                val (min, max) = tellyDynamicPitchRange
-                val basePitch = (min + max) / 2
+                // Dynamic pitch adjustments            // Extract min and max from FloatRange explicitly
+            val minPitch = tellyDynamicPitchRange.start
+            val maxPitch = tellyDynamicPitchRange.endInclusive
+            val basePitch = (minPitch + maxPitch) / 2f
 
                 if (tellyOptimizedMode == "Smart") {
                     // Smart mode adjusts pitch based on edge distance
@@ -890,16 +891,25 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             return
         }
 
-        val (horizontal, vertical) = if (scaffoldMode == "Telly") {
-            5 to 3
+        val horizontalValue = if (scaffoldMode == "Telly") {
+            5
         } else if (allowClutching) {
-            horizontalClutchBlocks to verticalClutchBlocks
+            horizontalClutchBlocks
         } else {
-            1 to 1
+            1
+        }
+
+        val verticalValue = if (scaffoldMode == "Telly") {
+            3
+        } else if (allowClutching) {
+            verticalClutchBlocks
+        } else {
+            1
         }
 
         BlockPos.getAllInBox(
-            blockPosition.add(-horizontal, 0, -horizontal), blockPosition.add(horizontal, -vertical, horizontal)
+            blockPosition.add(-horizontalValue, 0, -horizontalValue), 
+            blockPosition.add(horizontalValue, -verticalValue, horizontalValue)
         ).sortedBy {
             BlockUtils.getCenterDistance(it)
         }.forEach {
@@ -1055,10 +1065,13 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     val jumpHandler = handler<JumpEvent> { event ->
         if (!jumpStrafe) return@handler
 
-        if (event.eventState == EventState.POST) {
-            MovementUtils.strafe(
-                (if (!isLookingDiagonally) jumpStraightStrafe else jumpDiagonalStrafe).random()
-            )
+        if (event.eventState == EventState.POST) {                // Convert FloatRange to Float before passing to strafe
+                val strafeValue = if (!isLookingDiagonally) {
+                    jumpStraightStrafe.random()
+                } else {
+                    jumpDiagonalStrafe.random()
+                }
+                MovementUtils.strafe(strafeValue)
         }
     }
 
