@@ -59,6 +59,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         ), "Simple"
     )
 
+    // GrimReduce Options
+    private val GrimReduceFactor by float("GrimReduceFactor", 0.6f, 0f..1f) { mode == "GrimReduce" }
+    private val GrimMinHurtTime by int("GrimMinHurtTime", 5, 0..10) { mode == "GrimReduce" }
+    private val GrimMaxHurtTime by int("GrimMaxHurtTime", 10, 0..20) { mode == "GrimReduce" }
+    private val GrimOnGround by boolean("OnlyGround", false) { mode == "GrimReduce" }
+
     private val horizontal by float("Horizontal", 0F, -1F..1F) { mode in arrayOf("Simple", "AAC", "Legit") }
     private val vertical by float("Vertical", 0F, -1F..1F) { mode in arrayOf("Simple", "Legit") }
 
@@ -140,6 +146,9 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val maxXZMotion by float("MaxXZMotion", 0.4f, 0f..1.9f) { limitMaxMotionValue.isActive() }
     private val maxYMotion by float("MaxYMotion", 0.36f, 0f..0.46f) { limitMaxMotionValue.isActive() }
     //0.00075 is added silently
+
+    // Random timing values for Polar mode
+    private var polarHurtTime = Random.nextInt(8, 10)
 
     // Vanilla XZ limits
     // Non-KB: 0.4 (no sprint), 0.9 (sprint)
