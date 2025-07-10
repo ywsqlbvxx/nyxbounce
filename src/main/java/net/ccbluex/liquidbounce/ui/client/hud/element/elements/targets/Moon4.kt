@@ -9,6 +9,8 @@ import net.ccbluex.liquidbounce.ui.client.hud.element.Border
 import net.ccbluex.liquidbounce.LiquidBounce
 import net.ccbluex.liquidbounce.ui.client.hud.element.elements.Target
 import net.ccbluex.liquidbounce.ui.font.Fonts
+import net.ccbluex.liquidbounce.utils.MinecraftInstance
+import net.ccbluex.liquidbounce.utils.render.ColorUtils
 import net.ccbluex.liquidbounce.utils.render.RenderUtils
 import net.ccbluex.liquidbounce.utils.render.RenderUtils.drawHead
 import net.ccbluex.liquidbounce.utils.render.RenderUtils.drawRoundedRect
@@ -27,7 +29,7 @@ class Moon4(inst: Target) : TargetStyle("Moon4", inst) {
     override fun drawTarget(entity: EntityPlayer) {
         updateAnim(entity.health)
         
-        val mainColor = Color(3, 169, 244) // Default bar color
+        val mainColor = targetInstance.barColor
         val percent = entity.health.toInt()
         val nameLength = (Fonts.fontSemibold40.getStringWidth("$BOLD${entity.name}")).coerceAtLeast(
             Fonts.fontRegular35.getStringWidth(
@@ -49,9 +51,8 @@ class Moon4(inst: Target) : TargetStyle("Moon4", inst) {
         GL11.glEnable(GL11.GL_TEXTURE_2D)
 
         // Draw head (skin)
-        val skin = mc.netHandler.getPlayerInfo(entity.uniqueID)?.locationSkin
-        if (skin != null) {
-            drawHead(skin, 1, 0, 8F, 8F, 8, 8, 35, 35, 64F, 64F, Color.WHITE)
+        mc.netHandler?.getPlayerInfo(entity.uniqueID)?.locationSkin?.let { skin ->
+            drawHead(skin, 1f, 0f, 8f, 8f, 8, 8, 35, 35, 64f, 64f, Color.WHITE)
         }
 
         Fonts.fontSemibold40.drawStringWithShadow("$BOLD${entity.name}", 2F + 36F, 2F, -1)
@@ -61,11 +62,7 @@ class Moon4(inst: Target) : TargetStyle("Moon4", inst) {
         val animateThingy = (easingHealth.coerceIn(entity.health, entity.maxHealth) / entity.maxHealth) * (nameLength - 2F)
 
         if (easingHealth > entity.health) {
-            val darkerColor = Color(
-                (mainColor.red * 0.7).toInt(),
-                (mainColor.green * 0.7).toInt(),
-                (mainColor.blue * 0.7).toInt()
-            )
+            val darkerColor = ColorUtils.darker(mainColor, 0.7f)
             drawRoundedRect(38F, 24F, 38F + animateThingy, 32f, darkerColor.rgb, 3F)
         }
 
