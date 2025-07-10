@@ -135,22 +135,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val dynamicVoidCheck by boolean("DynamicVoidCheck", true) { scaffoldMode == "Dynamic" }
     private val dynamicVoidDistance by int("DynamicVoidDistance", 5, 1..10) { scaffoldMode == "Dynamic" && dynamicVoidCheck }
 
-    // Breezily mode sub-values
-    private val breezilyTiming by floatRange("BreezilyTiming", 0.1f..0.15f, 0.05f..0.3f) { scaffoldMode == "Breezily" }
-    private val breezilyStrafe by float("BreezilyStrafe", 0.2f, 0.1f..0.5f) { scaffoldMode == "Breezily" }
-    private val breezilyStabilize by boolean("BreezilyStabilize", true) { scaffoldMode == "Breezily" }
-    private val breezilyPitch by float("BreezilyPitch", 82.5f, 75f..85f) { scaffoldMode == "Breezily" }
-
-    // Dynamic mode sub-values
-    private val dynamicRandomization by boolean("DynamicRandomization", true) { scaffoldMode == "Dynamic" }
-    private val dynamicSmoothness by floatRange("DynamicSmoothness", 0.8f..1.2f, 0.1f..2.0f) { scaffoldMode == "Dynamic" }
-    private val dynamicAcceleration by float("DynamicAcceleration", 0.3f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
-    private val dynamicDeceleration by float("DynamicDeceleration", 0.7f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
-    private val dynamicPitchAdjust by boolean("DynamicPitchAdjust", true) { scaffoldMode == "Dynamic" }
-    private val dynamicEdgeDistance by float("DynamicEdgeDistance", 0.3f, 0.1f..0.5f) { scaffoldMode == "Dynamic" }
-    private val dynamicVoidCheck by boolean("DynamicVoidCheck", true) { scaffoldMode == "Dynamic" }
-    private val dynamicVoidDistance by int("DynamicVoidDistance", 5, 1..10) { scaffoldMode == "Dynamic" && dynamicVoidCheck }
-
     // GodBridge mode sub-values
     private val waitForRots by boolean("WaitForRotations", false) { isGodBridgeEnabled }
     private val useOptimizedPitch by boolean("UseOptimizedPitch", false) { isGodBridgeEnabled }
@@ -337,16 +321,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Extra clicks
     private var extraClick = ExtraClickInfo(TimeUtils.randomClickDelay(extraClickCPS.first, extraClickCPS.last), 0L, 0)
-    
-    // Breezily and Dynamic state tracking
-    private var breezilyRotation: Rotation? = null
-    private var lastBreezilySwitch = 0L
-    private var dynamicRotation: Rotation? = null
-    private var lastDynamicUpdate = 0L
-    private var dynamicSpeed = 0.5f
-    private var dynamicAccelerating = true
-    private var lastDynamicEdgeCheck = 0L
-    private var inDangerZone = false
 
     // GodBridge
     private var blocksPlacedUntilJump = 0
@@ -533,56 +507,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         if (mc.playerController.currentGameType == WorldSettings.GameType.SPECTATOR) return@loopSequence
 
         mc.timer.timerSpeed = timer
-
-        // Update Breezily mode
-        if (scaffoldMode == "Breezily" && player.onGround) {
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastBreezilySwitch > (breezilyTiming.random() * 1000)) {
-                val baseYaw = MovementUtils.direction.toDegreesF()
-                val side = if ((currentTime / 200) % 2 == 0L) breezilyStrafe else -breezilyStrafe
-                
-                breezilyRotation = Rotation(
-                    baseYaw + side,
-                    breezilyPitch
-                ).fixedSensitivity()
-                
-                if (breezilyStabilize) {
-                    player.motionX *= 0.7
-                    player.motionZ *= 0.7
-                }
-
-                lastBreezilySwitch = currentTime
-            }
-        }
-
-        // Update Dynamic mode
-        if (scaffoldMode == "Dynamic" && player.onGround) {
-            val currentTime = System.currentTimeMillis()
-            
-            // Update acceleration/deceleration
-            if (currentTime - lastDynamicUpdate > 50) {
-                if (dynamicAccelerating) {
-                    dynamicSpeed += dynamicAcceleration * (dynamicSmoothness.random() * 0.1f)
-                    if (dynamicSpeed > 1f) {
-                        dynamicSpeed = 1f
-                        dynamicAccelerating = false
-                    }
-                } else {
-                    dynamicSpeed -= dynamicDeceleration * (dynamicSmoothness.random() * 0.1f)
-                    if (dynamicSpeed < 0.1f) {
-                        dynamicSpeed = 0.1f
-                        dynamicAccelerating = true
-                    }
-                }
-                lastDynamicUpdate = currentTime
-            }
-            
-            // Update void check
-            if (currentTime - lastDynamicEdgeCheck > 100) {
-                inDangerZone = checkVoidDanger()
-                lastDynamicEdgeCheck = currentTime
-            }
-        }
 
         // Breezily mode logic
         if (isBreezilyEnabled && player.onGround) {
@@ -865,18 +789,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (!Tower.isTowering && isGodBridgeEnabled && options.rotationsActive) {
             generateGodBridgeRotations(ticks)
-            return@handler
-        }
-
-        if (scaffoldMode == "Breezily" && options.rotationsActive) {
-            breezilyRotation?.let { setRotation(it, ticks) }
-            return@handler
-        }
-        
-        if (scaffoldMode == "Dynamic" && options.rotationsActive) {
-            val currentRot = currRotation
-            dynamicRotation = calculateDynamicRotation(currentRot)
-            dynamicRotation?.let { setRotation(it, ticks) }
             return@handler
         }
 

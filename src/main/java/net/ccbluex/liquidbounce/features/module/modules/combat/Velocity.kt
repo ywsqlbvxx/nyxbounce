@@ -850,11 +850,13 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         val player = mc.thePlayer ?: return@handler
 
         if (mode == "jumpreset" && hasReceivedVelocity) {
-            if (!player.isJumping && nextInt(endExclusive = 100) < chance && shouldJump() && player.isSprinting && player.onGround && player.hurtTime == 9) {
+            if (!player.isJumping && nextInt(endExclusive = 100) < chance && shouldJump() && player.onGround && player.hurtTime > 0) {
+                // Sử dụng legit jump để giảm knockback một cách tự nhiên
                 player.tryJump()
+                // Giảm một phần velocity thay vì set về 0
+                player.motionX *= 0.6
+                player.motionZ *= 0.6
                 limitUntilJump = 0
-                player.motionX = 0.0
-                player.motionZ = 0.0
             }
             hasReceivedVelocity = false
             return@handler
