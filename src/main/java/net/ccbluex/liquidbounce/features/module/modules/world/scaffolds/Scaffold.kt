@@ -1729,17 +1729,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         val player = mc.thePlayer ?: return
         val world = mc.theWorld ?: return
 
-        // More stable speed handling
+        // Speed handling using movement utils
         val speed = intaveSpeed * when {
-            player.onGround -> 0.8f // Reduced ground speed for better stability
+            player.onGround -> 0.8f
             player.fallDistance < 0.5f -> 0.7f
             else -> 0.6f
         }
 
-        // Smoother movement
+        // Apply speed modifications through movement utils
         if (player.onGround) {
-            player.motionX *= speed
-            player.motionZ *= speed
+            MovementUtils.strafe(speed)
         }
 
         // Get target rotation based on mode
@@ -1749,76 +1748,57 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         }
 
         if (targetRotation != null) {
-            val currentRot = RotationUtils.currentRotation ?: player.rotation
-            
-            // Smoother rotation transitions
-            val smoothYaw = getFixedAngleDelta(
-                currentRot.yaw,
-                targetRotation.yaw,
-                intaveYawSpeed
-            )
-            
-            val smoothPitch = getFixedAngleDelta(
-                currentRot.pitch,
-                targetRotation.pitch,
-                intavePitchSpeed
+            // Use existing rotation utils for smooth transitions
+            val rotation = RotationUtils.limitAngleChange(
+                RotationUtils.currentRotation ?: player.rotation,
+                targetRotation,
+                (intaveYawSpeed * 180).toFloat()
             )
 
-            // Apply rotations with enhanced stability
-            val finalRotation = Rotation(
-                currentRot.yaw + smoothYaw,
-                currentRot.pitch + smoothPitch
-            ).fixedSensitivity()
-
-            // Keep rotations within safe ranges
-            val clampedPitch = MathHelper.clamp_float(finalRotation.pitch, 77f, 83f)
-            finalRotation.pitch = clampedPitch
-
-            // Store rotation states for next tick
-            intaveRotation = finalRotation
+            // Store rotation states
+            intaveRotation = rotation
             if (intaveKeepRotation) {
-                intaveLastRotation = finalRotation
+                intaveLastRotation = rotation
             }
 
-            setTargetRotation(finalRotation, 1)
+            // Set target rotation with existing utils
+            setTargetRotation(rotation, options)
         }
     }
 
     private fun calculateStableRotation(): Rotation? {
         val player = mc.thePlayer ?: return null
+        val world = mc.theWorld ?: return null
         
         // Get optimal placement position
         val pos = BlockPos(player).down()
-        if (!pos.isReplaceable(mc.theWorld)) return null
+        if (!world.isAirBlock(pos)) return null
 
-        val eyesPos = player.getPositionEyes(1f)
-        val blockData = getPlacingBlockData(pos) ?: return null
+        val eyes = player.getPositionEyes(1f)
+        val placeInfo = PlaceInfo.get(pos) ?: return null
 
-        // Calculate stable angles with enhanced precision
-        val diffX = blockData.blockPos.x + 0.5 - eyesPos.xCoord
-        val diffY = blockData.blockPos.y + 0.5 - eyesPos.yCoord
-        val diffZ = blockData.blockPos.z + 0.5 - eyesPos.zCoord
+        val center = Vec3(
+            placeInfo.blockPos.x + 0.5,
+            placeInfo.blockPos.y + 0.5,
+            placeInfo.blockPos.z + 0.5
+        )
 
-        val dist = sqrt(diffX * diffX + diffZ * diffZ)
-        
-        // Stabilized yaw calculation
-        val yaw = MathHelper.wrapAngleTo180_float((atan2(diffZ, diffX) * 180.0 / Math.PI - 90).toFloat())
-        
-        // Smart pitch calculation with optimal ranges
-        val pitch = if (intaveSmartPitch) {
-            val optimalPitch = if (player.fallDistance > 0) {
-                80f - (player.fallDistance * 0.5f).coerceAtMost(3f)
-            } else if (!player.onGround) {
-                79f
-            } else {
-                80f
+        // Get rotations to center of block
+        val rotation = toRotation(center, false)
+
+        // Smart pitch adjustment
+        val adjustedPitch = if (intaveSmartPitch) {
+            val optimalPitch = when {
+                player.fallDistance > 0 -> 80f - (player.fallDistance * 0.5f).coerceAtMost(3f)
+                !player.onGround -> 79f
+                else -> 80f
             }
             MathHelper.clamp_float(optimalPitch, 77f, 83f)
         } else {
-            MathHelper.clamp_float(-(atan2(diffY, dist) * 180.0 / Math.PI).toFloat(), 77f, 83f)
+            MathHelper.clamp_float(rotation.pitch, 77f, 83f)
         }
 
-        return Rotation(yaw, pitch)
+        return Rotation(rotation.yaw, adjustedPitch).fixedSensitivity()
     }
 
     private fun calculateGodBridgeRotation(): Rotation? {
@@ -1828,26 +1808,22 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             return intaveLastRotation
         }
 
-        // Base yaw on movement direction for stability
-        val yaw = if (player.isMoving) {
-            val moveDir = MathHelper.wrapAngleTo180_float(MovementUtils.direction.toDegreesF())
-            val snappedYaw = Math.round(moveDir / 45f) * 45f
-            MathHelper.wrapAngleTo180_float(snappedYaw)
+        // Use movement direction for yaw
+        val moveYaw = if (player.isMoving) {
+            round(MovementUtils.direction.toDegreesF() / 45) * 45
         } else {
             player.rotationYaw
         }
 
-        // Calculate optimal pitch for current situation
+        // Calculate optimal pitch using existing values
         val basePitch = if (intaveSmartPitch) {
-            when {
-                player.fallDistance > 0 -> 79f - (player.fallDistance * 0.5f).coerceAtMost(2f)
-                !player.onGround -> 79.5f
-                player.isSprinting -> 80f
-                else -> 79f
-            }
-        } else 79f
+            val optimalPitch = calculateOptimalPitch()
+            MathHelper.clamp_float(optimalPitch, 77f, 83f)
+        } else {
+            79f
+        }
 
-        return Rotation(yaw, basePitch)
+        return Rotation(moveYaw, basePitch).fixedSensitivity()
     }
 
     override val tag

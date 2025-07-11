@@ -59,6 +59,10 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         ), "Simple"
     )
 
+    // IntaveReduce Options
+    private val reduceFactor by float("IntaveReduceFactor", 0.6f, 0f..1f) { mode == "IntaveReduce" }
+    private val hurtTime by int("IntaveHurtTime", 3, 0..10) { mode == "IntaveReduce" }
+
     // GrimReduce Options
     private val GrimReduceFactor by float("GrimReduceFactor", 0.6f, 0f..1f) { mode == "GrimReduce" }
     private val GrimMinHurtTime by int("GrimMinHurtTime", 5, 0..10) { mode == "GrimReduce" }
@@ -863,8 +867,8 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
                         motionX *= ratioXZ
                         motionZ *= ratioXZ
-                    }
-                }
+                      }
+                  }
 
                 mc.thePlayer.motionX = motionX * horizontal
                 mc.thePlayer.motionZ = motionZ * horizontal
