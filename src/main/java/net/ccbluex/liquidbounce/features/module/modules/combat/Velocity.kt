@@ -136,9 +136,9 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val pauseOnExplosion by boolean("PauseOnExplosion", true)
     private val ticksToPause by int("TicksToPause", 20, 1..50) { pauseOnExplosion }
     
-    private val 3fmcHorizontal by float("3fmcHorizontal", 0F, 0F..1F) { mode == "3FMC" }
-    private val 3fmcVertical by float("3fmcVertical", 0F, 0F..1F) { mode == "3FMC" }
-    private val 3fmcChance by int("3fmcChance", 100, 0..100) { mode == "3FMC" }
+    private val bafmcHorizontal by float("3fmcHorizontal", 0F, 0F..1F) { mode == "3FMC" }
+    private val bafmcVertical by float("3fmcVertical", 0F, 0F..1F) { mode == "3FMC" }
+    private val bafmcChance by int("3fmcChance", 100, 0..100) { mode == "3FMC" }
 
     // TODO: Could this be useful in other modes? (Jump?)
     // Limits
@@ -632,21 +632,21 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 
                 "3fmc" -> {
                     if (packet is S12PacketEntityVelocity && packet.entityID == mc.thePlayer.entityId) {
-                        if (kotlin.random.Random.nextInt(100) < 3fmcChance) {
-                            if (3fmcHorizontal == 0f && 3fmcVertical == 0f) {
+                        if (kotlin.random.Random.nextInt(100) < bafmcChance) {
+                            if (bafmcHorizontal == 0f && bafmcVertical == 0f) {
                                 event.cancelEvent()
                                 return@handler
                             }
 
-                            if (3fmcHorizontal == 0f) {
-                                mc.thePlayer.motionY = packet.motionY / 8000.0 * 3fmcVertical
+                            if (bafmcHorizontal == 0f) {
+                                mc.thePlayer.motionY = packet.motionY / 8000.0 * bafmcVertical
                                 event.cancelEvent()
                                 return@handler
                             }
 
-                            packet.motionX = (packet.motionX * 3fmcHorizontal).toInt()
-                            packet.motionY = (packet.motionY * 3fmcVertical).toInt()
-                            packet.motionZ = (packet.motionZ * 3fmcHorizontal).toInt()
+                            packet.motionX = (packet.motionX * bafmcHorizontal).toInt()
+                            packet.motionY = (packet.motionY * bafmcVertical).toInt()
+                            packet.motionZ = (packet.motionZ * bafmcHorizontal).toInt()
                         }
                     }
                 }
