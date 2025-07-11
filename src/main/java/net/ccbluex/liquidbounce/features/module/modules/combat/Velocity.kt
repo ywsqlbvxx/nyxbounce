@@ -54,7 +54,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             "Reverse", "SmoothReverse", "JumpReset", "Glitch", "Legit",
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce", 
             "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
-            "Click", "BlocksMC", "3FMC", "GrimReduce", "Intave",
+            "Click", "BlocksMC", "3FMC", "3FMC2", "GrimReduce", "Intave",
             "IntaveTest"
         ), "Simple"
     )
@@ -92,10 +92,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
     // Chance
     private val chance by int("Chance", 100, 0..100) { mode == "JumpReset" || mode == "Legit" }
-    //3fmc
-    private val 3fmcHorizontal by float("H", 0F, 0F..1F) { mode == "3FMC" }
-    private val 3fmcVertical by float("V", 0F, 0F..1F) { mode == "3FMC" }
-    private val 3fmcChance by int("Chance", 100, 0..100) { mode == "3FMC" }
     
     // JumpReset
     private val jumpCooldownMode by choices("JumpCooldownMode", arrayOf("Ticks", "ReceivedHits"), "Ticks")
@@ -139,6 +135,10 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
     private val pauseOnExplosion by boolean("PauseOnExplosion", true)
     private val ticksToPause by int("TicksToPause", 20, 1..50) { pauseOnExplosion }
+    
+    private val 3fmcHorizontal by float("3fmcHorizontal", 0F, 0F..1F) { mode == "3FMC" }
+    private val 3fmcVertical by float("3fmcVertical", 0F, 0F..1F) { mode == "3FMC" }
+    private val 3fmcChance by int("3fmcChance", 100, 0..100) { mode == "3FMC" }
 
     // TODO: Could this be useful in other modes? (Jump?)
     // Limits
@@ -212,7 +212,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     }
     
     override fun onEnable() {            if (mode == "3FMC") {
-                ClientUtils.displayChatMessage("[Velocity] thanks fdp")
+                ClientUtils.displayChatMessage("[Velocity] 3FMC chưa hoàn thiện, có thể flag hoặc lỗi, cẩn trọng!")
             }
     }
 
@@ -613,6 +613,23 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     }
                 }
                 
+                "3fmc2" -> {
+                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId && thePlayer.onGround) {
+                        event.cancelEvent()
+                        thePlayer.motionX = 0.0
+                        thePlayer.motionZ = 0.0
+                        thePlayer.motionY = packet.realMotionY
+                    }
+                }
+
+                "glitch" -> {
+                    if (!thePlayer.onGround)
+                        return@handler
+
+                    hasReceivedVelocity = true
+                    event.cancelEvent()
+                }
+                
                 "3fmc" -> {
                     if (packet is S12PacketEntityVelocity && packet.entityID == mc.thePlayer.entityId) {
                         if (kotlin.random.Random.nextInt(100) < 3fmcChance) {
@@ -632,14 +649,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                             packet.motionZ = (packet.motionZ * 3fmcHorizontal).toInt()
                         }
                     }
-                } 
-
-                "glitch" -> {
-                    if (!thePlayer.onGround)
-                        return@handler
-
-                    hasReceivedVelocity = true
-                    event.cancelEvent()
                 }
 
                 "matrixreduce" -> {
