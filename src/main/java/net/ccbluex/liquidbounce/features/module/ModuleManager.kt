@@ -97,7 +97,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             Derp,
             DelayRemover,
             ESP,
-            Eagle,
+            AutoEagle,
             FakeLag,
             FastBow,
             FastBreak,

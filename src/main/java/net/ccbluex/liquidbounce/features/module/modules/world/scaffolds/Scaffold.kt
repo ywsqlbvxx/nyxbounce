@@ -73,7 +73,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // -->
 
     val scaffoldMode by choices(
-        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily", "Dynamic"), "Normal"
+        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily", "Dynamic", "Intave"), "Normal"
     )
     
     // HMCBlinkFly
@@ -398,7 +398,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             val baseYaw = MovementUtils.direction.toDegreesF()
             val side = if ((currentTime / 100) % 2 == 0L) breezilyStrafe else -breezilyStrafe
             
-            // Add randomization to rotations if enabled
             val randomYaw = if (breezilyRandomization) (-1f..1f).random() else 0f
             val randomPitch = if (breezilyRandomization) (-0.5f..0.5f).random() else 0f
             
@@ -424,7 +423,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         val player = mc.thePlayer ?: return current
         val currentTime = System.currentTimeMillis()
         
-        // Update acceleration/deceleration
         if (currentTime - lastDynamicUpdate > 50) {
             if (dynamicAccelerating) {
                 dynamicSpeed += dynamicAcceleration * (dynamicSmoothness.random() * 0.1f)
@@ -442,10 +440,8 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             lastDynamicUpdate = currentTime
         }
         
-        // Add randomization
         val baseSpeed = dynamicSpeed * (if (dynamicRandomization) (0.9f..1.1f).random() else 1f)
         
-        // Calculate target rotation
         val moveDir = player.movementInput.moveForward
         val targetYaw = when {
             moveDir > 0 -> MovementUtils.direction.toDegreesF()
@@ -453,13 +449,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             else -> current.yaw
         }
         
-        // Adjust for void checking
         if (currentTime - lastDynamicEdgeCheck > 100) {
             inDangerZone = checkVoidDanger()
             lastDynamicEdgeCheck = currentTime
         }
         
-        // Calculate pitch based on conditions
         val targetPitch = when {
             inDangerZone -> 82.5f
             dynamicPitchAdjust -> (78f..83f).random()
@@ -483,6 +477,26 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         return smoothRotation(current, newRotation, smoothSpeed)
     }
+
+    // Intave mode options
+    private val intaveRotationMode by choices("IntaveRotation", arrayOf("GodBridge", "Stable"), "GodBridge") 
+    { scaffoldMode == "Intave" }
+    private val intaveSpeed by float("IntaveSpeed", 0.15f, 0.1f..0.4f) { scaffoldMode == "Intave" }
+    private val intavePitchSpeed by float("IntavePitchSpeed", 0.15f, 0.05f..0.3f) { scaffoldMode == "Intave" }
+    private val intaveYawSpeed by float("IntaveYawSpeed", 0.15f, 0.05f..0.3f) { scaffoldMode == "Intave" }
+    private val intaveSmartPitch by boolean("IntaveSmartPitch", true) { scaffoldMode == "Intave" }
+    private val intaveRandomization by boolean("IntaveRandomization", false) { scaffoldMode == "Intave" }
+    private val intaveMaxRandomization by float("IntaveMaxRandomization", 0.5f, 0.1f..3f) 
+    { scaffoldMode == "Intave" && intaveRandomization }
+    private val intaveKeepRotation by boolean("IntaveKeepRotation", true) { scaffoldMode == "Intave" }
+
+    // Intave variables
+    private var intaveRotation: Rotation? = null
+    private var intaveLastRotation: Rotation? = null
+    private var intaveRotationSpeed = 0f
+    private var intaveTicksSinceFlag = 0
+    private var intaveLastPlaceTime = 0L
+    private var intaveRandomValue = 0f
 
     private var godBridgeTargetRotation: Rotation? = null
     private var breezilyRotation: Rotation? = null
@@ -530,6 +544,15 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         launchY = player.posY.roundToInt()
         blocksUntilAxisChange = 0
+
+        if (scaffoldMode == "Intave") {
+            intaveRotation = null
+            intaveLastRotation = null
+            intaveRotationSpeed = 0f
+            intaveTicksSinceFlag = 0
+            intaveLastPlaceTime = 0L
+            intaveRandomValue = 0f
+        }
     }
 
     // Events
@@ -717,6 +740,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 MovementUtils.strafe(0.2F)
                 player.motionY = 0.0
             }
+        }
+
+        // Intave mode handling
+        if (scaffoldMode == "Intave") {
+            handleIntaveMode()
         }
     }
     
@@ -1152,6 +1180,12 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         SilentHotbar.resetSlot(this)
 
         options.instant = false
+
+        if (scaffoldMode == "Intave") {
+            intaveRotation = null
+            intaveLastRotation = null
+            mc.timer.timerSpeed = 1f
+        }
     }
 
     // Entity movement event
@@ -1689,6 +1723,131 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             }
             else -> customGodPitch
         }
+    }
+
+    private fun handleIntaveMode() {
+        val player = mc.thePlayer ?: return
+        val world = mc.theWorld ?: return
+
+        // More stable speed handling
+        val speed = intaveSpeed * when {
+            player.onGround -> 0.8f // Reduced ground speed for better stability
+            player.fallDistance < 0.5f -> 0.7f
+            else -> 0.6f
+        }
+
+        // Smoother movement
+        if (player.onGround) {
+            player.motionX *= speed
+            player.motionZ *= speed
+        }
+
+        // Get target rotation based on mode
+        val targetRotation = when (intaveRotationMode.lowercase()) {
+            "godbridge" -> calculateGodBridgeRotation()
+            else -> calculateStableRotation()
+        }
+
+        if (targetRotation != null) {
+            val currentRot = RotationUtils.currentRotation ?: player.rotation
+            
+            // Smoother rotation transitions
+            val smoothYaw = getFixedAngleDelta(
+                currentRot.yaw,
+                targetRotation.yaw,
+                intaveYawSpeed
+            )
+            
+            val smoothPitch = getFixedAngleDelta(
+                currentRot.pitch,
+                targetRotation.pitch,
+                intavePitchSpeed
+            )
+
+            // Apply rotations with enhanced stability
+            val finalRotation = Rotation(
+                currentRot.yaw + smoothYaw,
+                currentRot.pitch + smoothPitch
+            ).fixedSensitivity()
+
+            // Keep rotations within safe ranges
+            val clampedPitch = MathHelper.clamp_float(finalRotation.pitch, 77f, 83f)
+            finalRotation.pitch = clampedPitch
+
+            // Store rotation states for next tick
+            intaveRotation = finalRotation
+            if (intaveKeepRotation) {
+                intaveLastRotation = finalRotation
+            }
+
+            setTargetRotation(finalRotation, 1)
+        }
+    }
+
+    private fun calculateStableRotation(): Rotation? {
+        val player = mc.thePlayer ?: return null
+        
+        // Get optimal placement position
+        val pos = BlockPos(player).down()
+        if (!pos.isReplaceable(mc.theWorld)) return null
+
+        val eyesPos = player.getPositionEyes(1f)
+        val blockData = getPlacingBlockData(pos) ?: return null
+
+        // Calculate stable angles with enhanced precision
+        val diffX = blockData.blockPos.x + 0.5 - eyesPos.xCoord
+        val diffY = blockData.blockPos.y + 0.5 - eyesPos.yCoord
+        val diffZ = blockData.blockPos.z + 0.5 - eyesPos.zCoord
+
+        val dist = sqrt(diffX * diffX + diffZ * diffZ)
+        
+        // Stabilized yaw calculation
+        val yaw = MathHelper.wrapAngleTo180_float((atan2(diffZ, diffX) * 180.0 / Math.PI - 90).toFloat())
+        
+        // Smart pitch calculation with optimal ranges
+        val pitch = if (intaveSmartPitch) {
+            val optimalPitch = if (player.fallDistance > 0) {
+                80f - (player.fallDistance * 0.5f).coerceAtMost(3f)
+            } else if (!player.onGround) {
+                79f
+            } else {
+                80f
+            }
+            MathHelper.clamp_float(optimalPitch, 77f, 83f)
+        } else {
+            MathHelper.clamp_float(-(atan2(diffY, dist) * 180.0 / Math.PI).toFloat(), 77f, 83f)
+        }
+
+        return Rotation(yaw, pitch)
+    }
+
+    private fun calculateGodBridgeRotation(): Rotation? {
+        val player = mc.thePlayer ?: return null
+        
+        if (!player.onGround) {
+            return intaveLastRotation
+        }
+
+        // Base yaw on movement direction for stability
+        val yaw = if (player.isMoving) {
+            val moveDir = MathHelper.wrapAngleTo180_float(MovementUtils.direction.toDegreesF())
+            val snappedYaw = Math.round(moveDir / 45f) * 45f
+            MathHelper.wrapAngleTo180_float(snappedYaw)
+        } else {
+            player.rotationYaw
+        }
+
+        // Calculate optimal pitch for current situation
+        val basePitch = if (intaveSmartPitch) {
+            when {
+                player.fallDistance > 0 -> 79f - (player.fallDistance * 0.5f).coerceAtMost(2f)
+                !player.onGround -> 79.5f
+                player.isSprinting -> 80f
+                else -> 79f
+            }
+        } else 79f
+
+        return Rotation(yaw, basePitch)
     }
 
     override val tag
