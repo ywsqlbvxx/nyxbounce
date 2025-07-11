@@ -54,7 +54,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             "Reverse", "SmoothReverse", "JumpReset", "Glitch", "Legit",
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce", 
             "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
-            "Click", "BlocksMC", "3FMC", "3FMC2", "GrimReduce", "Intave",
+            "Click", "BlocksMC", "3FMC", "GrimReduce", "Intave",
             "IntaveTest"
         ), "Simple"
     )
@@ -93,9 +93,9 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     // Chance
     private val chance by int("Chance", 100, 0..100) { mode == "JumpReset" || mode == "Legit" }
     //3fmc
-    private val enableDelayCancel by boolean("EnableDelayCancel", true) { mode == "3FMC" }
-    private val delayCancel by int("DelayCancel", 500, 200..2000) { mode == "3FMC" && enableDelayCancel }
-    private val debug3FMC by boolean("Debug3FMC", false) { mode == "3FMC" }
+    private val 3fmcHorizontal by float("H", 0F, 0F..1F) { mode == "3FMC" }
+    private val 3fmcVertical by float("V", 0F, 0F..1F) { mode == "3FMC" }
+    private val 3fmcChance by int("Chance", 100, 0..100) { mode == "3FMC" }
     
     // JumpReset
     private val jumpCooldownMode by choices("JumpCooldownMode", arrayOf("Ticks", "ReceivedHits"), "Ticks")
@@ -166,12 +166,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
      */
     private val velocityTimer = MSTimer()
     private var hasReceivedVelocity = false
-    
-    //3fmc
-    private val delayCancelTimer = MSTimer()
-    private var waitingDelayCancel = false
-    private var zeroMotionS12Count = 0
-    private var fmcStage = 0
 
     // SmoothReverse
     private var reverseHurt = false
@@ -218,7 +212,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     }
     
     override fun onEnable() {            if (mode == "3FMC") {
-                ClientUtils.displayChatMessage("[Velocity] 3FMC chưa hoàn thiện, có thể flag hoặc lỗi, cẩn trọng!")
+                ClientUtils.displayChatMessage("[Velocity] thanks fdp")
             }
     }
 
@@ -620,60 +614,25 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 }
                 
                 "3fmc" -> {
-                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
-                        val isZeroMotion = packet.motionX == 0 && packet.motionZ == 0
-                        if (isZeroMotion) {
-                            zeroMotionS12Count++
-                            if (zeroMotionS12Count >= 2) {
+                    if (packet is S12PacketEntityVelocity && packet.entityID == mc.thePlayer.entityId) {
+                        if (kotlin.random.Random.nextInt(100) < 3fmcChance) {
+                            if (3fmcHorizontal == 0f && 3fmcVertical == 0f) {
                                 event.cancelEvent()
-                                if (debug3FMC) {
-                                    ClientUtils.displayChatMessage("[DEBUG] Đã cancel packet (anticheat flag)")
-                                }
                                 return@handler
                             }
-                        } else {
-                            zeroMotionS12Count = 0
-                        }
-                        
-                        if (enableDelayCancel) {
-                            if (waitingDelayCancel) {
-                                if (!delayCancelTimer.hasTimePassed(delayCancel.toLong())) {
-                                    if (debug3FMC) {
-                                        ClientUtils.displayChatMessage("[DEBUG] Đang countdown")
-                                    }
-                                    return@handler
-                                } else {
-                                    waitingDelayCancel = false
-                                }
+
+                            if (3fmcHorizontal == 0f) {
+                                mc.thePlayer.motionY = packet.motionY / 8000.0 * 3fmcVertical
+                                event.cancelEvent()
+                                return@handler
                             }
-                            if (!waitingDelayCancel && thePlayer.onGround) {
-                                packet.motionX = 0
-                                packet.motionZ = 0
-                                waitingDelayCancel = true
-                                delayCancelTimer.reset()
-                                if (debug3FMC) {
-                                    ClientUtils.displayChatMessage("[DEBUG] Đặt motionXYZ = 0 + countdown")
-                                }
-                            }
-                        } else {
-                            if (thePlayer.onGround) {
-                                packet.motionX = 0
-                                packet.motionZ = 0
-                                if (debug3FMC) {
-                                    ClientUtils.displayChatMessage("[DEBUG] Đặt motionXYZ = 0")
-                                }
-                            }
+
+                            packet.motionX = (packet.motionX * 3fmcHorizontal).toInt()
+                            packet.motionY = (packet.motionY * 3fmcVertical).toInt()
+                            packet.motionZ = (packet.motionZ * 3fmcHorizontal).toInt()
                         }
                     }
-                }
-                "3fmc2" -> {
-                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId && thePlayer.onGround) {
-                        event.cancelEvent()
-                        thePlayer.motionX = 0.0
-                        thePlayer.motionZ = 0.0
-                        thePlayer.motionY = packet.realMotionY
-                    }
-                }
+                } 
 
                 "glitch" -> {
                     if (!thePlayer.onGround)
