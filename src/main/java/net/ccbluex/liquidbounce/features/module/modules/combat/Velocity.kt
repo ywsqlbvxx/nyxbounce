@@ -139,6 +139,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val bafmcHorizontal by float("3fmcHorizontal", 0F, 0F..1F) { mode == "3FMC" }
     private val bafmcVertical by float("3fmcVertical", 0F, 0F..1F) { mode == "3FMC" }
     private val bafmcChance by int("3fmcChance", 100, 0..100) { mode == "3FMC" }
+    private val bafmcDisableInAir by boolean("DisableInAir", true) { mode == "3FMC" }
 
     // TODO: Could this be useful in other modes? (Jump?)
     // Limits
@@ -212,7 +213,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     }
     
     override fun onEnable() {            if (mode == "3FMC") {
-                ClientUtils.displayChatMessage("[Velocity] 3FMC chưa hoàn thiện, có thể flag hoặc lỗi, cẩn trọng!")
+                ClientUtils.displayChatMessage("[Velocity] 3FMC 00 velo by fdp ( thanks bpm!")
             }
     }
 
@@ -631,6 +632,8 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 }
                 
                 "3fmc" -> {
+                    if (bafmcDisableInAir && ! isOnGround(0.5))
+                        return@handler
                     if (packet is S12PacketEntityVelocity && packet.entityID == mc.thePlayer.entityId) {
                         if (kotlin.random.Random.nextInt(100) < bafmcChance) {
                             if (bafmcHorizontal == 0f && bafmcVertical == 0f) {
