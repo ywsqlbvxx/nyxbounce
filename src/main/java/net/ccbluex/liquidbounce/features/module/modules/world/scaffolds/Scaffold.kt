@@ -1748,12 +1748,22 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         }
 
         if (targetRotation != null) {
-            // Use existing rotation utils for smooth transitions
-            val rotation = RotationUtils.limitAngleChange(
-                RotationUtils.currentRotation ?: player.rotation,
-                targetRotation,
-                (intaveYawSpeed * 180).toFloat()
+            val currentRot = RotationUtils.currentRotation ?: player.rotation
+            val smoothYaw = getFixedAngleDelta(
+                currentRot.yaw,
+                targetRotation.yaw,
+                intaveYawSpeed
             )
+            val smoothPitch = getFixedAngleDelta(
+                currentRot.pitch,
+                targetRotation.pitch,
+                intavePitchSpeed
+            )
+            
+            val rotation = Rotation(
+                currentRot.yaw + smoothYaw,
+                currentRot.pitch + smoothPitch
+            ).fixedSensitivity()
 
             // Store rotation states
             intaveRotation = rotation
