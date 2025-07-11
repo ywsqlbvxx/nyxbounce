@@ -481,13 +481,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // Intave mode options
     private val intaveRotationMode by choices("IntaveRotation", arrayOf("GodBridge", "Stable"), "GodBridge") 
     { scaffoldMode == "Intave" }
-    private val intaveSpeed by float("IntaveSpeed", 0.15f, 0.1f..0.4f) { scaffoldMode == "Intave" }
-    private val intavePitchSpeed by float("IntavePitchSpeed", 0.15f, 0.05f..0.3f) { scaffoldMode == "Intave" }
-    private val intaveYawSpeed by float("IntaveYawSpeed", 0.15f, 0.05f..0.3f) { scaffoldMode == "Intave" }
     private val intaveSmartPitch by boolean("IntaveSmartPitch", true) { scaffoldMode == "Intave" }
-    private val intaveRandomization by boolean("IntaveRandomization", false) { scaffoldMode == "Intave" }
-    private val intaveMaxRandomization by float("IntaveMaxRandomization", 0.5f, 0.1f..3f) 
-    { scaffoldMode == "Intave" && intaveRandomization }
     private val intaveKeepRotation by boolean("IntaveKeepRotation", true) { scaffoldMode == "Intave" }
 
     // Intave variables
@@ -1729,16 +1723,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         val player = mc.thePlayer ?: return
         val world = mc.theWorld ?: return
 
-        // Speed handling using movement utils
-        val speed = intaveSpeed * when {
-            player.onGround -> 0.8f
-            player.fallDistance < 0.5f -> 0.7f
-            else -> 0.6f
-        }
-
-        // Apply speed modifications through movement utils
+        // Use legitimate GodBridge-like movement
         if (player.onGround) {
-            MovementUtils.strafe(speed)
+            // Similar to normal bridge speeds
+            MovementUtils.strafe(0.2f)
+            
+            // Stabilize speed for better control
+            if (sqrt(player.motionX * player.motionX + player.motionZ * player.motionZ) > 0.1) {
+                player.motionX *= 0.8
+                player.motionZ *= 0.8
+            }
         }
 
         // Get target rotation based on mode
@@ -1754,9 +1748,16 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             val yawDiff = MathHelper.wrapAngleTo180_float(targetRotation.yaw - currentRot.yaw)
             val pitchDiff = MathHelper.wrapAngleTo180_float(targetRotation.pitch - currentRot.pitch)
             
+            // Use smoother speeds similar to legitimate GodBridge
+            val speed = when {
+                player.fallDistance > 0 -> 0.15f  // Slower in air for safety
+                player.onGround -> 0.3f   // Normal ground speed
+                else -> 0.2f  // Default speed
+            }
+            
             val rotation = Rotation(
-                currentRot.yaw + (yawDiff * intaveYawSpeed),
-                currentRot.pitch + (pitchDiff * intavePitchSpeed)
+                currentRot.yaw + (yawDiff * speed),
+                currentRot.pitch + (pitchDiff * speed)
             ).fixedSensitivity()
 
             // Store rotation states
