@@ -1749,20 +1749,14 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (targetRotation != null) {
             val currentRot = RotationUtils.currentRotation ?: player.rotation
-            val smoothYaw = getFixedAngleDelta(
-                currentRot.yaw,
-                targetRotation.yaw,
-                intaveYawSpeed
-            )
-            val smoothPitch = getFixedAngleDelta(
-                currentRot.pitch,
-                targetRotation.pitch,
-                intavePitchSpeed
-            )
+            
+            // Calculate smooth angles based on the sensitivity
+            val yawDiff = MathHelper.wrapAngleTo180_float(targetRotation.yaw - currentRot.yaw)
+            val pitchDiff = MathHelper.wrapAngleTo180_float(targetRotation.pitch - currentRot.pitch)
             
             val rotation = Rotation(
-                currentRot.yaw + smoothYaw,
-                currentRot.pitch + smoothPitch
+                currentRot.yaw + (yawDiff * intaveYawSpeed),
+                currentRot.pitch + (pitchDiff * intavePitchSpeed)
             ).fixedSensitivity()
 
             // Store rotation states
