@@ -61,7 +61,7 @@ class GuiHeoMCGen(private val prevGui: GuiAltManager) : AbstractScreen() {
         loginButton = +GuiButton(2, width / 2 - 100, height / 2 + 20, "Login as Cracked")
 
         // Generate button
-        generateButton = +GuiButton(1, width / 2 - 100, height / 2 - 20, "Generate Random Alt")
+        generateButton = +GuiButton(1, width / 2 - 100, height / 2 + 45, "Generate Random Alt")
 
         // Back button
         +GuiButton(0, width / 2 - 100, height / 2 + 70, 200, 20, translationButton("back"))
@@ -168,8 +168,8 @@ class GuiHeoMCGen(private val prevGui: GuiAltManager) : AbstractScreen() {
             }
 
             2 -> {
-                if (usernameField.text.isEmpty() || passwordField.text.isEmpty()) {
-                    status = "§cPlease generate an alt first!"
+                if (usernameField.text.isEmpty()) {
+                    status = "§cPlease enter a username!"
                     return
                 }
 
@@ -178,33 +178,33 @@ class GuiHeoMCGen(private val prevGui: GuiAltManager) : AbstractScreen() {
 
                 SharedScopes.IO.launch {
                     try {
-                        status = "§cLogging in..."
-
-                        val yggdrasilUserAuthentication = YggdrasilUserAuthentication(
-                            YggdrasilAuthenticationService(NO_PROXY, ""),
-                            MINECRAFT
-                        )
-                        yggdrasilUserAuthentication.setUsername(emailField.text)
-                        yggdrasilUserAuthentication.setPassword(passwordField.text)
-
-                        status = try {
-                            yggdrasilUserAuthentication.logIn()
-
-                            mc.session = Session(
-                                yggdrasilUserAuthentication.selectedProfile.name,
-                                yggdrasilUserAuthentication.selectedProfile.id.toString(),
-                                yggdrasilUserAuthentication.authenticatedToken,
-                                "mojang"
-                            )
-                            call(SessionUpdateEvent)
-
-                            prevGui.status = "§aYour name is now §b§l${yggdrasilUserAuthentication.selectedProfile.name}§c."
-                            mc.displayGuiScreen(prevGui)
-                            "§aLogin successful!"
-                        } catch (e: AuthenticationException) {
-                            LOGGER.error("Failed to login.", e)
-                            "§cFailed to login: ${e.message}"
+                        status = "§aAdding to list and logging in..."
+                        
+                        // Add to alts list
+                        val newAlt = "${usernameField.text}:${emailField.text}:${passwordField.text}"
+                        val currentAlts = try {
+                            java.net.URL(ALTS_URL).readText().lines().toMutableList()
+                        } catch (e: Exception) {
+                            mutableListOf()
                         }
+                        
+                        if (!currentAlts.contains(newAlt)) {
+                            currentAlts.add(newAlt)
+                        }
+                        
+                        // Login as cracked
+                        mc.session = Session(
+                            usernameField.text,
+                            "",
+                            "",
+                            "legacy"
+                        )
+                        call(SessionUpdateEvent)
+
+                        prevGui.status = "§aYour name is now §b§l${usernameField.text}§c."
+                        mc.displayGuiScreen(prevGui)
+                        status = "§aLogin successful!"
+                        
                     } catch (throwable: Throwable) {
                         LOGGER.error("Failed to login.", throwable)
                         status = "§cFailed to login. Unknown error."
