@@ -109,7 +109,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val autoF5 by boolean("AutoF5", false).subjective()
 
     // Basic stuff
-    val sprint by choices("Sprint", arrayOf("Off", "Normal", "AllDirections"), "Off")
+    val sprint by boolean("Sprint", false)
     private val swing by boolean("Swing", true).subjective()
     private val down by boolean("Down", true) { !sameY && scaffoldMode !in arrayOf("GodBridge", "Telly") }
     private val autoJump by boolean("AutoJump", false)
@@ -413,24 +413,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             player.jump()
         }
         
-        if (sprint != "Off" && player.isMoving) {
-            when(sprint) {
-                "Normal" -> {
-                    if (!player.isSprinting) {
-                        player.isSprinting = true 
-                    }
-                }
-                "AllDirections" -> {
-                    if (!player.isSprinting) {
-                        player.isSprinting = true
-                    }
-                    if (player.moveStrafing != 0f || player.moveForward < 0f) {
-                        player.isSprinting = true 
-                    }
-                }
-            }
+        if (sprint && player.isMoving && !player.isSprinting) {
+            player.isSprinting = true
         }
-
+        
         if (slow) {
             if (!slowGround || slowGround && player.onGround) {
                 player.motionX *= slowSpeed
