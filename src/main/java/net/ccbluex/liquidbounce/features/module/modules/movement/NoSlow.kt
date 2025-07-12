@@ -34,7 +34,7 @@ object NoSlow : Module("NoSlow", Category.MOVEMENT, gameDetecting = false) {
 
     private val swordMode by choices(
         "SwordMode",
-        arrayOf("None", "NCP", "UpdatedNCP", "AAC5", "SwitchItem", "InvalidC08", "Blink"),
+        arrayOf("None", "NCP", "UpdatedNCP", "AAC5", "SwitchItem", "InvalidC08", "Blink", "GrimAC"),
         "None"
     )
 
@@ -202,6 +202,16 @@ object NoSlow : Module("NoSlow", Category.MOVEMENT, gameDetecting = false) {
                             if (player.ticksExisted % 3 == 0)
                                 sendPacket(C08PacketPlayerBlockPlacement(BlockPos(-1, -1, -1), 1, null, 0f, 0f, 0f))
                         }
+                    }
+                }
+
+                "grimac" -> {
+                    if (event.eventState == EventState.PRE) {
+                        sendPacket(C09PacketHeldItemChange((mc.thePlayer.inventory.currentItem % 8) + 1))
+                        sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+                        sendPacket(C09PacketHeldItemChange(mc.thePlayer.inventory.currentItem))
+                    } else {
+                        sendPacket(C08PacketPlayerBlockPlacement(BlockPos(-1, -1, -1), 255, heldItem, 0f, 0f, 0f))
                     }
                 }
             }

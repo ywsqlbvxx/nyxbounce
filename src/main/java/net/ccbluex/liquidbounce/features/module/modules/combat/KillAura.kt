@@ -70,8 +70,10 @@ import net.minecraft.potion.Potion
 import net.minecraft.util.*
 import org.lwjgl.input.Keyboard
 import java.awt.Color
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     /**
@@ -199,6 +201,20 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     // Rotations
     private val options = RotationSettings(this).withoutKeepRotation()
+
+    // Rotation modes
+    private val modeValue = choices(
+        "RotationMode",
+        arrayOf("Normal", "Spin", "BackSpin", "LiquidBounce", "Smart"),
+        "Normal"
+    )
+
+    // Smart rotation settings
+    private val smartPredictValue = boolean("SmartPredict", true) { modeValue.get() == "Smart" }
+    private val smartAimSpeed = floatRange("SmartAimSpeed", 0.3f..0.7f, 0.1f..1f) { modeValue.get() == "Smart" }
+    private val smartStabilizeValue = boolean("SmartStabilize", true) { modeValue.get() == "Smart" }
+    private val smartStrafeValue = boolean("SmartStrafe", true) { modeValue.get() == "Smart" }
+    private val smartAdjustVelocity = boolean("SmartAdjustVelocity", true) { modeValue.get() == "Smart" }
 
     // Raycast
     private val raycastValue = boolean("RayCast", true) { options.rotationsActive }
@@ -816,11 +832,15 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         }
 
-        if (bestTarget != null) {
-            if (Backtrack.runWithNearestTrackedDistance(bestTarget) { updateRotations(bestTarget) }) {
-                target = bestTarget
-                return
+        if (bestTarget != null) {        if (Backtrack.runWithNearestTrackedDistance(bestTarget) {
+            when (modeValue.get().lowercase()) {
+                "smart" -> updateSmartRotations(bestTarget)
+                else -> updateRotations(bestTarget)
             }
+        }) {
+            target = bestTarget
+            return
+        }
         }
 
         if (prevTargetEntities.isNotEmpty()) {
