@@ -177,10 +177,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     { useMaxSneakTime && eagleMode != "OnGround" }
 
     // Rotation Options
-    private val modeList =
+    private val rotationMode =
         choices("Rotations", arrayOf("Off", "Normal", "Stabilized", "ReverseYaw", "GodBridge"), "Normal")
 
-    private val options = RotationSettingsWithRotationModes(this, modeList).apply {
+    private val options = RotationSettingsWithRotationModes(this, rotationMode).apply {
         strictValue.excludeWithState()
         resetTicksValue.setSupport { it && scaffoldMode != "Telly" }
     }
@@ -1145,7 +1145,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (options.rotationsActive && !isGodBridgeEnabled) {
             val rotationDifference = rotationDifference(placeRotation.rotation, currRotation)
-            val rotationDifference2 = rotationDifference(placeRotation.rotation / 90F, currRotation / 90F)
+            val rotationDifference2 = rotationDifference(
+                Rotation(placeRotation.rotation.yaw / 90F, placeRotation.rotation.pitch / 90F),
+                Rotation(currRotation.yaw / 90F, currRotation.pitch / 90F)
+            )
 
             val simPlayer = SimulatedPlayer.fromClientPlayer(player.movementInput)
             simPlayer.tick()
