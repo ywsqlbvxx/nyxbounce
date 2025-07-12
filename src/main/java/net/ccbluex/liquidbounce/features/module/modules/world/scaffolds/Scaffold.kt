@@ -661,9 +661,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             val lockRotation = RotationUtils.limitAngleChange(oldPlayerRot, playerRot, 60f)
             setTargetRotation(lockRotation, options, 1)
             
-            val breezilySettings = object : RotationSettingsWithRotationModes(this@Scaffold, rotationMode) {
-                override val horizontalAngleChangeValue = floatRange("HorizontalAngleChange", 60f..60f, 1f..180f)
-                override val verticalAngleChangeValue = floatRange("VerticalAngleChange", 60f..60f, 1f..180f)
+            val breezilySettings = RotationSettingsWithRotationModes(this@Scaffold, rotationMode).apply {
+                horizontalAngleChangeValue.set(60f..60f)
+                verticalAngleChangeValue.set(60f..60f)
             }
 
             val blockBelow = mc.theWorld.getBlockState(BlockPos(player.posX, player.posY - 1.0, player.posZ)).block
