@@ -660,6 +660,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             val playerRot = Rotation(camYaw + 180f, rpitch)
             val lockRotation = RotationUtils.limitAngleChange(oldPlayerRot, playerRot, 60f)
             setTargetRotation(lockRotation, options, 1)
+            
+            val breezilySettings = object : RotationSettingsWithRotationModes(this@Scaffold, options.modeList) {
+                override val horizontalAngleChangeValue = floatRange("HorizontalAngleChange", 60f..60f, 1f..180f)
+                override val verticalAngleChangeValue = floatRange("VerticalAngleChange", 60f..60f, 1f..180f)
+            }
 
             val blockBelow = mc.theWorld.getBlockState(BlockPos(player.posX, player.posY - 1.0, player.posZ)).block
             if (blockBelow == net.minecraft.init.Blocks.air && ((camYaw / 45).roundToInt()) % 2 == 0) {
