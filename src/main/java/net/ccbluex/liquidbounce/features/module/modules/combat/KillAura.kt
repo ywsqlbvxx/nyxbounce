@@ -70,10 +70,8 @@ import net.minecraft.potion.Potion
 import net.minecraft.util.*
 import org.lwjgl.input.Keyboard
 import java.awt.Color
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     /**
@@ -201,20 +199,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     // Rotations
     private val options = RotationSettings(this).withoutKeepRotation()
-
-    // Rotation modes
-    private val modeValue = choices(
-        "RotationMode",
-        arrayOf("Normal", "Spin", "BackSpin", "LiquidBounce", "Smart"),
-        "Normal"
-    )
-
-    // Smart rotation settings
-    private val smartPredictValue = boolean("SmartPredict", true) { modeValue.get() == "Smart" }
-    private val smartAimSpeed = floatRange("SmartAimSpeed", 0.3f..0.7f, 0.1f..1f) { modeValue.get() == "Smart" }
-    private val smartStabilizeValue = boolean("SmartStabilize", true) { modeValue.get() == "Smart" }
-    private val smartStrafeValue = boolean("SmartStrafe", true) { modeValue.get() == "Smart" }
-    private val smartAdjustVelocity = boolean("SmartAdjustVelocity", true) { modeValue.get() == "Smart" }
 
     // Raycast
     private val raycastValue = boolean("RayCast", true) { options.rotationsActive }
@@ -832,15 +816,11 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         }
 
-        if (bestTarget != null) {        if (Backtrack.runWithNearestTrackedDistance(bestTarget) {
-            when (modeValue.get().lowercase()) {
-                "smart" -> updateSmartRotations(bestTarget)
-                else -> updateRotations(bestTarget)
+        if (bestTarget != null) {
+            if (Backtrack.runWithNearestTrackedDistance(bestTarget) { updateRotations(bestTarget) }) {
+                target = bestTarget
+                return
             }
-        }) {
-            target = bestTarget
-            return
-        }
         }
 
         if (prevTargetEntities.isNotEmpty()) {
@@ -972,64 +952,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
         player.setPosAndPrevPos(currPos, oldPos)
 
-        return true
-    }
-
-    /**
-     * Update rotations to enemy using smart logic
-     */
-    private fun updateSmartRotations(entity: Entity): Boolean {
-        val player = mc.thePlayer ?: return false
-
-        if (shouldPrioritize()) return false
-
-        if (!options.rotationsActive) {
-            return player.getDistanceToEntityBox(entity) <= range
-        }
-
-        val boundingBox = if (smartPredictValue) {
-            val prediction = entity.currPos.subtract(entity.prevPos).times(2 + predictEnemyPosition.toDouble())
-            entity.hitBox.offset(prediction)
-        } else {
-            entity.hitBox
-        }
-
-        // Get the current aim spot
-        val rotation = searchCenter(
-            boundingBox,
-            generateSpotBasedOnDistance,
-            outBorder && !attackTimer.hasTimePassed(attackDelay / 2),
-            randomization,
-            predict = false,
-            lookRange = range + scanRange,
-            attackRange = range,
-            throughWallsRange = throughWallsRange,
-            bodyPoints = listOf(highestBodyPointToTarget, lowestBodyPointToTarget),
-            horizontalSearch = horizontalBodySearchRange
-        ) ?: return false
-
-        // Apply smart targeting adjustments
-        val aimSpeed = smartAimSpeed.random()
-        val targetRotation = if (smartStabilizeValue) {
-            val currentRot = currentRotation ?: player.rotation
-            Rotation(
-                currentRot.yaw + (rotation.yaw - currentRot.yaw) * aimSpeed,
-                currentRot.pitch + (rotation.pitch - currentRot.pitch) * aimSpeed
-            )
-        } else {
-            rotation
-        }
-
-        // Apply strafe and velocity adjustments
-        if (smartStrafeValue) {
-            player.strafe *= 0.8f
-        }
-        if (smartAdjustVelocity) {
-            player.motionX *= 0.8
-            player.motionZ *= 0.8
-        }
-
-        setTargetRotation(targetRotation, options = options)
         return true
     }
 
