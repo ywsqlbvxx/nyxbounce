@@ -55,15 +55,15 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce", 
             "Delay", "Hypixel", "HypixelAir",
             "Click", "BlocksMC", "3FMC", "GrimReduce", "Intave",
-            "IntaveTest"
+            "Grim"
         ), "Simple"
     )
 
-    // IntaveReduce Options
+    // IntaveReduce
     private val reduceFactor by float("IntaveReduceFactor", 0.6f, 0f..1f) { mode == "IntaveReduce" }
     private val hurtTime by int("IntaveHurtTime", 3, 0..10) { mode == "IntaveReduce" }
 
-    // GrimReduce Options
+    // GrimReduce
     private val GrimReduceFactor by float("GrimReduceFactor", 0.6f, 0f..1f) { mode == "GrimReduce" }
     private val GrimMinHurtTime by int("GrimMinHurtTime", 5, 0..10) { mode == "GrimReduce" }
     private val GrimMaxHurtTime by int("GrimMaxHurtTime", 10, 0..20) { mode == "GrimReduce" }
@@ -114,16 +114,16 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val spoofDelay by int("SpoofDelay", 500, 0..5000) { mode == "Delay" }
     var delayMode = false
 
-    // Intave Options
+    // Intave 
     private val intaveJump by boolean("IntaveJump", true) { mode == "Intave" }
     private val intaveJumpDelay by int("JumpDelay", 10, 0..20) { mode == "Intave" && intaveJump }
     private val intaveJumpChance by int("JumpChance", 100, 0..100) { mode == "Intave" && intaveJump }
     
-    private val intaveSilent by boolean("IntaveSilent", true) { mode == "Intave" }
-    private val intaveSilentVertical by float("SilentVertical", 0.6f, 0f..1f) { mode == "Intave" && intaveSilent }
-    private val intaveSilentHorizontal by float("SilentHorizontal", 0.8f, 0f..1f) { mode == "Intave" && intaveSilent }
+    private val intaveReduceFactor by float("IntaveReduceFactor", 0.6f, 0f..1f) { mode == "Intave" }
+    private val intaveReduceDelay by int("IntaveReduceDelay", 10, 0..20) { mode == "Intave" }
+    private val intaveReduceChance by int("IntaveReduceChance", 100, 0..100) { mode == "Intave" }
 
-    // GrimReduce parameters
+    // GrimReduce
     private val grimReduceTicks by int("GrimReduceTicks", 4, 1..10) { mode == "grimreduce" }
     private val grimReduceAirOnly by boolean("GrimReduceAirOnly", true) { mode == "grimreduce" }
     private val grimReduceHorizontal by float("GrimReduceHorizontal", 0.62f, 0f..1f) { mode == "grimreduce" }
@@ -140,6 +140,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val bafmcVertical by float("3fmcVertical", 0F, 0F..1F) { mode == "3FMC" }
     private val bafmcChance by int("3fmcChance", 100, 0..100) { mode == "3FMC" }
     private val bafmcDisableInAir by boolean("DisableInAir", true) { mode == "3FMC" }
+
+    // Grim options
+    private val grimHorizontal by float("GrimHorizontal", 0F, 0F..1F) { mode == "Grim" }
+    private val grimVertical by float("GrimVertical", 0F, 0F..1F) { mode == "Grim" }
+    private val grimChance by int("GrimChance", 100, 0..100) { mode == "Grim" }
+    private val grimDisableInAir by boolean("DisableInAir", true) { mode == "Grim" }
 
     // TODO: Could this be useful in other modes? (Jump?)
     // Limits
@@ -583,16 +589,28 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                             if (thePlayer.fallDistance > intaveSmartFallDistance) return@handler
                         }
 
+                        // Jump functionality
                         if (intaveJump && thePlayer.onGround && thePlayer.hurtTime == intaveJumpDelay) {
                             if (nextInt(endExclusive = 100) <= intaveJumpChance) {
                                 thePlayer.jump()
                             }
                         }
 
-                        if (intaveSilent) {
-                            packet.motionY = (packet.getMotionY() * intaveSilentVertical).toInt()
-                            packet.motionX = (packet.getMotionX() * intaveSilentHorizontal).toInt()
-                            packet.motionZ = (packet.getMotionZ() * intaveSilentHorizontal).toInt()
+                        // Apply reduction
+                        if (nextInt(endExclusive = 100) <= intaveReduceChance) {
+                            hasReceivedVelocity = true
+                            intaveTick = 0
+                            
+                            if (thePlayer.onGround) {
+                                packet.motionX = (packet.getMotionX() * intaveReduceFactor).toInt()
+                                packet.motionZ = (packet.getMotionZ() * intaveReduceFactor).toInt()
+                            }
+                            
+                            if (thePlayer.hurtTime <= intaveReduceDelay) {
+                                packet.motionX = (packet.getMotionX() * intaveReduceFactor).toInt()
+                                packet.motionZ = (packet.getMotionZ() * intaveReduceFactor).toInt()
+                                packet.motionY = (packet.getMotionY() * intaveReduceFactor).toInt()
+                            }
                         }
                     }
                 }
@@ -624,6 +642,29 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                             packet.motionX = (packet.motionX * bafmcHorizontal).toInt()
                             packet.motionY = (packet.motionY * bafmcVertical).toInt()
                             packet.motionZ = (packet.motionZ * bafmcHorizontal).toInt()
+                        }
+                    }
+                }
+
+                "grim" -> {
+                    if (grimDisableInAir && ! isOnGround(0.5))
+                        return@handler
+                    if (packet is S12PacketEntityVelocity && packet.entityID == mc.thePlayer.entityId) {
+                        if (kotlin.random.Random.nextInt(100) < grimChance) {
+                            if (grimHorizontal == 0f && grimVertical == 0f) {
+                                event.cancelEvent()
+                                return@handler
+                            }
+
+                            if (grimHorizontal == 0f) {
+                                mc.thePlayer.motionY = packet.motionY / 8000.0 * grimVertical
+                                event.cancelEvent()
+                                return@handler
+                            }
+
+                            packet.motionX = (packet.motionX * grimHorizontal).toInt()
+                            packet.motionY = (packet.motionY * grimVertical).toInt()
+                            packet.motionZ = (packet.motionZ * grimHorizontal).toInt()
                         }
                     }
                 }
