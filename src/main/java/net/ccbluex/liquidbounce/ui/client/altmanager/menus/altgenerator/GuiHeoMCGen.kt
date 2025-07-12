@@ -15,7 +15,7 @@ import net.ccbluex.liquidbounce.event.EventManager.call
 import net.ccbluex.liquidbounce.event.SessionUpdateEvent
 import net.ccbluex.liquidbounce.lang.translationButton
 import net.ccbluex.liquidbounce.ui.client.altmanager.GuiAltManager
-// Removed GuiPasswordField import as we're using GuiTextField for all fields
+import net.ccbluex.liquidbounce.ui.elements.GuiPasswordField
 import net.ccbluex.liquidbounce.ui.font.AWTFontRenderer.Companion.assumeNonVolatile
 import net.ccbluex.liquidbounce.ui.font.Fonts
 import net.ccbluex.liquidbounce.utils.client.ClientUtils.LOGGER
@@ -57,11 +57,11 @@ class GuiHeoMCGen(private val prevGui: GuiAltManager) : AbstractScreen() {
         // Enable keyboard repeat events
         Keyboard.enableRepeatEvents(true)
 
-        // Generate button
-        generateButton = +GuiButton(1, width / 2 - 100, height / 2 - 60, 200, 20, "Generate Random Alt")
-
         // Login button
-        loginButton = +GuiButton(2, width / 2 - 100, height / 2 + 0, 200, 20, "Login As Cracked")
+        loginButton = +GuiButton(2, width / 2 - 100, height / 2 + 20, "Login as Cracked")
+
+        // Generate button
+        generateButton = +GuiButton(1, width / 2 - 100, height / 2 - 20, "Generate Random Alt")
 
         // Back button
         +GuiButton(0, width / 2 - 100, height / 2 + 70, 200, 20, translationButton("back"))
@@ -71,7 +71,7 @@ class GuiHeoMCGen(private val prevGui: GuiAltManager) : AbstractScreen() {
         usernameField.isFocused = false
         usernameField.maxStringLength = 64
 
-        // Password field (visible)
+        // Password field
         passwordField = GuiTextField(1337, Fonts.fontSemibold40, width / 2 - 100, height / 2 - 80, 200, 20)
         passwordField.maxStringLength = 64
 
@@ -168,31 +168,51 @@ class GuiHeoMCGen(private val prevGui: GuiAltManager) : AbstractScreen() {
             }
 
             2 -> {
-                if (usernameField.text.isEmpty()) {
-                    status = "§cPlease enter a username!"
+                if (usernameField.text.isEmpty() || passwordField.text.isEmpty()) {
+                    status = "§cPlease generate an alt first!"
                     return
                 }
 
                 loginButton.enabled = false
                 generateButton.enabled = false
 
-                try {
-                    status = "§aLogging in as cracked..."
-                    
-                    // Create cracked session
-                    mc.session = Session(usernameField.text, "", "", "mojang")
-                    call(SessionUpdateEvent)
-                    
-                    prevGui.status = "§aLogged in as §b§l${usernameField.text}§a (cracked)"
-                    mc.displayGuiScreen(prevGui)
-                } catch (throwable: Throwable) {
-                    LOGGER.error("Failed to login.", throwable)
-                    status = "§cFailed to login. Unknown error."
-                }
+                SharedScopes.IO.launch {
+                    try {
+                        status = "§cLogging in..."
 
-                loginButton.enabled = true
-                generateButton.enabled = true
-            }
+                        val yggdrasilUserAuthentication = YggdrasilUserAuthentication(
+                            YggdrasilAuthenticationService(NO_PROXY, ""),
+                            MINECRAFT
+                        )
+                        yggdrasilUserAuthentication.setUsername(emailField.text)
+                        yggdrasilUserAuthentication.setPassword(passwordField.text)
+
+                        status = try {
+                            yggdrasilUserAuthentication.logIn()
+
+                            mc.session = Session(
+                                yggdrasilUserAuthentication.selectedProfile.name,
+                                yggdrasilUserAuthentication.selectedProfile.id.toString(),
+                                yggdrasilUserAuthentication.authenticatedToken,
+                                "mojang"
+                            )
+                            call(SessionUpdateEvent)
+
+                            prevGui.status = "§aYour name is now §b§l${yggdrasilUserAuthentication.selectedProfile.name}§c."
+                            mc.displayGuiScreen(prevGui)
+                            "§aLogin successful!"
+                        } catch (e: AuthenticationException) {
+                            LOGGER.error("Failed to login.", e)
+                            "§cFailed to login: ${e.message}"
+                        }
+                    } catch (throwable: Throwable) {
+                        LOGGER.error("Failed to login.", throwable)
+                        status = "§cFailed to login. Unknown error."
+                    }
+
+                    loginButton.enabled = true
+                    generateButton.enabled = true
+                }
             }
         }
     }
