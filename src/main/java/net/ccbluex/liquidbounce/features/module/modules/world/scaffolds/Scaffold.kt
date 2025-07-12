@@ -327,7 +327,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         val z = cos(yaw.toRadians()).toDouble()
         
         var dangerBlocks = 0
-        for (i in 1..dynamicVoidDistance) {
+        for (i in 1..5) { 
             val checkPos = BlockPos(
                 player.posX + x * i,
                 player.posY - 1,
