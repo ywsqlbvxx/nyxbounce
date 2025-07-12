@@ -53,11 +53,15 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             "Simple", "AAC", "AACPush", "AACZero", "AACv4",
             "Reverse", "SmoothReverse", "JumpReset", "Glitch", "Legit",
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce", 
-            "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
-            "Click", "BlocksMC", "3FMC", "3FMC2", "GrimReduce", "Intave",
+            "Delay", "Hypixel", "HypixelAir",
+            "Click", "BlocksMC", "3FMC", "GrimReduce", "Intave",
             "IntaveTest"
         ), "Simple"
     )
+
+    // IntaveReduce Options
+    private val reduceFactor by float("IntaveReduceFactor", 0.6f, 0f..1f) { mode == "IntaveReduce" }
+    private val hurtTime by int("IntaveHurtTime", 3, 0..10) { mode == "IntaveReduce" }
 
     // GrimReduce Options
     private val GrimReduceFactor by float("GrimReduceFactor", 0.6f, 0f..1f) { mode == "GrimReduce" }
@@ -128,10 +132,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val intaveSmart by boolean("IntaveSmart", true) { mode == "Intave" }
     private val intaveSmartFallDistance by float("SmartFallDistance", 0.5f, 0f..1f) { mode == "Intave" && intaveSmart }
     private val intaveSmartInAir by boolean("SmartInAir", true) { mode == "Intave" && intaveSmart }
-
-    // IntaveReduce
-    private val reduceFactor by float("Factor", 0.6f, 0.6f..1f) { mode == "IntaveReduce" }
-    private val hurtTime by int("HurtTime", 9, 1..10) { mode == "IntaveReduce" }
 
     private val pauseOnExplosion by boolean("PauseOnExplosion", true)
     private val ticksToPause by int("TicksToPause", 20, 1..50) { pauseOnExplosion }
@@ -372,27 +372,10 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     thePlayer.motionZ *= horizontalMod 
                     thePlayer.motionY *= verticalMod
                 }
-            }
-
-            "intavereduce" -> {
-                if (!hasReceivedVelocity) return@handler
-                intaveTick++
-
-                if (mc.thePlayer.hurtTime == 2) {
-                    intaveDamageTick++
-                    if (thePlayer.onGround && intaveTick % 2 == 0 && intaveDamageTick <= 10) {
-                        thePlayer.tryJump()
-                        intaveTick = 0
-                    }
-                    hasReceivedVelocity = false
-                }
-            }
-
-            "grimreduce" -> {
+            }                "grimreduce" -> {
                 if (!hasReceivedVelocity) return@handler
 
                 if (thePlayer.hurtTime > 0) {
-                    // Apply gradual reduction over multiple ticks to bypass prediction checks
                     if (thePlayer.hurtTime <= grimReduceTicks) {
                         if (!grimReduceAirOnly || !thePlayer.onGround) {
                             thePlayer.motionX *= grimReduceHorizontal
@@ -614,15 +597,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     }
                 }
                 
-                "3fmc2" -> {
-                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId && thePlayer.onGround) {
-                        event.cancelEvent()
-                        thePlayer.motionX = 0.0
-                        thePlayer.motionZ = 0.0
-                        thePlayer.motionY = packet.realMotionY
-                    }
-                }
-
                 "glitch" -> {
                     if (!thePlayer.onGround)
                         return@handler
@@ -674,14 +648,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
                         sendPacket(C0BPacketEntityAction(thePlayer, START_SNEAKING))
                         sendPacket(C0BPacketEntityAction(thePlayer, STOP_SNEAKING))
-                    }
-                }
-
-                "grimc03" -> {
-                    // Checks to prevent from getting flagged (BadPacketsE)
-                    if (thePlayer.isMoving) {
-                        hasReceivedVelocity = true
-                        event.cancelEvent()
                     }
                 }
 
@@ -752,31 +718,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         }
     }
 
-    /**
-     * Tick Event (Abuse Timer Balance)
-     */
-    val onTick = handler<GameTickEvent> {
-        val player = mc.thePlayer ?: return@handler
 
-        if (mode != "GrimC03")
-            return@handler
-
-        // Timer Abuse (https://github.com/CCBlueX/LiquidBounce/issues/2519)
-        if (timerTicks > 0 && mc.timer.timerSpeed <= 1) {
-            val timerSpeed = 0.8f + (0.2f * (20 - timerTicks) / 20)
-            mc.timer.timerSpeed = timerSpeed.coerceAtMost(1f)
-            --timerTicks
-        } else if (mc.timer.timerSpeed <= 1) {
-            mc.timer.timerSpeed = 1f
-        }
-
-        if (hasReceivedVelocity) {
-            val pos = BlockPos(player.posX, player.posY, player.posZ)
-
-            if (checkAir(pos))
-                hasReceivedVelocity = false
-        }
-    }
 
     /**
      * Delay Mode
@@ -925,8 +867,8 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
                         motionX *= ratioXZ
                         motionZ *= ratioXZ
-                    }
-                }
+                      }
+                  }
 
                 mc.thePlayer.motionX = motionX * horizontal
                 mc.thePlayer.motionZ = motionZ * horizontal

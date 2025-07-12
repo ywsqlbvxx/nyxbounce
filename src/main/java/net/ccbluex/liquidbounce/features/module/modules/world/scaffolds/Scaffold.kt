@@ -73,7 +73,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // -->
 
     val scaffoldMode by choices(
-        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily", "Dynamic"), "Normal"
+        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge"), "Normal"
     )
     
     // HMCBlinkFly
@@ -118,24 +118,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val ticksUntilRotation by intRange("TicksUntilRotation", 3..3, 1..8) {
         scaffoldMode == "Telly"
     }
-
-    // Breezily mode sub-values
-    private val breezilyTiming by floatRange("BreezilyTiming", 0.1f..0.15f, 0.05f..0.3f) { scaffoldMode == "Breezily" }
-    private val breezilyStrafe by float("BreezilyStrafe", 0.2f, 0.1f..0.5f) { scaffoldMode == "Breezily" }
-    private val breezilyStabilize by boolean("BreezilyStabilize", true) { scaffoldMode == "Breezily" }
-    private val breezilyPitch by float("BreezilyPitch", 82.5f, 75f..85f) { scaffoldMode == "Breezily" }
-    private val breezilyRotationSpeed by float("BreezilyRotationSpeed", 0.4f, 0.1f..1.0f) { scaffoldMode == "Breezily" }
-    private val breezilyRandomization by boolean("BreezilyRandomization", true) { scaffoldMode == "Breezily" }
-
-    // Dynamic mode sub-values
-    private val dynamicRandomization by boolean("DynamicRandomization", true) { scaffoldMode == "Dynamic" }
-    private val dynamicSmoothness by floatRange("DynamicSmoothness", 0.8f..1.2f, 0.1f..2.0f) { scaffoldMode == "Dynamic" }
-    private val dynamicAcceleration by float("DynamicAcceleration", 0.3f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
-    private val dynamicDeceleration by float("DynamicDeceleration", 0.7f, 0.1f..1.0f) { scaffoldMode == "Dynamic" }
-    private val dynamicPitchAdjust by boolean("DynamicPitchAdjust", true) { scaffoldMode == "Dynamic" }
-    private val dynamicEdgeDistance by float("DynamicEdgeDistance", 0.3f, 0.1f..0.5f) { scaffoldMode == "Dynamic" }
-    private val dynamicVoidCheck by boolean("DynamicVoidCheck", true) { scaffoldMode == "Dynamic" }
-    private val dynamicVoidDistance by int("DynamicVoidDistance", 5, 1..10) { scaffoldMode == "Dynamic" && dynamicVoidCheck }
 
     // GodBridge mode sub-values
     private val waitForRots by boolean("WaitForRotations", false) { isGodBridgeEnabled }
@@ -335,14 +317,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val isGodBridgeEnabled
         get() = scaffoldMode == "GodBridge" || scaffoldMode == "Normal" && options.rotationMode == "GodBridge"
 
-    private val isBreezilyEnabled
-        get() = scaffoldMode == "Breezily"
-        
-    private val isDynamicEnabled
-        get() = scaffoldMode == "Dynamic"
-        
     private fun checkVoidDanger(): Boolean {
-        if (!dynamicVoidCheck) return false
         val player = mc.thePlayer ?: return false
         val world = mc.theWorld ?: return false
         
@@ -352,7 +327,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         val z = cos(yaw.toRadians()).toDouble()
         
         var dangerBlocks = 0
-        for (i in 1..dynamicVoidDistance) {
+        for (i in 1..5) { 
             val checkPos = BlockPos(
                 player.posX + x * i,
                 player.posY - 1,
@@ -363,7 +338,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         }
         return false
     }
-
+    
     private fun checkRotationSafety(rotation: Rotation): Boolean {
         val player = mc.thePlayer ?: return false
         val world = mc.theWorld ?: return false
@@ -377,125 +352,12 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         )
         
         val raytrace = world.rayTraceBlocks(eyePos, reachVec, false, true, false)
-        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK
+        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK // MovingObjectType.BLOCK represents hitting a block
     }
 
-    private fun smoothRotation(from: Rotation, to: Rotation, speed: Float): Rotation {
-        val diffYaw = MathHelper.wrapAngleTo180_float(to.yaw - from.yaw)
-        val diffPitch = MathHelper.wrapAngleTo180_float(to.pitch - from.pitch)
-        
-        return Rotation(
-            from.yaw + diffYaw * speed,
-            from.pitch + diffPitch * speed
-        ).fixedSensitivity()
-    }
 
-    private fun updateBreezilyMode() {
-        val player = mc.thePlayer ?: return
-        val currentTime = System.currentTimeMillis()
-
-        if (player.onGround && currentTime - lastBreezilySwitch > (breezilyTiming.random() * 1000)) {
-            val baseYaw = MovementUtils.direction.toDegreesF()
-            val side = if ((currentTime / 100) % 2 == 0L) breezilyStrafe else -breezilyStrafe
-            
-            // Add randomization to rotations if enabled
-            val randomYaw = if (breezilyRandomization) (-1f..1f).random() else 0f
-            val randomPitch = if (breezilyRandomization) (-0.5f..0.5f).random() else 0f
-            
-            val rotation = Rotation(
-                baseYaw + side + randomYaw, 
-                breezilyPitch + randomPitch
-            ).fixedSensitivity()
-
-            if (checkRotationSafety(rotation)) {
-                if (breezilyStabilize) {
-                    player.motionX *= 0.7
-                    player.motionZ *= 0.7
-                }
-                
-                val smoothSpeed = breezilyRotationSpeed * (if (breezilyRandomization) (0.9f..1.1f).random() else 1f)
-                breezilyRotation = smoothRotation(currRotation, rotation, smoothSpeed)
-                lastBreezilySwitch = currentTime
-            }
-        }
-    }
-
-    private fun calculateDynamicRotation(current: Rotation): Rotation {
-        val player = mc.thePlayer ?: return current
-        val currentTime = System.currentTimeMillis()
-        
-        // Update acceleration/deceleration
-        if (currentTime - lastDynamicUpdate > 50) {
-            if (dynamicAccelerating) {
-                dynamicSpeed += dynamicAcceleration * (dynamicSmoothness.random() * 0.1f)
-                if (dynamicSpeed > 1f) {
-                    dynamicSpeed = 1f
-                    dynamicAccelerating = false
-                }
-            } else {
-                dynamicSpeed -= dynamicDeceleration * (dynamicSmoothness.random() * 0.1f)
-                if (dynamicSpeed < 0.1f) {
-                    dynamicSpeed = 0.1f
-                    dynamicAccelerating = true
-                }
-            }
-            lastDynamicUpdate = currentTime
-        }
-        
-        // Add randomization
-        val baseSpeed = dynamicSpeed * (if (dynamicRandomization) (0.9f..1.1f).random() else 1f)
-        
-        // Calculate target rotation
-        val moveDir = player.movementInput.moveForward
-        val targetYaw = when {
-            moveDir > 0 -> MovementUtils.direction.toDegreesF()
-            moveDir < 0 -> MovementUtils.direction.toDegreesF() + 180f
-            else -> current.yaw
-        }
-        
-        // Adjust for void checking
-        if (currentTime - lastDynamicEdgeCheck > 100) {
-            inDangerZone = checkVoidDanger()
-            lastDynamicEdgeCheck = currentTime
-        }
-        
-        // Calculate pitch based on conditions
-        val targetPitch = when {
-            inDangerZone -> 82.5f
-            dynamicPitchAdjust -> (78f..83f).random()
-            else -> 79.5f
-        }
-        
-        val newRotation = Rotation(
-            MathHelper.wrapAngleTo180_float(targetYaw + ((-2f..2f).random() * baseSpeed)),
-            targetPitch + ((-1f..1f).random() * baseSpeed)
-        ).fixedSensitivity()
-        
-        if (!checkRotationSafety(newRotation)) {
-            return current 
-        }
-
-        val smoothSpeed = when {
-            inDangerZone -> 0.6f 
-            player.onGround -> 0.3f 
-            else -> 0.4f 
-        }
-
-        return smoothRotation(current, newRotation, smoothSpeed)
-    }
 
     private var godBridgeTargetRotation: Rotation? = null
-    private var breezilyRotation: Rotation? = null
-    private var lastBreezilySwitch: Long = 0
-    
-    // Dynamic mode tracking
-    private var dynamicRotation: Rotation? = null
-    private var lastDynamicUpdate = 0L
-    private var dynamicSpeed = 0f
-    private var dynamicAccelerating = true
-    private var lastDynamicEdgeCheck = 0L
-    private var inDangerZone = false
-
     private val isLookingDiagonally: Boolean
         get() {
             val player = mc.thePlayer ?: return false
@@ -539,35 +401,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         if (mc.playerController.currentGameType == WorldSettings.GameType.SPECTATOR) return@loopSequence
 
         mc.timer.timerSpeed = timer
-
-        // Update Breezily mode
-        if (isBreezilyEnabled) {
-            updateBreezilyMode()
-        }
-
-        // Update Dynamic mode
-        if (isDynamicEnabled) {
-            if (System.currentTimeMillis() - lastDynamicEdgeCheck > 100) {
-                inDangerZone = checkVoidDanger()
-                lastDynamicEdgeCheck = System.currentTimeMillis()
-            }
-            
-            // Apply dynamic speed modifications
-            if (dynamicPitchAdjust) {
-                val speed = dynamicSpeed * (if (dynamicRandomization) (0.9f..1.1f).random() else 1f)
-                player.motionX *= speed
-                player.motionZ *= speed
-            }
-            
-            // Handle edge distance checks
-            if (inDangerZone || dynamicEdgeDistance > 0f) {
-                val blockPos = BlockPos(player.posX, player.posY - 1, player.posZ)
-                if (mc.theWorld?.isAirBlock(blockPos) == true) {
-                    player.motionX *= 0.7
-                    player.motionZ *= 0.7
-                }
-            }
-        }
 
         // Telly
         if (player.onGround) ticksUntilJump++
@@ -831,18 +664,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (!Tower.isTowering && isGodBridgeEnabled && options.rotationsActive) {
             generateGodBridgeRotations(ticks)
-            return@handler
-        }
-
-        if (isBreezilyEnabled && options.rotationsActive) {
-            breezilyRotation?.let { setRotation(it, ticks) }
-            return@handler
-        }
-        
-        if (isDynamicEnabled && options.rotationsActive) {
-            val current = RotationUtils.currentRotation ?: mc.thePlayer.rotation
-            dynamicRotation = calculateDynamicRotation(current)
-            dynamicRotation?.let { setRotation(it, ticks) }
             return@handler
         }
 
