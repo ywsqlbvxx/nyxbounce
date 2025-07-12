@@ -35,6 +35,9 @@ import net.ccbluex.liquidbounce.utils.timing.*
 import net.minecraft.block.BlockBush
 import net.minecraft.client.settings.GameSettings
 import net.minecraft.init.Blocks.air
+import net.minecraft.util.BlockPos
+import net.minecraft.init.Blocks
+import kotlin.math.roundToInt
 import net.minecraft.item.ItemBlock
 import net.minecraft.item.ItemStack
 import net.minecraft.network.play.client.C0APacketAnimation
@@ -73,7 +76,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // -->
 
     val scaffoldMode by choices(
-        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge"), "Normal"
+        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily"), "Normal"
     )
     
     // HMCBlinkFly
@@ -107,6 +110,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Settings
     private val autoF5 by boolean("AutoF5", false).subjective()
+    private var breezilyState = false
 
     // Basic stuff
     val sprint by boolean("Sprint", false)
@@ -647,7 +651,28 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     val onRotationUpdate = handler<RotationUpdateEvent> {
         val player = mc.thePlayer ?: return@handler
+    // breezily
+        if (scaffoldMode == "Breezily") {
+             val camYaw = player.rotationYaw
+             val camPitch = player.rotationPitch
+            val oldPlayerRot = Rotation(camYaw, camPitch)
+            val rpitch = if (((camYaw / 45).roundToInt()) % 2 == 0) 79.6f else 76.3f
+            val playerRot = Rotation(camYaw + 180f, rpitch)
+            val lockRotation = RotationUtils.limitAngleChange(oldPlayerRot, playerRot, 60f)
+            setTargetRotation(lockRotation, options, 1)
 
+            val blockBelow = mc.theWorld.getBlockState(BlockPos(player.posX, player.posY - 1.0, player.posZ)).block
+            if (blockBelow == net.minecraft.init.Blocks.air && ((camYaw / 45).roundToInt()) % 2 == 0) {
+                breezilyState = !breezilyState
+                mc.gameSettings.keyBindRight.pressed = breezilyState
+                mc.gameSettings.keyBindLeft.pressed = !breezilyState
+            } else {
+                mc.gameSettings.keyBindRight.pressed = false
+                mc.gameSettings.keyBindLeft.pressed = false
+            }
+            return@handler
+        }
+        
         if (player.ticksExisted == 1) {
             launchY = player.posY.roundToInt()
         }
@@ -973,6 +998,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         SilentHotbar.resetSlot(this)
 
         options.instant = false
+        
+        mc.gameSettings.keyBindRight.pressed = false
+        mc.gameSettings.keyBindLeft.pressed = false
     }
 
     // Entity movement event
