@@ -59,10 +59,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         ), "Simple"
     )
 
-    // IntaveReduce
-    private val reduceFactor by float("IntaveReduceFactor", 0.6f, 0f..1f) { mode == "IntaveReduce" }
-    private val hurtTime by int("IntaveHurtTime", 3, 0..10) { mode == "IntaveReduce" }
-
     // GrimReduce
     private val GrimReduceFactor by float("GrimReduceFactor", 0.6f, 0f..1f) { mode == "GrimReduce" }
     private val GrimMinHurtTime by int("GrimMinHurtTime", 5, 0..10) { mode == "GrimReduce" }
@@ -119,10 +115,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val intaveJumpDelay by int("JumpDelay", 10, 0..20) { mode == "Intave" && intaveJump }
     private val intaveJumpChance by int("JumpChance", 100, 0..100) { mode == "Intave" && intaveJump }
     
-    private val intaveReduceFactor by float("IntaveReduceFactor", 0.6f, 0f..1f) { mode == "Intave" }
-    private val intaveReduceDelay by int("IntaveReduceDelay", 10, 0..20) { mode == "Intave" }
-    private val intaveReduceChance by int("IntaveReduceChance", 100, 0..100) { mode == "Intave" }
-
     // GrimReduce
     private val grimReduceTicks by int("GrimReduceTicks", 4, 1..10) { mode == "grimreduce" }
     private val grimReduceAirOnly by boolean("GrimReduceAirOnly", true) { mode == "grimreduce" }
@@ -183,10 +175,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     // Jump
     private var limitUntilJump = 0
 
-    // IntaveReduce
-    private var intaveTick = 0
-    private var lastAttackTime = 0L
-    private var intaveDamageTick = 0
 
     // Delay
     private val packets = LinkedHashMap<Packet<*>, Long>()
@@ -467,18 +455,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         }
     }
 
-    val onAttack = handler<AttackEvent> {
-        val player = mc.thePlayer ?: return@handler
-
-        if (mode != "IntaveReduce" || !hasReceivedVelocity) return@handler
-
-        if (player.hurtTime == hurtTime && System.currentTimeMillis() - lastAttackTime <= 8000) {
-            player.motionX *= reduceFactor
-            player.motionZ *= reduceFactor
-        }
-
-        lastAttackTime = System.currentTimeMillis()
-    }
 
     private fun checkAir(blockPos: BlockPos): Boolean {
         val world = mc.theWorld ?: return false
@@ -596,24 +572,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                             }
                         }
 
-                        // Apply reduction
-                        if (nextInt(endExclusive = 100) <= intaveReduceChance) {
-                            hasReceivedVelocity = true
-                            intaveTick = 0
-                            
-                            if (thePlayer.onGround) {
-                                packet.motionX = (packet.getMotionX() * intaveReduceFactor).toInt()
-                                packet.motionZ = (packet.getMotionZ() * intaveReduceFactor).toInt()
-                            }
-                            
-                            if (thePlayer.hurtTime <= intaveReduceDelay) {
-                                packet.motionX = (packet.getMotionX() * intaveReduceFactor).toInt()
-                                packet.motionZ = (packet.getMotionZ() * intaveReduceFactor).toInt()
-                                packet.motionY = (packet.getMotionY() * intaveReduceFactor).toInt()
-                            }
-                        }
-                    }
-                }
                 
                 "glitch" -> {
                     if (!thePlayer.onGround)

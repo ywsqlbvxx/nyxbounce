@@ -607,12 +607,43 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      */
     private fun runAttack(isFirstClick: Boolean, isLastClick: Boolean) {
         val currentTarget = this.target ?: return
-
         val player = mc.thePlayer ?: return
         val world = mc.theWorld ?: return
 
         if (noConsumeAttack == "NoHits" && isConsumingItem()) {
             return
+        }
+
+        // HitSelect logic
+        if (hitSelect) {
+            val targetHurtTime = currentTarget.hurtTime
+            
+            when (hitSelectMode.lowercase()) {
+                "smart" -> {
+                    val targetMoving = currentTarget.movementInput.moveForward != 0f || currentTarget.movementInput.moveStrafe != 0f
+                    val optimalTiming = if (adaptiveHitTiming) {
+                        if (targetMoving) hitTiming * 0.8f else hitTiming
+                    } else hitTiming
+                    
+                    if (targetHurtTime > optimalTiming || 
+                        System.currentTimeMillis() - lastAttackTime < minAttackDelay) {
+                        return
+                    }
+                }
+                "aggressive" -> {
+                    if (targetHurtTime > hitTiming * 0.7f || 
+                        System.currentTimeMillis() - lastAttackTime < minAttackDelay * 0.7) {
+                        return
+                    }
+                }
+                "defensive" -> {
+                    if (targetHurtTime > hitTiming * 1.2f || 
+                        System.currentTimeMillis() - lastAttackTime < minAttackDelay * 1.3 ||
+                        player.getDistanceToEntityBox(currentTarget) < 2f) {
+                        return
+                    }
+                }
+            }
         }
 
         // Settings
@@ -873,11 +904,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             val affectSprint = false.takeIf { KeepSprint.handleEvents() || keepSprint }
 
             thePlayer.attackEntityWithModifiedSprint(entity, affectSprint) { if (swing) thePlayer.swingItem() }
-            if (autoBlock == "RightHold"
-                && thePlayer.heldItem?.item is ItemSword
-                && thePlayer.getDistanceToEntityBox(entity) <= blockMaxRange) {
-                mc.gameSettings.keyBindUseItem.pressed = true
-            }
+            lastAttackTime = System.currentTimeMillis()  // Update last attack time
+            
             // Apply enchantment critical effect if FakeSharp is enabled
             if (EnchantmentHelper.getModifierForCreature(
                     thePlayer.heldItem, entity.creatureAttribute
