@@ -975,6 +975,64 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         return true
     }
 
+    /**
+     * Update rotations to enemy using smart logic
+     */
+    private fun updateSmartRotations(entity: Entity): Boolean {
+        val player = mc.thePlayer ?: return false
+
+        if (shouldPrioritize()) return false
+
+        if (!options.rotationsActive) {
+            return player.getDistanceToEntityBox(entity) <= range
+        }
+
+        val boundingBox = if (smartPredictValue) {
+            val prediction = entity.currPos.subtract(entity.prevPos).times(2 + predictEnemyPosition.toDouble())
+            entity.hitBox.offset(prediction)
+        } else {
+            entity.hitBox
+        }
+
+        // Get the current aim spot
+        val rotation = searchCenter(
+            boundingBox,
+            generateSpotBasedOnDistance,
+            outBorder && !attackTimer.hasTimePassed(attackDelay / 2),
+            randomization,
+            predict = false,
+            lookRange = range + scanRange,
+            attackRange = range,
+            throughWallsRange = throughWallsRange,
+            bodyPoints = listOf(highestBodyPointToTarget, lowestBodyPointToTarget),
+            horizontalSearch = horizontalBodySearchRange
+        ) ?: return false
+
+        // Apply smart targeting adjustments
+        val aimSpeed = smartAimSpeed.random()
+        val targetRotation = if (smartStabilizeValue) {
+            val currentRot = currentRotation ?: player.rotation
+            Rotation(
+                currentRot.yaw + (rotation.yaw - currentRot.yaw) * aimSpeed,
+                currentRot.pitch + (rotation.pitch - currentRot.pitch) * aimSpeed
+            )
+        } else {
+            rotation
+        }
+
+        // Apply strafe and velocity adjustments
+        if (smartStrafeValue) {
+            player.strafe *= 0.8f
+        }
+        if (smartAdjustVelocity) {
+            player.motionX *= 0.8
+            player.motionZ *= 0.8
+        }
+
+        setTargetRotation(targetRotation, options = options)
+        return true
+    }
+
     private fun ticksSinceClick() = runTimeTicks - (attackTickTimes.lastOrNull()?.second ?: 0)
 
     /**
