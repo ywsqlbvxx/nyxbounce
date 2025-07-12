@@ -136,7 +136,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val onDestroyBlock by boolean("OnDestroyBlock", false)
 
     // AutoBlock
-    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold"), "Packet")
+    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Interact"), "Packet")
     private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" }
     private val unblockMode by choices(
         "UnblockMode", arrayOf("Stop", "Switch", "Empty"), "Stop"
@@ -171,6 +171,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             "Off", "Fake"
         ) && blinkAutoBlock
     }
+
+    // Interact mode settings
+    private val interactBlockTicks by int("InteractBlockTicks", 2, 1..20) { autoBlock == "Interact" }
 
     // AutoBlock conditions
     private val smartAutoBlock by boolean("SmartAutoBlock", false) { autoBlock == "Packet" }
@@ -340,6 +343,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     // Blink AutoBlock
     private var blinked = false
+    
+    // Interact AutoBlock
+    private var interactBlockTimer = 0
 
     // Swing fails
     private val swingFails = mutableListOf<SwingFailData>()
@@ -354,6 +360,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         attackTickTimes.clear()
         attackTimer.reset()
         clicks = 0
+        interactBlockTimer = 0
         
         if (autoBlock == "RightHold") {
             mc.gameSettings.keyBindUseItem.pressed = false
@@ -416,6 +423,15 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             target = null
             renderBlocking = false
             return@handler
+        }
+
+        if (autoBlock == "Interact" && blockStatus) {
+            interactBlockTimer++
+            
+            if (interactBlockTimer >= interactBlockTicks) {
+                stopBlocking(true)
+                interactBlockTimer = 0
+            }
         }
 
         if (clickOnly && !mc.gameSettings.keyBindAttack.isKeyDown) {
@@ -1087,6 +1103,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
                 val movingObject = boundingBox.calculateIntercept(positionEye, lookAt) ?: return
                 val hitVec = movingObject.hitVec
+
+                if (autoBlock == "Interact") {
+                    interactBlockTimer = 0
+                }
 
                 sendPackets(
                     C02PacketUseEntity(interactEntity, hitVec - interactEntity.positionVector),
