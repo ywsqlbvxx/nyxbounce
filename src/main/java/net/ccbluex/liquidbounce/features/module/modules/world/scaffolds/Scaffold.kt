@@ -658,8 +658,12 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             val oldPlayerRot = Rotation(camYaw, camPitch)
             val rpitch = if (((camYaw / 45).roundToInt()) % 2 == 0) 79.6f else 76.3f
             val playerRot = Rotation(camYaw + 180f, rpitch)
-            val lockRotation = RotationUtils.limitAngleChange(oldPlayerRot, playerRot, 60f)
-            setTargetRotation(lockRotation, options, 1)
+            val settings = RotationSettingsWithRotationModes(this@Scaffold, rotationMode).apply {
+                horizontalAngleChangeValue.set(60f..60f)
+                verticalAngleChangeValue.set(60f..60f)
+            }
+            val lockRotation = RotationUtils.limitAngleChange(oldPlayerRot, playerRot, settings)
+            setTargetRotation(lockRotation, settings, 1)
             
             val breezilySettings = RotationSettingsWithRotationModes(this@Scaffold, rotationMode).apply {
                 horizontalAngleChangeValue.set(60f..60f)
