@@ -1,8 +1,3 @@
-/*
- * LiquidBounce Hacked Client
- * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/CCBlueX/LiquidBounce/
- */
 package net.ccbluex.liquidbounce.features.module.modules.world.scaffolds
 
 import net.ccbluex.liquidbounce.event.*
@@ -35,9 +30,6 @@ import net.ccbluex.liquidbounce.utils.timing.*
 import net.minecraft.block.BlockBush
 import net.minecraft.client.settings.GameSettings
 import net.minecraft.init.Blocks.air
-import net.minecraft.util.BlockPos
-import net.minecraft.init.Blocks
-import kotlin.math.roundToInt
 import net.minecraft.item.ItemBlock
 import net.minecraft.item.ItemStack
 import net.minecraft.network.play.client.C0APacketAnimation
@@ -78,11 +70,20 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     val scaffoldMode by choices(
         "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily"), "Normal"
     )
-    
+
     // HMCBlinkFly
     private val hmcBlinkFlyEnabled by boolean("HMCBlinkFly", false)
     private val hmcBlinkVisibleLimit by int("HMCBlinkVisibleBlocks", 4, 0..10) { hmcBlinkFlyEnabled }
     private var hmcBlinkPlacedCount = 0
+
+    // Breezily settings
+    private val breezilyPitchRange by floatRange("BreezilyPitch", 76.3f..79.6f, 65f..85f) { scaffoldMode == "Breezily" }
+    private val breezilyJitterSpeed by float("BreezilyJitterSpeed", 60f, 1f..180f) { scaffoldMode == "Breezily" }
+    private val breezilyAutoJump by boolean("BreezilyAutoJump", true) { scaffoldMode == "Breezily" }
+    
+    // Breezily settings
+    private var breezilySwing = false
+    private var lastBreezilyTick = 0L
 
     // Expand
     private val omniDirectionalExpand by boolean("OmniDirectionalExpand", false) { scaffoldMode == "Expand" }
@@ -110,7 +111,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Settings
     private val autoF5 by boolean("AutoF5", false).subjective()
-    private var breezilyState = false
 
     // Basic stuff
     val sprint by boolean("Sprint", false)
@@ -278,7 +278,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     private fun shouldLegitSneak(): Boolean {
         val currentTime = System.currentTimeMillis()
-        
+
         if (eagleSneaking) {
             val sneakDuration = currentTime - eagleSneakStartTime
             if (sneakDuration >= (eagleSneakTiming.random() * 1000)) {
@@ -287,11 +287,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             }
             return true
         }
-        
+
         if (currentTime - lastEagleTime <= (eagleRandomDelay * 1000)) {
             return false
         }
-        
+
         eagleSneakStartTime = currentTime
         lastEagleTime = currentTime
         return true
@@ -324,12 +324,12 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private fun checkVoidDanger(): Boolean {
         val player = mc.thePlayer ?: return false
         val world = mc.theWorld ?: return false
-        
+
         // Check blocks below in the movement direction
         val yaw = player.rotationYaw
         val x = -sin(yaw.toRadians()).toDouble()
         val z = cos(yaw.toRadians()).toDouble()
-        
+
         var dangerBlocks = 0
         for (i in 1..5) { 
             val checkPos = BlockPos(
@@ -342,11 +342,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         }
         return false
     }
-    
+
     private fun checkRotationSafety(rotation: Rotation): Boolean {
         val player = mc.thePlayer ?: return false
         val world = mc.theWorld ?: return false
-        
+
         val eyePos = player.getPositionEyes(1f)
         val lookVec = getVectorForRotation(rotation)
         val reachVec = eyePos.addVector(
@@ -354,7 +354,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             lookVec.yCoord * 4.5,
             lookVec.zCoord * 4.5
         )
-        
+
         val raytrace = world.rayTraceBlocks(eyePos, reachVec, false, true, false)
         return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK // MovingObjectType.BLOCK represents hitting a block
     }
@@ -412,15 +412,15 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         if (shouldGoDown) {
             mc.gameSettings.keyBindSneak.pressed = false
         }
-        
+
         if (autoJump && player.onGround && player.isMoving) {
             player.jump()
         }
-        
+
         if (sprint && player.isMoving && !player.isSprinting) {
             player.isSprinting = true
         }
-        
+
         if (slow) {
             if (!slowGround || slowGround && player.onGround) {
                 player.motionX *= slowSpeed
@@ -478,7 +478,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
                 // For better sneak support we could move this to MovementInputEvent
                 val pressedOnKeyboard = Keyboard.isKeyDown(options.keyBindSneak.keyCode)
-                
+
                 val isLegitMode = eagle == "Legit"
 
                 var shouldEagle = if (isLegitMode) {
@@ -556,7 +556,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             }
         }
     }
-    
+
     val onHMCBlinkPacket = handler<PacketEvent> { event ->
         if (!hmcBlinkFlyEnabled) return@handler
 
@@ -651,33 +651,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     val onRotationUpdate = handler<RotationUpdateEvent> {
         val player = mc.thePlayer ?: return@handler
-    // breezily
-        if (scaffoldMode == "Breezily") {
-             val camYaw = player.rotationYaw
-             val camPitch = player.rotationPitch
-            val oldPlayerRot = Rotation(camYaw, camPitch)
-            val rpitch = if (((camYaw / 45).roundToInt()) % 2 == 0) 79.6f else 76.3f
-            val playerRot = Rotation(camYaw + 180f, rpitch)
-            val lockRotation = RotationUtils.limitAngleChange(oldPlayerRot, playerRot, 60f)
-            setTargetRotation(lockRotation, options, 1)
-            
-            val breezilySettings = object : RotationSettingsWithRotationModes(this@Scaffold, options.modeList) {
-                override val horizontalAngleChangeValue = floatRange("HorizontalAngleChange", 60f..60f, 1f..180f)
-                override val verticalAngleChangeValue = floatRange("VerticalAngleChange", 60f..60f, 1f..180f)
-            }
 
-            val blockBelow = mc.theWorld.getBlockState(BlockPos(player.posX, player.posY - 1.0, player.posZ)).block
-            if (blockBelow == net.minecraft.init.Blocks.air && ((camYaw / 45).roundToInt()) % 2 == 0) {
-                breezilyState = !breezilyState
-                mc.gameSettings.keyBindRight.pressed = breezilyState
-                mc.gameSettings.keyBindLeft.pressed = !breezilyState
-            } else {
-                mc.gameSettings.keyBindRight.pressed = false
-                mc.gameSettings.keyBindLeft.pressed = false
-            }
-            return@handler
-        }
-        
         if (player.ticksExisted == 1) {
             launchY = player.posY.roundToInt()
         }
@@ -973,7 +947,12 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     override fun onDisable() {
         net.ccbluex.liquidbounce.utils.client.BlinkUtils.unblink()
         val player = mc.thePlayer ?: return
-
+        
+        if (scaffoldMode == "Breezily") {
+            mc.gameSettings.keyBindLeft.pressed = false
+            mc.gameSettings.keyBindRight.pressed = false
+        }
+    
         if (!GameSettings.isKeyDown(mc.gameSettings.keyBindSneak)) {
             mc.gameSettings.keyBindSneak.pressed = false
             if (eagleSneaking && player.isSneaking) {
@@ -1003,15 +982,18 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         SilentHotbar.resetSlot(this)
 
         options.instant = false
-        
-        mc.gameSettings.keyBindRight.pressed = false
-        mc.gameSettings.keyBindLeft.pressed = false
     }
 
     // Entity movement event
     val onMove = handler<MoveEvent> { event ->
         val player = mc.thePlayer ?: return@handler
-
+        
+        if (scaffoldMode == "Breezily") {
+            if (mc.thePlayer.onGround) {
+                event.x *= 0.8
+                event.z *= 0.8
+        }
+        
         if (!safeWalkValue.isActive() || shouldGoDown) {
             return@handler
         }
@@ -1094,7 +1076,34 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         val player = mc.thePlayer ?: return false
 
         options.instant = false
+        if (scaffoldMode == "Breezily") {
+            val yaw = mc.thePlayer.rotationYaw
+            val isEvenRotation = ((yaw / 45).roundToInt()) % 2 == 0
+            val pitch = if (isEvenRotation) breezilyPitchRange.last else breezilyPitchRange.first
+        
+            placeRotation = PlaceRotation(
+                placeInfo,
+                Rotation(yaw + 180f, pitch).fixedSensitivity()
+            )
 
+            // Handle breezily jitter movement
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastBreezilyTick >= (1000f / breezilyJitterSpeed)) {
+                breezilySwing = !breezilySwing
+                lastBreezilyTick = currentTime
+            
+                if (mc.thePlayer.onGround && breezilyAutoJump) {
+                    mc.thePlayer.jump()
+                }
+            }
+
+            // Apply jitter movement
+            mc.gameSettings.keyBindRight.pressed = breezilySwing
+            mc.gameSettings.keyBindLeft.pressed = !breezilySwing
+
+            return true
+        }
+        
         if (!blockPosition.isReplaceable) {
             if (autoF5) mc.gameSettings.thirdPersonView = 0
             return false
@@ -1478,7 +1487,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             } else 0f
 
             val pitch = calculateOptimalPitch()
-            
+
             Rotation(movingYaw + side, pitch)
         } else {
             val pitch = if (dynamicPitch) 75.6f + (if(player.fallDistance > 0) player.fallDistance * 0.5f else 0f) else 75.6f
@@ -1496,7 +1505,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         godBridgeTargetRotation = rotation
         setRotation(rotation, ticks)
     }
-    
+
     private fun isServerPacket(packet: Any): Boolean {
         return packet.javaClass.simpleName.startsWith("S")
     }
