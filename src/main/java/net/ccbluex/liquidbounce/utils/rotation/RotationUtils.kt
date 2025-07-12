@@ -323,7 +323,7 @@ object RotationUtils : MinecraftInstance, Listenable {
     fun rotationDifference(a: Rotation, b: Rotation = serverRotation) =
         hypot(angleDifference(a.yaw, b.yaw), a.pitch - b.pitch)
 
-    private fun limitAngleChange(
+    public fun limitAngleChange(
         currentRotation: Rotation, targetRotation: Rotation, settings: RotationSettings
     ): Rotation {
         val (hSpeed, vSpeed) = if (settings.instant) {
