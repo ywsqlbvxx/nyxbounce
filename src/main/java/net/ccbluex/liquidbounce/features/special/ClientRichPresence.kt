@@ -116,10 +116,7 @@ object ClientRichPresence : Configurable("DiscordRPC"), MinecraftInstance, Liste
                 // Set server info
                 if (showRPCServerIP) {
                     setDetails(customRPCText.ifEmpty {
-                        "Server: ${
-                            if (mc.isIntegratedServerRunning || serverData == null) "Singleplayer"
-                            else ServerUtils.hideSensitiveInformation(serverData.serverIP)
-                        }"
+                        "Cheating using $CLIENT_NAME v$clientVersionText"
                     })
                 }
 
