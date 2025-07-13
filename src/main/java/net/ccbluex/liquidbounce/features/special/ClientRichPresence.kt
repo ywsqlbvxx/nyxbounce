@@ -160,7 +160,7 @@ object ClientRichPresence : Configurable("DiscordRPC"), MinecraftInstance, Liste
      * @throws IOException If reading failed
      */
     private fun loadConfiguration() {
-        val discordConf = HttpClient.get("$CLIENT_CLOUD/discord.json").jsonBody<DiscordConfiguration>() ?: return
+        val discordConf = HttpClient.get("https://file.theatlantis.asia/discord.json").jsonBody<DiscordConfiguration>() ?: return
 
         // Check has app id
         discordConf.appID?.let { appID = it }
