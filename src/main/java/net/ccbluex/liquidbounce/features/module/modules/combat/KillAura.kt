@@ -82,7 +82,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val simulateDoubleClicking by boolean("SimulateDoubleClicking", false) { !simulateCooldown }
 
     // CPS - Attack speed
-    private val cps by intRange("CPS", 5..8, 1..50) { !simulateCooldown }.onChanged {
+    private val cps by intRange("CPS", 5..8, 1..100) { !simulateCooldown }.onChanged {
         attackDelay = randomClickDelay(it.first, it.last)
     }
 
@@ -95,7 +95,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     // Range
     // TODO: Make block range independent from attack range
-    private val range: Float by float("Range", 3.7f, 1f..8f).onChanged {
+    private val range: Float by float("Range", 3.7f, 1f..10f).onChanged {
         blockRange = blockRange.coerceAtMost(it)
     }
     private val scanRange by float("ScanRange", 2f, 0f..10f)
@@ -121,7 +121,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     )
     private val targetMode by choices("TargetMode", arrayOf("Single", "Switch", "Multi"), "Switch")
     private val limitedMultiTargets by int("LimitedMultiTargets", 0, 0..50) { targetMode == "Multi" }
-    private val maxSwitchFOV by float("MaxSwitchFOV", 90f, 30f..180f) { targetMode == "Switch" }
+    private val maxSwitchFOV by float("MaxSwitchFOV", 90f, 30f..360f) { targetMode == "Switch" }
 
     // Delay
     private val switchDelay by int("SwitchDelay", 15, 1..1000) { targetMode == "Switch" }
@@ -136,7 +136,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val onDestroyBlock by boolean("OnDestroyBlock", false)
 
     // AutoBlock
-    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold"), "Packet")
+    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Interact"), "Packet")
     private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" }
     private val unblockMode by choices(
         "UnblockMode", arrayOf("Stop", "Switch", "Empty"), "Stop"
@@ -172,6 +172,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         ) && blinkAutoBlock
     }
 
+    // Interact mode settings
+    private val interactBlockTicks by int("InteractBlockTicks", 2, 1..20) { autoBlock == "Interact" }
+
     // AutoBlock conditions
     private val smartAutoBlock by boolean("SmartAutoBlock", false) { autoBlock == "Packet" }
 
@@ -192,7 +195,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val maxOwnHurtTime by int("MaxOwnHurtTime", 3, 0..10) { smartAutoBlock }
 
     // Don't block if target isn't looking at you
-    private val maxDirectionDiff by float("MaxOpponentDirectionDiff", 60f, 30f..180f) { smartAutoBlock }
+    private val maxDirectionDiff by float("MaxOpponentDirectionDiff", 60f, 30f..360f) { smartAutoBlock }
 
     // Don't block if target is swinging an item and therefore cannot attack
     private val maxSwingProgress by int("MaxOpponentSwingProgress", 1, 0..5) { smartAutoBlock }
@@ -250,7 +253,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         "HorizontalBodySearchRange", 0f..1f, 0f..1f
     ) { options.rotationsActive }
 
-    private val fov by float("FOV", 180f, 0f..180f)
+    private val fov by float("FOV", 180f, 0f..360f)
 
     // Prediction
     private val predictClientMovement by int("PredictClientMovement", 2, 0..5)
@@ -268,7 +271,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     ) { swing && failSwing && options.rotationsActive }
     private val swingOnlyInAir by boolean("SwingOnlyInAir", true) { swing && failSwing && options.rotationsActive }
     private val maxRotationDifferenceToSwing by float(
-        "MaxRotationDifferenceToSwing", 180f, 0f..180f
+        "MaxRotationDifferenceToSwing", 180f, 0f..360f
     ) { swing && failSwing && options.rotationsActive }
     private val swingWhenTicksLate = boolean("SwingWhenTicksLate", false) {
         swing && failSwing && maxRotationDifferenceToSwing != 180f && options.rotationsActive
@@ -279,6 +282,21 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val renderBoxOnSwingFail by boolean("RenderBoxOnSwingFail", false) { failSwing }
     private val renderBoxColor = ColorSettingsInteger(this, "RenderBoxColor") { renderBoxOnSwingFail }.with(Color.CYAN)
     private val renderBoxFadeSeconds by float("RenderBoxFadeSeconds", 1f, 0f..5f) { renderBoxOnSwingFail }
+
+    private fun adaptiveHitTiming(target: EntityLivingBase): Boolean {
+        val dist = mc.thePlayer.getDistanceToEntityBox(target)
+        val velX = target.motionX
+        val velZ = target.motionZ
+        val speed = Math.sqrt(velX * velX + velZ * velZ)
+
+        val optimalTiming = when {
+            speed > 0.3 -> hitTiming - 2
+            speed > 0.2 -> hitTiming - 1
+            else -> hitTiming
+        }
+
+        return target.hurtTime <= optimalTiming
+    }
 
     // Inventory
     private val simulateClosingInventory by boolean("SimulateClosingInventory", false) { !noInventoryAttack }
@@ -341,8 +359,18 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     // Blink AutoBlock
     private var blinked = false
 
+    // Interact AutoBlock
+    private var interactBlockTimer = 0
+
     // Swing fails
     private val swingFails = mutableListOf<SwingFailData>()
+
+    // Add hit select options
+    private val hitSelect by boolean("HitSelect", false)
+    private val hitSelectMode by choices("HitSelectMode", arrayOf("Smart", "Aggressive", "Defensive"), "Smart")
+    private val hitTiming by int("HitTiming", 9, 0..20)
+    private val minAttackDelay by int("MinAttackDelay", 5, 0..20)
+    private var lastAttackTime = 0L
 
     /**
      * Disable kill aura module
@@ -354,7 +382,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         attackTickTimes.clear()
         attackTimer.reset()
         clicks = 0
-        
+        interactBlockTimer = 0
+
         if (autoBlock == "RightHold") {
             mc.gameSettings.keyBindUseItem.pressed = false
         }
@@ -418,6 +447,15 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             return@handler
         }
 
+        if (autoBlock == "Interact" && blockStatus) {
+            interactBlockTimer++
+
+            if (interactBlockTimer >= interactBlockTicks) {
+                stopBlocking(true)
+                interactBlockTimer = 0
+            }
+        }
+
         if (clickOnly && !mc.gameSettings.keyBindAttack.isKeyDown) {
             clicks = 0
             return@handler
@@ -477,7 +515,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                 }
             }
         }
-        
+
         if (autoBlock == "RightHold") {
             val localTarget = target
             if (localTarget != null
@@ -591,12 +629,34 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      */
     private fun runAttack(isFirstClick: Boolean, isLastClick: Boolean) {
         val currentTarget = this.target ?: return
-
         val player = mc.thePlayer ?: return
         val world = mc.theWorld ?: return
 
         if (noConsumeAttack == "NoHits" && isConsumingItem()) {
             return
+        }
+
+        // HitSelect logic
+        if (hitSelect) {
+            val targetHurtTime = currentTarget.hurtTime
+
+            when (hitSelectMode.lowercase()) {
+                "smart" -> {
+                    if (player.movementInput.moveForward != 0f || player.movementInput.moveStrafe != 0f) {
+                        if (!adaptiveHitTiming(currentTarget)) return
+                    } else {
+                        if (targetHurtTime > hitTiming || targetHurtTime < hitTiming - 2) return
+                    }
+                }
+                "aggressive" -> {
+                    if (targetHurtTime > hitTiming ||
+                        System.currentTimeMillis().compareTo(lastAttackTime + minAttackDelay) < 0) return
+                }
+                "defensive" -> {
+                    if (targetHurtTime > hitTiming ||
+                        System.currentTimeMillis().compareTo(lastAttackTime + minAttackDelay) < 0) return
+                }
+            }
         }
 
         // Settings
@@ -848,7 +908,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         }
 
-        // The function is only called when we are facing an entity
         if (shouldDelayClick(MovingObjectPosition.MovingObjectType.ENTITY)) {
             return
         }
@@ -857,12 +916,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             val affectSprint = false.takeIf { KeepSprint.handleEvents() || keepSprint }
 
             thePlayer.attackEntityWithModifiedSprint(entity, affectSprint) { if (swing) thePlayer.swingItem() }
-            if (autoBlock == "RightHold"
-                && thePlayer.heldItem?.item is ItemSword
-                && thePlayer.getDistanceToEntityBox(entity) <= blockMaxRange) {
-                mc.gameSettings.keyBindUseItem.pressed = true
-            }
-            // Apply enchantment critical effect if FakeSharp is enabled
+            lastAttackTime = System.currentTimeMillis()  
+
             if (EnchantmentHelper.getModifierForCreature(
                     thePlayer.heldItem, entity.creatureAttribute
                 ) <= 0F && fakeSharp
@@ -870,8 +925,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                 thePlayer.onEnchantmentCritical(entity)
             }
         }
-
-        // Start blocking after attack
+// Start blocking after attack
         if (autoBlock != "Off" && (thePlayer.isBlocking || canBlock) && (!blinkAutoBlock && isLastClick || blinkAutoBlock && (!blinked || !BlinkUtils.isBlinking))) {
             startBlocking(entity, interactAutoBlock, autoBlock == "Fake")
         }
@@ -1107,6 +1161,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
                 val movingObject = boundingBox.calculateIntercept(positionEye, lookAt) ?: return
                 val hitVec = movingObject.hitVec
+
+                if (autoBlock == "Interact") {
+                    interactBlockTimer = 0
+                }
 
                 sendPackets(
                     C02PacketUseEntity(interactEntity, hitVec - interactEntity.positionVector),

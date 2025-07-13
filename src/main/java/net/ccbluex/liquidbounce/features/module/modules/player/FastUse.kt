@@ -18,7 +18,7 @@ import net.minecraft.network.play.client.C03PacketPlayer
 
 object FastUse : Module("FastUse", Category.PLAYER) {
 
-    private val mode by choices("Mode", arrayOf("Instant", "NCP", "AAC", "Custom", "3fmc"), "NCP")
+    private val mode by choices("Mode", arrayOf("Instant", "NCP", "AAC", "Custom", "3fmc", "Grim"), "Grim")
 
     private val delay by int("CustomDelay", 0, 0..300) { mode == "Custom" }
     private val customSpeed by int("CustomSpeed", 2, 1..35) { mode == "Custom" }
@@ -76,6 +76,19 @@ object FastUse : Module("FastUse", Category.PLAYER) {
                 if ((mc.thePlayer.ticksExisted % 2) == 0) {
                     repeat(2) {
                         sendPacket(C03PacketPlayer(serverOnGround))
+                    }
+                }
+            }
+            "grim" -> {
+                mc.timer.timerSpeed = 0.49F
+                usedTimer = true
+
+                if (mc.thePlayer.itemInUseDuration > 3) {  
+                    if ((mc.thePlayer.ticksExisted % 3) == 0) {
+                        repeat((1..2).random()) {
+                            val randomGround = if (serverOnGround) (Math.random() > 0.1) else false
+                            sendPacket(C03PacketPlayer(randomGround))
+                        }
                     }
                 }
             }
