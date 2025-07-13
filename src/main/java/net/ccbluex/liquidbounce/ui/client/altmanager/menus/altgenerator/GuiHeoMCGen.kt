@@ -34,7 +34,7 @@ class GuiHeoMCGen(private val prevGui: GuiAltManager) : AbstractScreen() {
 
     // Data Storage
     companion object {
-        const val ALTS_URL = "https://lists-theatlantis-asia.vercel.app/file/alts.txt"
+        const val ALTS_URL = "https://lists.theatlantis.asia/file/alts.txt"
         var lastGeneratedAlt: Triple<String, String, String>? = null
     }
 

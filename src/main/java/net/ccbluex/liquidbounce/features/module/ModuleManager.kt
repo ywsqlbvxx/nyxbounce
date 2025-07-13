@@ -217,7 +217,6 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             ChineseHat,
             SnakeGame,
             AutoPlace,
-            ComboBreaker
         )
 
         registerModules(modules = modules)
