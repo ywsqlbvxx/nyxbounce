@@ -116,7 +116,7 @@ object ClientRichPresence : Configurable("DiscordRPC"), MinecraftInstance, Liste
                 // Set server info
                 if (showRPCServerIP) {
                     setDetails(customRPCText.ifEmpty {
-                        "Cheating using $CLIENT_NAME v$clientVersionText"
+                        "Cheating using RinBounce $clientVersionText"
                     })
                 }
 
