@@ -1,22 +1,24 @@
 package net.ccbluex.liquidbounce.features.module.modules.combat
 
-import net.ccbluex.liquidbounce.event.AttackEvent
+import net.ccbluex.liquidbounce.event.EventTarget
 import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.features.module.ModuleCategory
-import net.ccbluex.liquidbounce.utils.MovementUtils
+import net.ccbluex.liquidbounce.utils.extensions.component1
+import net.ccbluex.liquidbounce.utils.extensions.component2
 import net.ccbluex.liquidbounce.value.BoolValue
 import net.ccbluex.liquidbounce.value.FloatValue
 import net.ccbluex.liquidbounce.value.IntegerValue
-import net.minecraft.client.Minecraft
+import net.minecraft.util.MathHelper
 import kotlin.random.Random
 
 object ComboBreaker : Module("ComboBreaker", ModuleCategory.COMBAT) {
-    private val maxComboHits by IntegerValue("MaxComboHits", 3, 0..5)
-    private val jumpChance by FloatValue("JumpChance", 0.3f, 0f..1f)
-    private val sidewaysChance by FloatValue("SidewaysChance", 0.7f, 0f..1f)
-    private val legitStrafe by BoolValue("LegitStrafe", true)
-    private val randomTiming by BoolValue("RandomTiming", true)
+    
+    private val maxComboHits = IntegerValue("MaxComboHits", 3, 0..5)
+    private val jumpChance = FloatValue("JumpChance", 0.3f, 0f..1f)
+    private val sidewaysChance = FloatValue("SidewaysChance", 0.7f, 0f..1f)
+    private val legitStrafe = BoolValue("LegitStrafe", true)
+    private val randomTiming = BoolValue("RandomTiming", true)
 
     private var currentCombo = 0
     private var lastHurtTime = 0
@@ -24,8 +26,9 @@ object ComboBreaker : Module("ComboBreaker", ModuleCategory.COMBAT) {
     private var evadeTimer = 0
     private var lastEvadeDirection = 0
 
-    val onUpdate = handler<UpdateEvent> { 
-        val thePlayer = mc.thePlayer ?: return@handler
+    @EventTarget
+    fun onUpdate(event: UpdateEvent) { 
+        val thePlayer = mc.thePlayer ?: return
 
         if (thePlayer.hurtTime == 0 && lastHurtTime > 0) {
             currentCombo = 0
@@ -48,17 +51,21 @@ object ComboBreaker : Module("ComboBreaker", ModuleCategory.COMBAT) {
             }
 
             if (shouldEvade && evadeTimer > 0) {
-                if (thePlayer.onGround && Random.nextFloat() < jumpChance) {
+                if (thePlayer.onGround && Random.nextFloat() < jumpChance.get()) {
                     thePlayer.jump()
                 }
 
-                if (Random.nextFloat() < sidewaysChance) {
-                    if (legitStrafe) {
-                        val strafeSpeed = MovementUtils.getSpeed() * 0.7f
-                        thePlayer.motionX = -lastEvadeDirection * strafeSpeed * Random.nextFloat()
-                        thePlayer.motionZ = strafeSpeed * (0.5f + Random.nextFloat() * 0.5f)
+                if (Random.nextFloat() < sidewaysChance.get()) {
+                    if (legitStrafe.get()) {
+                        val strafeSpeed = thePlayer.motionX * thePlayer.motionX + thePlayer.motionZ * thePlayer.motionZ
+                        val speed = MathHelper.sqrt_double(strafeSpeed) * 0.7f
+                        thePlayer.motionX = -lastEvadeDirection * speed * Random.nextFloat()
+                        thePlayer.motionZ = speed * (0.5f + Random.nextFloat() * 0.5f)
                     } else {
-                        MovementUtils.strafe(0.2f)
+                        val speed = 0.2f
+                        val yaw = thePlayer.rotationYaw * 0.017453292f
+                        thePlayer.motionX -= MathHelper.sin(yaw) * speed
+                        thePlayer.motionZ += MathHelper.cos(yaw) * speed
                     }
                 }
 
