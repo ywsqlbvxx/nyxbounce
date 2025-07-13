@@ -15,11 +15,11 @@ import kotlin.random.Random
 
 object ComboBreaker : Module("ComboBreaker", Category.COMBAT) {
     
-    private val maxComboHits = IntegerValue("MaxComboHits", 3, 0..5)
-    private val jumpChance = FloatValue("JumpChance", 0.3f, 0f..1f)
-    private val sidewaysChance = FloatValue("SidewaysChance", 0.7f, 0f..1f)
-    private val legitStrafe = BoolValue("LegitStrafe", true)
-    private val randomTiming = BoolValue("RandomTiming", true)
+    private val maxComboHits by IntegerValue("MaxComboHits", 3, 0, 5)
+    private val jumpChance by FloatValue("JumpChance", 0.3f, 0f, 1f)
+    private val sidewaysChance by FloatValue("SidewaysChance", 0.7f, 0f, 1f)
+    private val legitStrafe by BoolValue("LegitStrafe", true)
+    private val randomTiming by BoolValue("RandomTiming", true)
 
     private var currentCombo = 0
     private var lastHurtTime = 0
@@ -51,9 +51,9 @@ object ComboBreaker : Module("ComboBreaker", Category.COMBAT) {
                 currentCombo++
                 
                 // Start evading if combo exceeds limit
-                if (currentCombo >= maxComboHits.get()) {
+                if (currentCombo >= maxComboHits) {
                     shouldEvade = true
-                    evadeTimer = if (randomTiming.get()) Random.nextInt(5, 10) else 7
+                    evadeTimer = if (randomTiming) Random.nextInt(5, 10) else 7
                     lastEvadeDirection = if (Random.nextFloat() < 0.5f) 1 else -1
                 }
             }
@@ -61,13 +61,13 @@ object ComboBreaker : Module("ComboBreaker", Category.COMBAT) {
             // Execute evasive movement
             if (shouldEvade && evadeTimer > 0) {
                 // Random jumps
-                if (thePlayer.onGround && Random.nextFloat() < jumpChance.get()) {
+                if (thePlayer.onGround && Random.nextFloat() < jumpChance) {
                     thePlayer.jump()
                 }
 
                 // Sideways movement
-                if (Random.nextFloat() < sidewaysChance.get()) {
-                    if (legitStrafe.get()) {
+                if (Random.nextFloat() < sidewaysChance) {
+                    if (legitStrafe) {
                         // More natural strafing based on current motion
                         val strafeSpeed = thePlayer.motionX * thePlayer.motionX + thePlayer.motionZ * thePlayer.motionZ
                         val speed = MathHelper.sqrt_double(strafeSpeed) * 0.7
