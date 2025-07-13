@@ -908,7 +908,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         }
 
-        // The function is only called when we are facing an entity
         if (shouldDelayClick(MovingObjectPosition.MovingObjectType.ENTITY)) {
             return
         }
@@ -917,9 +916,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             val affectSprint = false.takeIf { KeepSprint.handleEvents() || keepSprint }
 
             thePlayer.attackEntityWithModifiedSprint(entity, affectSprint) { if (swing) thePlayer.swingItem() }
-            lastAttackTime = System.currentTimeMillis()  // Update last attack time
+            lastAttackTime = System.currentTimeMillis()  
 
-            // Apply enchantment critical effect if FakeSharp is enabled
             if (EnchantmentHelper.getModifierForCreature(
                     thePlayer.heldItem, entity.creatureAttribute
                 ) <= 0F && fakeSharp
@@ -927,8 +925,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                 thePlayer.onEnchantmentCritical(entity)
             }
         }
-
-        // Start blocking after attack
+tart blocking after attack
         if (autoBlock != "Off" && (thePlayer.isBlocking || canBlock) && (!blinkAutoBlock && isLastClick || blinkAutoBlock && (!blinked || !BlinkUtils.isBlinking))) {
             startBlocking(entity, interactAutoBlock, autoBlock == "Fake")
         }

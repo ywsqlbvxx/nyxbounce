@@ -7,9 +7,9 @@ import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
-import net.ccbluex.liquidbounce.config.BoolValue
-import net.ccbluex.liquidbounce.config.FloatValue
-import net.ccbluex.liquidbounce.config.IntegerValue
+import net.ccbluex.liquidbounce.value.BoolValue
+import net.ccbluex.liquidbounce.value.FloatValue
+import net.ccbluex.liquidbounce.value.IntegerValue
 import net.minecraft.util.MathHelper
 import kotlin.random.Random
 
@@ -33,7 +33,7 @@ object ComboBreaker : Module("ComboBreaker", Category.COMBAT) {
         evadeTimer = 0
     }
 
-    fun onUpdate(event: UpdateEvent) {
+    val onUpdate = handler<UpdateEvent> {
         val thePlayer = mc.thePlayer ?: return
 
         // Reset combo when not being hit
@@ -89,5 +89,9 @@ object ComboBreaker : Module("ComboBreaker", Category.COMBAT) {
                 }
             }
         }
+    }
+    
+    override fun handleEvents(): Boolean {
+        return true
     }
 }
