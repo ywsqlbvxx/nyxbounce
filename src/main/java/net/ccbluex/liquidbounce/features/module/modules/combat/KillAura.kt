@@ -283,6 +283,21 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val renderBoxColor = ColorSettingsInteger(this, "RenderBoxColor") { renderBoxOnSwingFail }.with(Color.CYAN)
     private val renderBoxFadeSeconds by float("RenderBoxFadeSeconds", 1f, 0f..5f) { renderBoxOnSwingFail }
 
+    private fun adaptiveHitTiming(target: EntityLivingBase): Boolean {
+        val dist = mc.thePlayer.getDistanceToEntityBox(target)
+        val velX = target.motionX
+        val velZ = target.motionZ
+        val speed = Math.sqrt(velX * velX + velZ * velZ)
+
+        val optimalTiming = when {
+            speed > 0.3 -> hitTiming - 2
+            speed > 0.2 -> hitTiming - 1
+            else -> hitTiming
+        }
+
+        return target.hurtTime <= optimalTiming
+    }
+
     // Inventory
     private val simulateClosingInventory by boolean("SimulateClosingInventory", false) { !noInventoryAttack }
     private val noInventoryAttack by boolean("NoInvAttack", false)
@@ -343,7 +358,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     // Blink AutoBlock
     private var blinked = false
-    
+
     // Interact AutoBlock
     private var interactBlockTimer = 0
 
@@ -368,7 +383,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         attackTimer.reset()
         clicks = 0
         interactBlockTimer = 0
-        
+
         if (autoBlock == "RightHold") {
             mc.gameSettings.keyBindUseItem.pressed = false
         }
@@ -434,7 +449,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
         if (autoBlock == "Interact" && blockStatus) {
             interactBlockTimer++
-            
+
             if (interactBlockTimer >= interactBlockTicks) {
                 stopBlocking(true)
                 interactBlockTimer = 0
@@ -500,7 +515,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                 }
             }
         }
-        
+
         if (autoBlock == "RightHold") {
             val localTarget = target
             if (localTarget != null
@@ -624,7 +639,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         // HitSelect logic
         if (hitSelect) {
             val targetHurtTime = currentTarget.hurtTime
-            
+
             when (hitSelectMode.lowercase()) {
                 "smart" -> {
                     if (player.movementInput.moveForward != 0f || player.movementInput.moveStrafe != 0f) {
@@ -634,11 +649,11 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                     }
                 }
                 "aggressive" -> {
-                    if (targetHurtTime > hitTiming || 
+                    if (targetHurtTime > hitTiming ||
                         System.currentTimeMillis().compareTo(lastAttackTime + minAttackDelay) < 0) return
                 }
                 "defensive" -> {
-                    if (targetHurtTime > hitTiming || 
+                    if (targetHurtTime > hitTiming ||
                         System.currentTimeMillis().compareTo(lastAttackTime + minAttackDelay) < 0) return
                 }
             }
@@ -903,7 +918,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
             thePlayer.attackEntityWithModifiedSprint(entity, affectSprint) { if (swing) thePlayer.swingItem() }
             lastAttackTime = System.currentTimeMillis()  // Update last attack time
-            
+
             // Apply enchantment critical effect if FakeSharp is enabled
             if (EnchantmentHelper.getModifierForCreature(
                     thePlayer.heldItem, entity.creatureAttribute
