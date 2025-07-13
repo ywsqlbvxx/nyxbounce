@@ -350,6 +350,13 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     // Swing fails
     private val swingFails = mutableListOf<SwingFailData>()
 
+    // Add hit select options
+    private val hitSelect by boolean("HitSelect", false)
+    private val hitSelectMode by choices("HitSelectMode", arrayOf("Smart", "Aggressive", "Defensive"), "Smart")
+    private val hitTiming by int("HitTiming", 9, 0..20)
+    private val minAttackDelay by int("MinAttackDelay", 5, 0..20)
+    private var lastAttackTime = 0L
+
     /**
      * Disable kill aura module
      */
@@ -620,28 +627,19 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             
             when (hitSelectMode.lowercase()) {
                 "smart" -> {
-                    val targetMoving = currentTarget.movementInput.moveForward != 0f || currentTarget.movementInput.moveStrafe != 0f
-                    val optimalTiming = if (adaptiveHitTiming) {
-                        if (targetMoving) hitTiming * 0.8f else hitTiming
-                    } else hitTiming
-                    
-                    if (targetHurtTime > optimalTiming || 
-                        System.currentTimeMillis() - lastAttackTime < minAttackDelay) {
-                        return
+                    if (player.movementInput.moveForward != 0f || player.movementInput.moveStrafe != 0f) {
+                        if (!adaptiveHitTiming(currentTarget)) return
+                    } else {
+                        if (targetHurtTime > hitTiming || targetHurtTime < hitTiming - 2) return
                     }
                 }
                 "aggressive" -> {
-                    if (targetHurtTime > hitTiming * 0.7f || 
-                        System.currentTimeMillis() - lastAttackTime < minAttackDelay * 0.7) {
-                        return
-                    }
+                    if (targetHurtTime > hitTiming || 
+                        System.currentTimeMillis().compareTo(lastAttackTime + minAttackDelay) < 0) return
                 }
                 "defensive" -> {
-                    if (targetHurtTime > hitTiming * 1.2f || 
-                        System.currentTimeMillis() - lastAttackTime < minAttackDelay * 1.3 ||
-                        player.getDistanceToEntityBox(currentTarget) < 2f) {
-                        return
-                    }
+                    if (targetHurtTime > hitTiming || 
+                        System.currentTimeMillis().compareTo(lastAttackTime + minAttackDelay) < 0) return
                 }
             }
         }
