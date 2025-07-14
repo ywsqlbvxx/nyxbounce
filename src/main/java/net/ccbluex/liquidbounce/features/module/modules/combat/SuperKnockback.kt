@@ -32,7 +32,7 @@ object SuperKnockback : Module("SuperKnockback", Category.COMBAT) {
         "Mode",
         arrayOf(
             "WTap", "SprintTap", "SprintTap2", "Old", "Silent", "Packet", "SneakPacket",
-            "Legit Fast", "Legit Test"
+            "LegitFast", "LegitTest"
         ),
         "Old"
     )
