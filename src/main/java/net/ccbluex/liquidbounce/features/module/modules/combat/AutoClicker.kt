@@ -41,6 +41,11 @@ object AutoClicker : Module("AutoClicker", Category.COMBAT) {
     private val block by boolean("AutoBlock", false) { left }
     private val blockDelay by int("BlockDelay", 50, 0..100) { block }
 
+    private val hitSelect by boolean("HitSelect", false) { block }
+    private val hitDelay by int("HitDelay", 200, 0..1000) { hitSelect }
+
+    private var lastHitTime = 0L
+
     private val requiresNoInput by boolean("RequiresNoInput", false) { left }
     private val maxAngleDifference by float("MaxAngleDifference", 30f, 10f..180f) { left && requiresNoInput }
     private val range by float("Range", 3f, 0.1f..5f) { left && requiresNoInput }
@@ -95,13 +100,27 @@ object AutoClicker : Module("AutoClicker", Category.COMBAT) {
                 if (!isLookingOnEntities(nearbyEntity, maxAngleDifference.toDouble())) return@handler
 
                 if (left && shouldAutoClick && time - leftLastSwing >= leftDelay) {
-                    handleLeftClick(time, doubleClick)
+                    if (hitSelect) {
+                        if (time - lastHitTime >= hitDelay) {
+                            handleLeftClick(time, doubleClick)
+                            lastHitTime = time
+                        }
+                    } else {
+                        handleLeftClick(time, doubleClick)
+                    }
                 } else if (block && !mc.gameSettings.keyBindUseItem.isKeyDown && shouldAutoClick && shouldAutoRightClick() && mc.gameSettings.keyBindAttack.pressTime != 0) {
                     handleBlock(time)
                 }
             } else {
                 if (left && mc.gameSettings.keyBindAttack.isKeyDown && !mc.gameSettings.keyBindUseItem.isKeyDown && shouldAutoClick && time - leftLastSwing >= leftDelay) {
-                    handleLeftClick(time, doubleClick)
+                    if (hitSelect) {
+                        if (time - lastHitTime >= hitDelay) {
+                            handleLeftClick(time, doubleClick)
+                            lastHitTime = time
+                        }
+                    } else {
+                        handleLeftClick(time, doubleClick)
+                    }
                 } else if (block && mc.gameSettings.keyBindAttack.isKeyDown && !mc.gameSettings.keyBindUseItem.isKeyDown && shouldAutoClick && shouldAutoRightClick() && mc.gameSettings.keyBindAttack.pressTime != 0) {
                     handleBlock(time)
                 }

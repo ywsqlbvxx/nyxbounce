@@ -243,7 +243,7 @@ class GuiMainMenu : AbstractScreen() {
 
         // b1.0.1 in top left corner (white color)
         mc.fontRendererObj.drawStringWithShadow(
-            "b1.1.4",
+            "b1.1.6",
             10f,
             10f,
             0xFFFFFF // White color
@@ -264,7 +264,7 @@ class GuiMainMenu : AbstractScreen() {
         GlStateManager.popMatrix()
 
         // "credit" text in bottom right corner (white color)
-        val creditText = "credit; [idle, deleteduser, welovegiabao]"
+        val creditText = "credit; CCBlueX, RatterMC"
         mc.fontRendererObj.drawStringWithShadow(
             creditText,
             width - mc.fontRendererObj.getStringWidth(creditText) - 10f,
