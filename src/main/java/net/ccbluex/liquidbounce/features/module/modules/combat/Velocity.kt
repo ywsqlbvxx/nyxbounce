@@ -230,32 +230,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             return@handler
 
         when (mode.lowercase()) {
-            "jumpreset" -> {
-                if (hasReceivedVelocity && thePlayer.onGround && !thePlayer.isInLiquid && !thePlayer.isOnLadder && thePlayer.ridingEntity == null && thePlayer.hurtTime > 0) {
-                    if (jumpCooldownMode == "Ticks") {
-                        if (jumpResetTicks <= 0) {
-                            thePlayer.jump()
-                            jumpResetTicks = ticksUntilJump
-                        } else {
-                            jumpResetTicks--
-                        }
-                    } else if (jumpCooldownMode == "ReceivedHits") {
-                        if (jumpResetHits <= 0) {
-                            thePlayer.jump()
-                            jumpResetHits = hitsUntilJump
-                        } else {
-                            jumpResetHits--
-                        }
-                    }
-                }
-                if (thePlayer.hurtTime == 0) {
-                    jumpResetTicks = 0
-                    jumpResetHits = 0
-                }
-                if (hasReceivedVelocity && thePlayer.hurtTime == 0) {
-                    hasReceivedVelocity = false
-                }
-            }
             "grimreduce" -> {
                 if (hasReceivedVelocity && thePlayer.hurtTime in GrimMinHurtTime..GrimMaxHurtTime) {
                     thePlayer.motionX *= GrimReduceFactor
