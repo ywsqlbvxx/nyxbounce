@@ -9,15 +9,18 @@ import net.ccbluex.liquidbounce.event.*
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.modules.player.Scaffold
+import net.ccbluex.liquidbounce.features.module.modules.player.Scaffold2
 import net.ccbluex.liquidbounce.config.*
+import net.ccbluex.liquidbounce.ui.client.gui.colortheme.ClientTheme
 import net.ccbluex.liquidbounce.utils.extensions.*
 import net.ccbluex.liquidbounce.utils.render.RenderUtils
 import net.ccbluex.liquidbounce.utils.timing.MSTimer
 import net.ccbluex.liquidbounce.utils.timing.TimeUtils
 import net.ccbluex.liquidbounce.utils.EntityUtils
 import net.ccbluex.liquidbounce.utils.RotationUtils
-import net.ccbluex.liquidbounce.utils.extensions.getDistanceToEntityBox
-import net.ccbluex.liquidbounce.utils.PacketUtils
+import net.ccbluex.liquidbounce.utils.MinecraftInstance
+import net.ccbluex.liquidbounce.utils.Rotation
+import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.client.settings.KeyBinding
 import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityLivingBase
@@ -100,12 +103,14 @@ object LegitAura : Module("LegitAura", Category.COMBAT) {
     @EventTarget 
     fun onRender3D(event: Render3DEvent) {
         target?.let {
-            RenderUtils.drawEntityBox(it, 
-                java.awt.Color(255, 255, 255, 70),
-                false, 
+            RenderUtils.drawEntityBox(
+                it, 
+                ClientTheme.getColorWithAlpha(1, 70),
+                false,
                 true,
-                1f
+                0f
             )
+            GlStateManager.resetColor()
         }
     }
 
@@ -123,7 +128,7 @@ object LegitAura : Module("LegitAura", Category.COMBAT) {
 
     private fun shouldStopAttacking(): Boolean {
         return onlyWeapon && !mc.thePlayer.isHoldingSword() || 
-               Scaffold.handleEvents() ||
+               (Scaffold.handleEvents() || Scaffold2.handleEvents()) ||
                mc.thePlayer.isSpectator()
     }
 
@@ -138,7 +143,7 @@ object LegitAura : Module("LegitAura", Category.COMBAT) {
 
         // Send attack packet
         val target = target ?: return
-        PacketUtils.sendPacket(C02PacketUseEntity(target, C02PacketUseEntity.Action.ATTACK))
+        mc.netHandler.addToSendQueue(C02PacketUseEntity(target, C02PacketUseEntity.Action.ATTACK))
 
         if (swing) {
             mc.thePlayer.swingItem()
@@ -161,7 +166,7 @@ object LegitAura : Module("LegitAura", Category.COMBAT) {
         KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.keyCode, false)
     }
 
-    private fun Entity.isHoldingSword() = this.heldItem?.item is ItemSword
+    private fun Entity.isHoldingSword() = mc.thePlayer.heldItem?.item is ItemSword
 
     override val tag: String
         get() = "%.1f".format(range)
