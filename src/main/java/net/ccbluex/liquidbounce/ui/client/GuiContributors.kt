@@ -56,47 +56,64 @@ class GuiContributors(private val prevGui: GuiScreen) : AbstractScreen() {
         SharedScopes.IO.launch { loadCredits() }
     }
 
-    private fun drawGradientBackground() {
-        animationTime += 0.02f
+    // ? cailonmaskidskidconcak ENHANCED OCEAN GRADIENT BACKGROUND (MATCHING GUIMAINMENU)
+    private fun drawOceanBackground() {
+        animationTime += 0.016f
         
         val tessellator = Tessellator.getInstance()
         val worldRenderer = tessellator.worldRenderer
         
         disableTexture2D()
         enableBlend()
-        disableAlpha()
-        tryBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, 1, 0)
         shadeModel(GL_SMOOTH)
         
         worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
         
-        val time = animationTime
-        val topR = (0.1f + 0.3f * kotlin.math.sin(time * 0.5f)).coerceIn(0f, 1f)
-        val topG = (0.3f + 0.4f * kotlin.math.sin(time * 0.7f + 1f)).coerceIn(0f, 1f)
-        val topB = (0.7f + 0.3f * kotlin.math.sin(time * 0.3f + 2f)).coerceIn(0f, 1f)
+        // ? cailonmaskidskidconcak ANIMATED OCEAN COLORS (MATCHING GUIMAINMENU)
+        val time = animationTime * 0.5f
+        val deepOcean = Color(
+            (40 + 30 * sin(time)).toInt().coerceIn(0, 255), 
+            (80 + 40 * sin(time * 0.7f)).toInt().coerceIn(0, 255), 
+            (120 + 50 * kotlin.math.cos(time * 0.8f)).toInt().coerceIn(0, 255)
+        )
+        val lightOcean = Color(
+            (80 + 50 * sin(time * 1.2f)).toInt().coerceIn(0, 255), 
+            (140 + 60 * kotlin.math.cos(time * 0.9f)).toInt().coerceIn(0, 255), 
+            (180 + 70 * sin(time * 1.1f)).toInt().coerceIn(0, 255)
+        )
+        val surface = Color(
+            (150 + 70 * sin(time * 0.8f)).toInt().coerceIn(0, 255), 
+            (200 + 55 * kotlin.math.cos(time)).toInt().coerceIn(0, 255), 
+            (240 + 15 * sin(time * 1.3f)).toInt().coerceIn(0, 255)
+        )
         
-        worldRenderer.pos(width.toDouble(), 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
-        worldRenderer.pos(0.0, 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
-        worldRenderer.pos(0.0, height.toDouble(), zLevel.toDouble()).color(0.9f, 0.95f, 1.0f, 1.0f).endVertex()
-        worldRenderer.pos(width.toDouble(), height.toDouble(), zLevel.toDouble()).color(0.9f, 0.95f, 1.0f, 1.0f).endVertex()
+        // Multi-layer gradient
+        worldRenderer.pos(width.toDouble(), 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
+        worldRenderer.pos(0.0, 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
+        worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        
+        worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        worldRenderer.pos(0.0, height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
+        worldRenderer.pos(width.toDouble(), height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
         
         tessellator.draw()
         
         shadeModel(GL_FLAT)
-        disableBlend()
-        enableAlpha()
         enableTexture2D()
     }
 
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
         assumeNonVolatile {
-            drawGradientBackground()
+            // ? cailonmaskidskidconcak USE ENHANCED OCEAN BACKGROUND
+            drawOceanBackground()
 
             list.drawScreen(mouseX, mouseY, partialTicks)
 
-            // Enhanced glowing rect
-            val glowIntensity = (0.4f + 0.6f * kotlin.math.sin(animationTime * 2f)).coerceIn(0f, 1f)
-            val rectColor = (Integer.MIN_VALUE and 0x00FFFFFF) or ((80 * glowIntensity).toInt() shl 24)
+            // Enhanced glowing rect with ocean theme
+            val glowIntensity = (0.4f + 0.6f * sin(animationTime * 2f)).coerceIn(0f, 1f)
+            val rectColor = Color(25, 50, 80, (120 * glowIntensity).toInt()).rgb
             
             drawRect(width / 4f, 40f, width.toFloat(), height - 40f, rectColor)
 
@@ -146,9 +163,9 @@ class GuiContributors(private val prevGui: GuiScreen) : AbstractScreen() {
 
                 y += imageSize
 
-                // Animated contributor info
-                val infoGlow = (0.7f + 0.3f * kotlin.math.sin(animationTime * 2.5f)).coerceIn(0f, 1f)
-                val infoColor = (Color.WHITE.rgb and 0x00FFFFFF) or ((255 * infoGlow).toInt() shl 24)
+                // Animated contributor info with ocean theme
+                val infoGlow = (0.7f + 0.3f * sin(animationTime * 2.5f)).coerceIn(0f, 1f)
+                val infoColor = Color(200, 230, 255, (255 * infoGlow).toInt()).rgb
 
                 Fonts.fontSemibold40.drawString("@" + credit.name, x + infoOffset + 5f, 48f, infoColor, true)
                 Fonts.fontSemibold40.drawString(
@@ -173,22 +190,23 @@ class GuiContributors(private val prevGui: GuiScreen) : AbstractScreen() {
                 }
             }
 
-            // Animated title
+            // Animated title with ocean colors
             val titleTime = animationTime * 1.5f
-            val titleR = (0.2f + 0.4f * kotlin.math.sin(titleTime)).coerceIn(0f, 1f)
-            val titleG = (0.4f + 0.4f * kotlin.math.sin(titleTime + 1f)).coerceIn(0f, 1f)
-            val titleB = (0.8f + 0.2f * kotlin.math.sin(titleTime + 2f)).coerceIn(0f, 1f)
-            val titleColor = ((titleR * 255).toInt() shl 16) or ((titleG * 255).toInt() shl 8) or (titleB * 255).toInt()
+            val titleColor = Color(
+                (100 + 100 * sin(titleTime)).toInt().coerceIn(0, 255),
+                (150 + 80 * sin(titleTime + 1f)).toInt().coerceIn(0, 255),
+                (255).coerceIn(0, 255)
+            ).rgb
 
             Fonts.fontSemibold40.drawCenteredString(translationMenu("contributors"), width / 2F, 6F, titleColor)
 
             if (credits.isEmpty()) {
                 if (failed) {
-                    val gb = ((kotlin.math.sin(System.currentTimeMillis() * (1 / 333.0)) + 1) * (0.5 * 255)).toInt()
+                    val gb = ((sin(System.currentTimeMillis() * (1 / 333.0)) + 1) * (0.5 * 255)).toInt()
                     Fonts.fontSemibold40.drawCenteredString("Failed to load", width / 8f, height / 2f, Color(255, gb, gb).rgb)
                 } else {
-                    val loadingGlow = (0.7f + 0.3f * kotlin.math.sin(animationTime * 3f)).coerceIn(0f, 1f)
-                    val loadingColor = (Color.WHITE.rgb and 0x00FFFFFF) or ((255 * loadingGlow).toInt() shl 24)
+                    val loadingGlow = (0.7f + 0.3f * sin(animationTime * 3f)).coerceIn(0f, 1f)
+                    val loadingColor = Color(150, 200, 255, (255 * loadingGlow).toInt()).rgb
                     
                     Fonts.fontSemibold40.drawCenteredString("Loading...", width / 8f, height / 2f, loadingColor)
                     drawLoadingCircle(width / 8f, height / 2f - 40)
@@ -304,9 +322,9 @@ class GuiContributors(private val prevGui: GuiScreen) : AbstractScreen() {
         ) {
             val credit = credits[entryID]
 
-            // Animated contributor names
-            val nameGlow = (0.7f + 0.3f * kotlin.math.sin(animationTime * 2f + entryID * 0.3f)).coerceIn(0f, 1f)
-            val nameColor = (Color.WHITE.rgb and 0x00FFFFFF) or ((255 * nameGlow).toInt() shl 24)
+            // Animated contributor names with ocean theme
+            val nameGlow = (0.7f + 0.3f * sin(animationTime * 2f + entryID * 0.3f)).coerceIn(0f, 1f)
+            val nameColor = Color(180, 220, 255, (255 * nameGlow).toInt()).rgb
 
             Fonts.fontSemibold40.drawCenteredString(credit.name, width / 2F, p_180791_3_ + 2F, nameColor, true)
         }

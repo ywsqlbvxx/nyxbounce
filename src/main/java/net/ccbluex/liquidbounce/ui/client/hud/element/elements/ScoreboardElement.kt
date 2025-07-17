@@ -163,8 +163,8 @@ class ScoreboardElement(
                                     val colorCode = name?.substring(0, 2) ?: "§9"
                                     name = when (serverIp.lowercase()) {
                                         "none" -> ""
-                                        "client" -> "$colorCode$CLIENT_NAME"
-                                        "website" -> "$colorCode$CLIENT_WEBSITE"
+                                        "client" -> "Rinbounce.saygex"
+                                        "website" -> "discord.gg/GC9fdRByEC"
                                         else -> return null
                                     }
                                 }
@@ -222,7 +222,7 @@ class ScoreboardElement(
                         } else title
 
                         if (drawRectOnTitle) {
-                            drawRect(minX, -(4 + inc), maxX, fontHeight - inc + rectHeightPadding, titleRectColor.rgb)
+                            // drawRect(minX, -(4 + inc), maxX, fontHeight - inc + rectHeightPadding, titleRectColor.rgb)
                         }
 
                         glColor4f(1f, 1f, 1f, 1f)
