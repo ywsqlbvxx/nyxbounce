@@ -25,30 +25,28 @@ import net.ccbluex.liquidbounce.utils.client.ServerUtils.remoteIp
 
 object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
     private val debug by boolean("Debug", true)
-    private val reduceSpam by boolean("ReduceSpam", false)
-    
-    private val actionNumbers = mutableListOf<Int>()
-    private var check = false
-    private var ticksPassed = 0
-    
+    private val reduceSpam by boolean("ReduceSpam", true)
 
-    private val detectVelocityModification by boolean("DetectVelocityModification", true)
-    private val detectTeleportPatterns by boolean("DetectTeleportPatterns", true) 
-    private val detectMovementFlags by boolean("DetectMovementFlags", true)
-    
+    val detectVelocityModification by boolean("DetectVelocityModification", true)
+    val detectTeleportPatterns by boolean("DetectTeleportPatterns", true) 
+    val detectMovementFlags by boolean("DetectMovementFlags", true)
+
     private val velocityChecks = mutableListOf<Triple<Int, Int, Int>>()
     private val positionHistory = mutableListOf<Triple<Double, Double, Double>>()
     private val flagPatterns = mutableMapOf<String, Int>()
-    
+
+    private val actionNumbers = mutableListOf<Int>()
+    private var check = false
+    private var ticksPassed = 0
+
     private var lastVelocityTime = 0L
     private var lastPosLookTime = 0L
     private var detectedAnticheat: String? = null
-    
 
     private val notificationCooldowns = mutableMapOf<String, Long>()
-    private val cooldownPeriod = 8000L
+    private const val COOLDOWN_PERIOD = 8000L
     private var lastPeriodicCheck = 0L
-    private val periodicCheckInterval = 15000L
+    private const val PERIODIC_CHECK_INTERVAL = 15000L
 
     val onPacket = handler<PacketEvent> { event ->
         when (event.packet) {
@@ -152,7 +150,7 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
             
 
             if (player.motionY < -0.08 && player.fallDistance > 0.5f && !player.onGround && !player.capabilities.isFlying) {
-                val packet = event.packet as C03PacketPlayer
+                val packet = event.packet
                 if (packet.onGround) {
                     incrementFlagPattern("ground_spoof")
                     debugMessage("Ground spoof detected (MotionY=${String.format("%.3f", player.motionY)}, FallDistance=${String.format("%.2f", player.fallDistance)}) - Pattern count: ${getFlagPattern("ground_spoof")}")
@@ -173,7 +171,7 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
 
         if (reduceSpam && check) {
             val currentTime = System.currentTimeMillis()
-            if (currentTime - lastPeriodicCheck > periodicCheckInterval) {
+            if (currentTime - lastPeriodicCheck > PERIODIC_CHECK_INTERVAL) {
                 lastPeriodicCheck = currentTime
                 performPeriodicCheck()
             }
@@ -300,8 +298,8 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
             val currentTime = System.currentTimeMillis()
             val lastNotification = notificationCooldowns[anticheat] ?: 0L
             
-            if (currentTime - lastNotification < cooldownPeriod) {
-                debugMessage("Notification for '$anticheat' suppressed due to cooldown (${(cooldownPeriod - (currentTime - lastNotification)) / 1000}s remaining)")
+            if (currentTime - lastNotification < COOLDOWN_PERIOD) {
+                debugMessage("Notification for '$anticheat' suppressed due to cooldown (${(COOLDOWN_PERIOD - (currentTime - lastNotification)) / 1000}s remaining)")
                 return
             }
             
