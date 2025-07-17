@@ -1,7 +1,7 @@
 /*
- * LiquidBounce Hacked Client
+ * RinBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/CCBlueX/LiquidBounce/
+ * https://github.com/rattermc/rinbounce69
  */
 package net.ccbluex.liquidbounce.features.module.modules.combat
 
@@ -54,6 +54,7 @@ import net.ccbluex.liquidbounce.utils.timing.MSTimer
 import net.ccbluex.liquidbounce.utils.timing.TickedActions.nextTick
 import net.ccbluex.liquidbounce.utils.timing.TimeUtils.randomClickDelay
 import net.minecraft.client.gui.inventory.GuiContainer
+import net.minecraft.client.settings.KeyBinding
 import net.minecraft.enchantment.EnchantmentHelper
 import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityLivingBase
@@ -136,11 +137,11 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val onDestroyBlock by boolean("OnDestroyBlock", false)
 
     // AutoBlock
-    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold"), "Packet")
-    private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" }
+    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent"), "Packet")
+    private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" || autoBlock == "Silent" }
     private val unblockMode by choices(
         "UnblockMode", arrayOf("Stop", "Switch", "Empty"), "Stop"
-    ) { autoBlock == "Packet" }
+    ) { autoBlock == "Packet" || autoBlock == "Silent" }
     private val releaseAutoBlock by boolean("ReleaseAutoBlock", true) { autoBlock !in arrayOf("Off", "Fake") }
     val forceBlockRender by boolean("ForceBlockRender", true) {
         autoBlock !in arrayOf(
@@ -334,6 +335,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     var renderBlocking = false
     var blockStatus = false
     private var blockStopInDead = false
+    private var lastBlockTime = 0L
+    private val silentBlockDelay by int("SilentBlockDelay", 50, 0..100) { autoBlock == "Silent" }
 
     // Switch Delay
     private val switchTimer = MSTimer()
@@ -838,6 +841,14 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         if (shouldPrioritize()) return
         if (autoBlock == "RightHold") {
             mc.gameSettings.keyBindUseItem.pressed = false
+        }
+
+        val time = System.currentTimeMillis()
+        
+        if (autoBlock == "Silent" && time - lastBlockTime >= silentBlockDelay && canBlock) {
+            KeyBinding.onTick(mc.gameSettings.keyBindUseItem.keyCode)
+            lastBlockTime = time
+            return
         }
 
         if (thePlayer.isBlocking && (autoBlock == "Off" && blockStatus || autoBlock == "Packet" && releaseAutoBlock)) {

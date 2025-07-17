@@ -1,7 +1,7 @@
 /*
- * LiquidBounce Hacked Client
+ * RinBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/CCBlueX/LiquidBounce/
+ * https://github.com/rattermc/rinbounce69
  */
 package net.ccbluex.liquidbounce.features.module.modules.combat
 
@@ -520,21 +520,11 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                             if (thePlayer.fallDistance > intaveSmartFallDistance) return@handler
                         }
 
-                        hasReceivedVelocity = true
-
-                        if (intaveJump && nextInt(endExclusive = 100) <= intaveJumpChance) {
-                            when (intaveJumpCooldownMode.lowercase()) {
-                                "ticks" -> if (limitUntilJump >= intaveTicksUntilJump) {
-                                    thePlayer.tryJump()
-                                    limitUntilJump = 0
-                                }
-                                "receivedhits" -> if (limitUntilJump >= intaveReceivedHitsUntilJump) {
-                                    thePlayer.tryJump()
-                                    limitUntilJump = 0
-                                }
-                            }
+                        if (intaveJump && thePlayer.onGround && thePlayer.hurtTime >= 9 && nextInt(endExclusive = 100) <= intaveJumpChance) {
+                            thePlayer.tryJump()
                         }
 
+                        hasReceivedVelocity = false
                         event.cancelEvent()
                     }
                 }
