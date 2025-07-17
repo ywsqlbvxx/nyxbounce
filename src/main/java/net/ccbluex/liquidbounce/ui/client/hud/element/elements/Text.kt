@@ -81,7 +81,7 @@ class Text(x: Double = 10.0, y: Double = 10.0, scale: Float = 1F, side: Side = S
         fun defaultClientTitle(): Text {
             val text = Text(x = 2.0, y = 1.0, scale = 2F)
 
-            text.displayString = "%clientName%"
+            text.displayString = "RinBounce"
             text.shadow = true
             text.color = text.blueRibbon
             text.font.set(Fonts.fontRegular45)
