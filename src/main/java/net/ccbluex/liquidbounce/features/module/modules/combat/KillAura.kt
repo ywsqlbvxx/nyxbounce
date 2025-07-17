@@ -78,13 +78,27 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * OPTIONS
      */
 
-    private val simulateCooldown by boolean("SimulateCooldown", false)
-    private val simulateDoubleClicking by boolean("SimulateDoubleClicking", false) { !simulateCooldown }
+    // Attack Modes and Timing
+    private val attackMode by choices("AttackMode", arrayOf(
+        "Dynamic", "Pre", "Post", "Tick", "Matrix", "Smart"
+    ), "Dynamic")
+    
+    private val timingMode by choices("TimingMode", arrayOf(
+        "Sequential", "Adaptive", "Sync", "Random"
+    ), "Adaptive")
 
-    // CPS - Attack speed
-    private val cps by intRange("CPS", 5..8, 1..50) { !simulateCooldown }.onChanged {
-        attackDelay = randomClickDelay(it.first, it.last)
-    }
+    // Improved CPS system
+    private val dynamicCPS by boolean("DynamicCPS", true)
+    private val baseCPS by intRange("BaseCPS", 12..16, 1..40)
+    private val burstCPS by intRange("BurstCPS", 16..20, 1..40) { dynamicCPS }
+    private val adaptiveCPS by boolean("AdaptiveCPS", true) { dynamicCPS }
+    private val cpsBypass by boolean("CPSBypass", true)
+    
+    // Advanced timing options
+    private val attackDecel by float("AttackDeceleration", 0.8f, 0.1f..1f)
+    private val attackAccel by float("AttackAcceleration", 1.2f, 1f..2f)
+    private val smartTiming by boolean("SmartTiming", true)
+    private val ticksExisted by int("TicksExisted", 40, 0..100)
 
     private val hurtTime by int("HurtTime", 10, 0..10) { !simulateCooldown }
 
@@ -103,22 +117,38 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val rangeSprintReduction by float("RangeSprintReduction", 0f, 0f..0.4f)
 
     // Modes
-    private val priority by choices(
+    // Enhanced targeting system
+    private val targetPriority by choices(
         "Priority", arrayOf(
-            "Health",
+            "Smart",
+            "Adaptive",
+            "Combo",
             "Distance",
-            "Direction",
-            "LivingTime",
-            "Armor",
-            "HurtResistance",
+            "Health",
             "HurtTime",
-            "HealthAbsorption",
-            "RegenAmplifier",
-            "OnLadder",
-            "InLiquid",
-            "InWeb"
-        ), "Distance"
+            "Armor",
+            "FOV",
+            "LivingTime",
+            "AttackDamage",
+            "BlockingStatus",
+            "Movement"
+        ), "Smart"
     )
+
+    // Advanced rotation options
+    private val rotationMode by choices(
+        "RotationMode", 
+        arrayOf("Advanced", "Matrix", "NCP", "BackTrack", "Smooth", "Predict"),
+        "Advanced"
+    )
+    
+    private val advancedRotations = AdvancedRotationSettings(this)
+    private val smoothRotation by boolean("SmoothRotation", true)
+    private val rotationSpeed by floatRange("RotationSpeed", 180f..180f, 1f..180f)
+    private val randomRotation by boolean("RandomRotation", true)
+    private val silentRotation by boolean("SilentRotation", true)
+    private val keepRotation by int("KeepRotation", 20, 1..50)
+    private val rotationStrafe by boolean("RotationStrafe", true)
     private val targetMode by choices("TargetMode", arrayOf("Single", "Switch", "Multi"), "Switch")
     private val limitedMultiTargets by int("LimitedMultiTargets", 0, 0..50) { targetMode == "Multi" }
     private val maxSwitchFOV by float("MaxSwitchFOV", 90f, 30f..180f) { targetMode == "Switch" }
@@ -135,12 +165,31 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val onScaffold by boolean("OnScaffold", false)
     private val onDestroyBlock by boolean("OnDestroyBlock", false)
 
-    // AutoBlock
-    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold"), "Packet")
-    private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" }
-    private val unblockMode by choices(
-        "UnblockMode", arrayOf("Stop", "Switch", "Empty"), "Stop"
-    ) { autoBlock == "Packet" }
+    // Enhanced AutoBlock System
+    val autoBlock by choices(
+        "AutoBlock",
+        arrayOf("Smart", "Packet", "NCP", "Matrix", "Vulcan", "Vanilla", "None"),
+        "Smart"
+    )
+    
+    // Advanced blocking options
+    private val blockMode by choices(
+        "BlockMode",
+        arrayOf("Always", "HurtTime", "Range", "Health", "Smart"),
+        "Smart"
+    ) { autoBlock != "None" }
+    
+    private val blockRange by floatRange("BlockRange", 3f..8f, 1f..8f) { autoBlock != "None" }
+    private val blockDelay by int("BlockDelay", 0, 0..10) { autoBlock != "None" }
+    private val unblockDelay by int("UnblockDelay", 0, 0..10) { autoBlock != "None" }
+    private val perfectBlock by boolean("PerfectBlock", true) { autoBlock != "None" }
+    private val blockRate by int("BlockRate", 100, 0..100) { autoBlock != "None" }
+    
+    // Smart block settings
+    private val smartBlock by boolean("SmartBlock", true) { autoBlock != "None" }
+    private val blockDamageOnly by boolean("BlockDamageOnly", true) { smartBlock }
+    private val blockHealthThreshold by float("BlockHealthThreshold", 15f, 1f..20f) { smartBlock }
+    private val instantBlock by boolean("InstantBlock", true) { smartBlock }
     private val releaseAutoBlock by boolean("ReleaseAutoBlock", true) { autoBlock !in arrayOf("Off", "Fake") }
     val forceBlockRender by boolean("ForceBlockRender", true) {
         autoBlock !in arrayOf(
@@ -253,11 +302,31 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val fov by float("FOV", 180f, 0f..180f)
 
     // Prediction
-    private val predictClientMovement by int("PredictClientMovement", 2, 0..5)
-    private val predictOnlyWhenOutOfRange by boolean(
-        "PredictOnlyWhenOutOfRange", false
-    ) { predictClientMovement != 0 }
-    private val predictEnemyPosition by float("PredictEnemyPosition", 1.5f, -1f..2f)
+    // Enhanced prediction system
+    private val predictionMode by choices(
+        "PredictionMode",
+        arrayOf("Advanced", "Linear", "Adaptive", "Pattern", "Dynamic"),
+        "Advanced"
+    )
+    
+    private val movementPrediction by floatRange("MovementPrediction", 0.5f..1.5f, 0f..3f)
+    private val velocityPrediction by boolean("VelocityPrediction", true)
+    private val pingPrediction by boolean("PingPrediction", true)
+    private val smartPrediction by boolean("SmartPrediction", true)
+    
+    // Advanced bypass options
+    private val bypassMode by choices(
+        "BypassMode",
+        arrayOf("Matrix", "NCP", "AAC", "Spartan", "Vulcan", "Verus", "Smart"),
+        "Smart"
+    )
+    
+    private val packetOptimize by boolean("PacketOptimize", true)
+    private val invalidPacket by boolean("InvalidPacket", false)
+    private val hitDelay by int("HitDelay", 0, 0..10)
+    private val randomDelay by intRange("RandomDelay", 0..2, 0..10)
+    private val groundSpoof by boolean("GroundSpoof", false)
+    private val criticalsFallDistance by float("CriticalsFallDistance", 0.01f, 0f..1f)
 
     private val forceFirstHit by boolean("ForceFirstHit", false) { !respectMissCooldown && !useHitDelay }
 
