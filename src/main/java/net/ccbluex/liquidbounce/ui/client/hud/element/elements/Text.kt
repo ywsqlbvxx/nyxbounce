@@ -75,6 +75,7 @@ class Text(x: Double = 10.0, y: Double = 10.0, scale: Float = 1F, side: Side = S
 
         val DECIMAL_FORMAT = DecimalFormat("0.00")
 
+<<<<<<< HEAD
         /**
          * Default Client Title
          */
@@ -106,8 +107,10 @@ class Text(x: Double = 10.0, y: Double = 10.0, scale: Float = 1F, side: Side = S
         /**
          * Default Block Counter
          */
+=======
+>>>>>>> b06f3188daefbda987d3f9d75068f34cb70110a8
         fun defaultBlockCount(): Text {
-            val text = Text(x = 520.0, y = 245.0, scale = 1F)
+            val text = Text(x = 486.0, y = 273.0, scale = 1F)
 
             text.displayString = "%blockamount%"
             text.shadow = true

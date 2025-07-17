@@ -98,55 +98,73 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
         +GuiButton(15, 5, startPositionY + 24 * 8, 90, 20, "HeoMC Alts")
     }
 
-    private fun drawGradientBackground() {
-        animationTime += 0.02f
+    // ? cailonmaskidskidconcak ENHANCED OCEAN GRADIENT BACKGROUND (MATCHING GUIMAINMENU)
+    private fun drawOceanBackground() {
+        animationTime += 0.016f
         
         val tessellator = Tessellator.getInstance()
         val worldRenderer = tessellator.worldRenderer
         
         GlStateManager.disableTexture2D()
         GlStateManager.enableBlend()
-        GlStateManager.disableAlpha()
-        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0)
         GlStateManager.shadeModel(GL11.GL_SMOOTH)
         
         worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
         
-        val time = animationTime
-        val topR = (0.15f + 0.25f * sin(time * 0.5f)).coerceIn(0f, 1f)
-        val topG = (0.35f + 0.35f * sin(time * 0.7f + 1f)).coerceIn(0f, 1f)
-        val topB = (0.75f + 0.25f * sin(time * 0.3f + 2f)).coerceIn(0f, 1f)
+        // ? cailonmaskidskidconcak ANIMATED OCEAN COLORS (MATCHING GUIMAINMENU)
+        val time = animationTime * 0.5f
+        val deepOcean = Color(
+            (40 + 30 * sin(time)).toInt().coerceIn(0, 255), 
+            (80 + 40 * sin(time * 0.7f)).toInt().coerceIn(0, 255), 
+            (120 + 50 * kotlin.math.cos(time * 0.8f)).toInt().coerceIn(0, 255)
+        )
+        val lightOcean = Color(
+            (80 + 50 * sin(time * 1.2f)).toInt().coerceIn(0, 255), 
+            (140 + 60 * kotlin.math.cos(time * 0.9f)).toInt().coerceIn(0, 255), 
+            (180 + 70 * sin(time * 1.1f)).toInt().coerceIn(0, 255)
+        )
+        val surface = Color(
+            (150 + 70 * sin(time * 0.8f)).toInt().coerceIn(0, 255), 
+            (200 + 55 * kotlin.math.cos(time)).toInt().coerceIn(0, 255), 
+            (240 + 15 * sin(time * 1.3f)).toInt().coerceIn(0, 255)
+        )
         
-        worldRenderer.pos(width.toDouble(), 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
-        worldRenderer.pos(0.0, 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
-        worldRenderer.pos(0.0, height.toDouble(), zLevel.toDouble()).color(0.9f, 0.95f, 1.0f, 1.0f).endVertex()
-        worldRenderer.pos(width.toDouble(), height.toDouble(), zLevel.toDouble()).color(0.9f, 0.95f, 1.0f, 1.0f).endVertex()
+        // Multi-layer gradient
+        worldRenderer.pos(width.toDouble(), 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
+        worldRenderer.pos(0.0, 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
+        worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        
+        worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        worldRenderer.pos(0.0, height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
+        worldRenderer.pos(width.toDouble(), height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
         
         tessellator.draw()
         
         GlStateManager.shadeModel(GL11.GL_FLAT)
-        GlStateManager.disableBlend()
-        GlStateManager.enableAlpha()
         GlStateManager.enableTexture2D()
     }
 
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
         assumeNonVolatile {
-            drawGradientBackground()
+            // ? cailonmaskidskidconcak USE ENHANCED OCEAN BACKGROUND
+            drawOceanBackground()
             altsList.drawScreen(mouseX, mouseY, partialTicks)
             
-            // Animated title
+            // Animated title with ocean colors
             val titleTime = animationTime * 1.5f
-            val titleR = (0.2f + 0.4f * sin(titleTime)).coerceIn(0f, 1f)
-            val titleG = (0.4f + 0.4f * sin(titleTime + 1f)).coerceIn(0f, 1f)
-            val titleB = (0.8f + 0.2f * sin(titleTime + 2f)).coerceIn(0f, 1f)
-            val titleColor = ((titleR * 255).toInt() shl 16) or ((titleG * 255).toInt() shl 8) or (titleB * 255).toInt()
+            val titleColor = Color(
+                (100 + 100 * sin(titleTime)).toInt().coerceIn(0, 255),
+                (150 + 80 * sin(titleTime + 1f)).toInt().coerceIn(0, 255),
+                255
+            ).rgb
             
             Fonts.fontSemibold40.drawCenteredString(translationMenu("altManager"), width / 2f, 6f, titleColor)
             
-            // Glowing text
+            // Glowing text with ocean theme
             val textGlow = (0.7f + 0.3f * sin(animationTime * 2.5f)).coerceIn(0f, 1f)
-            val textColor = (0xFFFFFF and 0x00FFFFFF) or ((255 * textGlow).toInt() shl 24)
+            val textColor = Color(200, 230, 255, (255 * textGlow).toInt()).rgb
             
             Fonts.fontSemibold35.drawCenteredString(
                 if (searchField.text.isEmpty()) "${accountsConfig.accounts.size} Alts" else altsList.accounts.size.toString() + " Search Results",
@@ -167,7 +185,7 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
             searchField.drawTextBox()
             if (searchField.text.isEmpty() && !searchField.isFocused) {
                 val placeholderGlow = (0.5f + 0.3f * sin(animationTime * 1.5f)).coerceIn(0f, 1f)
-                val placeholderColor = (0xFFFFFF and 0x00FFFFFF) or ((255 * placeholderGlow).toInt() shl 24)
+                val placeholderColor = Color(150, 180, 220, (255 * placeholderGlow).toInt()).rgb
                 Fonts.fontSemibold40.drawStringWithShadow(
                     translationText("Search"), searchField.xPosition + 4f, 17f, placeholderColor
                 )
@@ -405,16 +423,16 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
                 minecraftAccount.name
             }
 
-            // Animated account colors
+            // Animated account colors with ocean theme
             val accountGlow = (0.7f + 0.3f * sin(animationTime * 2f + id * 0.2f)).coerceIn(0f, 1f)
-            val accountColor = (Color.WHITE.rgb and 0x00FFFFFF) or ((255 * accountGlow).toInt() shl 24)
+            val accountColor = Color(180, 220, 255, (255 * accountGlow).toInt()).rgb
 
             Fonts.fontSemibold40.drawCenteredString(accountName, width / 2f, y + 2f, accountColor, true)
             
             val typeColor = if (minecraftAccount is CrackedAccount) {
-                (Color.GRAY.rgb and 0x00FFFFFF) or ((255 * accountGlow).toInt() shl 24)
+                Color(150, 150, 150, (255 * accountGlow).toInt()).rgb
             } else {
-                (Color(118, 255, 95).rgb and 0x00FFFFFF) or ((255 * accountGlow).toInt() shl 24)
+                Color(118, 255, 95, (255 * accountGlow).toInt()).rgb
             }
             
             Fonts.fontSemibold40.drawCenteredString(
