@@ -41,7 +41,7 @@ import kotlin.math.pow
  */
 @ElementInfo(name = "Target")
 class Target : Element("Target") {
-    private val targetHudStyle by choices("Style", arrayOf("LiquidBounce"), "LiquidBounce")
+    private val targetHudStyle by choices("Style", arrayOf("LiquidBounce", "RinBounce"), "RinBounce")
     private val styleOptionsExpanded by boolean("StyleOptions", false)
 
     // LiquidBounce Style Settings
@@ -113,6 +113,19 @@ class Target : Element("Target") {
                     roundedRectRadius,
                     borderStrength,
                     backgroundColor,
+                    healthBarColor1,
+                    healthBarColor2,
+                    roundHealthBarShape,
+                    borderColor,
+                    textColor,
+                    titleFont,
+                    healthFont,
+                    textShadow
+                )
+                "rinbounce" -> RinBounce(
+                    roundedRectRadius,
+                    borderStrength,
+                    backgroundColor, 
                     healthBarColor1,
                     healthBarColor2,
                     roundHealthBarShape,
