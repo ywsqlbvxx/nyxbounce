@@ -1,7 +1,7 @@
 /*
- * RinBounce Hacked Client
- * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/rattermc/rinbounce69
+ * LiquidBounce Hacked Client
+ * A free          floatRange("VerticalAngleChange", 180f..180f, 1f..720f) { rotationsActive && generalApply() }     floatRange("HorizontalAngleChange", 180f..180f, 1f..720f) { rotationsActive && generalApply() }open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
+ * https://github.com/CCBlueX/LiquidBounce/
  */
 package net.ccbluex.liquidbounce.utils.rotation
 
@@ -26,7 +26,7 @@ open class RotationSettings(owner: Module, generalApply: () -> Boolean = { true 
     open val rotationsValue = boolean("Rotations", true) { generalApply() }
     open val applyServerSideValue = boolean("ApplyServerSide", true) { rotationsActive && generalApply() }
     open val simulateShortStopValue = boolean("SimulateShortStop", false) { rotationsActive && generalApply() }
-    open val rotationDiffBuildUpToStopValue = float("RotationDiffBuildUpToStop", 180f, 50f..720f) { simulateShortStop }
+    open val rotationDiffBuildUpToStopValue = float("RotationDiffBuildUpToStop", 180f, 50f..1440f) { simulateShortStop }
     open val maxThresholdAttemptsToStopValue = int("MaxThresholdAttemptsToStop", 1, 0..5) { simulateShortStop }
     open val shortStopDurationValue = intRange("ShortStopDuration", 1..2, 1..5) { simulateShortStop }
     open val strafeValue = boolean("Strafe", false) { rotationsActive && applyServerSide && generalApply() }
@@ -40,9 +40,9 @@ open class RotationSettings(owner: Module, generalApply: () -> Boolean = { true 
     open val legitimizeValue = boolean("Legitimize", false) { rotationsActive && generalApply() }
 
     open val horizontalAngleChangeValue =
-        floatRange("HorizontalAngleChange", 180f..180f, 1f..180f) { rotationsActive && generalApply() }
+        floatRange("HorizontalAngleChange", 180f..180f, 1f..360f) { rotationsActive && generalApply() }
     open val verticalAngleChangeValue =
-        floatRange("VerticalAngleChange", 180f..180f, 1f..180f) { rotationsActive && generalApply() }
+        floatRange("VerticalAngleChange", 180f..180f, 1f..360f) { rotationsActive && generalApply() }
 
     open val angleResetDifferenceValue = float("AngleResetDifference", 5f.withGCD(), 0.0f..180f) {
         rotationsActive && applyServerSide && generalApply()
