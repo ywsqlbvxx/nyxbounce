@@ -20,14 +20,30 @@ import net.ccbluex.liquidbounce.utils.client.ServerUtils.remoteIp
 
 object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
     private val debug by boolean("Debug", true)
+    private val reduceSpam by boolean("ReduceSpam", false)
+    
     private val actionNumbers = mutableListOf<Int>()
     private var check = false
     private var ticksPassed = 0
-    private val flagPatterns = mutableMapOf<String, Int>()
+    
+
+    private val detectVelocityModification by boolean("DetectVelocityModification", true)
+    private val detectTeleportPatterns by boolean("DetectTeleportPatterns", true) 
+    private val detectMovementFlags by boolean("DetectMovementFlags", true)
+    
+    private val velocityChecks = mutableListOf<Triple<Int, Int, Int>>()
     private val positionHistory = mutableListOf<Triple<Double, Double, Double>>()
-    private val velocityChecks = mutableListOf<Triple<Double, Double, Double>>()
-    private var lastPosLookTime: Long = 0
-    private var lastVelocityTime: Long = 0
+    private val flagPatterns = mutableMapOf<String, Int>()
+    
+    private var lastVelocityTime = 0L
+    private var lastPosLookTime = 0L
+    private var detectedAnticheat: String? = null
+    
+
+    private val notificationCooldowns = mutableMapOf<String, Long>()
+    private val cooldownPeriod = 8000L // 8 seconds
+    private var lastPeriodicCheck = 0L
+    private val periodicCheckInterval = 15000L // 15 seconds
 
     val onPacket = handler<PacketEvent> { event ->
         when (event.packet) {
@@ -146,7 +162,16 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
 
     val onTick = handler<GameTickEvent> {
         if (check && ticksPassed++ > 40) {
-            notify("None").also { reset() }
+            notifyDetection("None").also { reset() }
+        }
+        
+        // Periodic anticheat checking when ReduceSpam is enabled
+        if (reduceSpam && check) {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastPeriodicCheck > periodicCheckInterval) {
+                lastPeriodicCheck = currentTime
+                performPeriodicCheck()
+            }
         }
     }
 
@@ -264,6 +289,61 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
         reset()
     }
 
+    private fun notifyDetection(anticheat: String) {
+        // Only apply spam reduction when ReduceSpam is enabled
+        if (reduceSpam) {
+            val currentTime = System.currentTimeMillis()
+            val lastNotification = notificationCooldowns[anticheat] ?: 0L
+            
+            if (currentTime - lastNotification < cooldownPeriod) {
+                debugMessage("Notification for '$anticheat' suppressed due to cooldown (${(cooldownPeriod - (currentTime - lastNotification)) / 1000}s remaining)")
+                return
+            }
+            
+            notificationCooldowns[anticheat] = currentTime
+            debugMessage("Notification cooldown updated for '$anticheat'")
+        }
+        
+        // When ReduceSpam is disabled, always send notifications immediately (allows spam)
+        detectedAnticheat = anticheat
+        notify(anticheat)
+        debugMessage("Anticheat detection notification sent: $anticheat")
+    }
+    
+    private fun performPeriodicCheck() {
+        debugMessage("Performing periodic anticheat check...")
+        
+        // Check if we have enough data for analysis
+        if (actionNumbers.size >= 3) {
+            debugMessage("Periodic check: Found ${actionNumbers.size} transaction numbers for analysis")
+            analyzeActionNumbers()
+        }
+        
+        // Check flag patterns for potential detections
+        flagPatterns.forEach { (pattern, count) ->
+            when (pattern) {
+                "rapid_teleport" -> if (count > 2) {
+                    debugMessage("Periodic check: Rapid teleport pattern detected ($count occurrences)")
+                    notifyDetection("Movement AntiCheat")
+                }
+                "rounded_velocity" -> if (count > 1) {
+                    debugMessage("Periodic check: Rounded velocity pattern detected ($count occurrences)")
+                    notifyDetection("Velocity AntiCheat")
+                }
+                "ground_spoof" -> if (count > 2) {
+                    debugMessage("Periodic check: Ground spoof pattern detected ($count occurrences)")
+                    notifyDetection("Movement AntiCheat")
+                }
+            }
+        }
+        
+        // Check for server-specific indicators
+        if (remoteIp.lowercase().contains("hypixel")) {
+            debugMessage("Periodic check: Hypixel server detected")
+            notifyDetection("Watchdog")
+        }
+    }
+
     private fun notify(message: String) = hud.addNotification(
         Notification.informative(this, "Anticheat detected: $message", 3000L)
     )
@@ -299,7 +379,25 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
         actionNumbers.clear()
         ticksPassed = 0
         check = false
+        
+        // Clear old cooldowns (older than 30 seconds)
+        if (reduceSpam) {
+            val currentTime = System.currentTimeMillis()
+            notificationCooldowns.entries.removeIf { (_, time) -> 
+                currentTime - time > 30000L
+            }
+            debugMessage("Notification cooldowns cleaned up")
+        }
     }
 
     override fun onEnable() = reset()
+    
+    override fun onDisable() {
+        reset()
+        notificationCooldowns.clear()
+        flagPatterns.clear()
+        velocityChecks.clear()
+        positionHistory.clear()
+        debugMessage("AnticheatDetector disabled, all data cleared")
+    }
 }
