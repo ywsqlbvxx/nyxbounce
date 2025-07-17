@@ -1,7 +1,7 @@
 /*
- * RinBounce Hacked Client
+ * LiquidBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/rattermc/rinbounce69
+ * https://github.com/CCBlueX/LiquidBounce/
  */
 package net.ccbluex.liquidbounce.utils.rotation
 
@@ -323,7 +323,7 @@ object RotationUtils : MinecraftInstance, Listenable {
     fun rotationDifference(a: Rotation, b: Rotation = serverRotation) =
         hypot(angleDifference(a.yaw, b.yaw), a.pitch - b.pitch)
 
-    fun limitAngleChange(
+    private fun limitAngleChange(
         currentRotation: Rotation, targetRotation: Rotation, settings: RotationSettings
     ): Rotation {
         val (hSpeed, vSpeed) = if (settings.instant) {

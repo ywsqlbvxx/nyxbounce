@@ -1,7 +1,7 @@
 /*
- * RinBounce Hacked Client
+ * LiquidBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/rattermc/rinbounce69
+ * https://github.com/CCBlueX/LiquidBounce/
  */
 package net.ccbluex.liquidbounce.ui.client.altmanager
 
@@ -23,7 +23,6 @@ import net.ccbluex.liquidbounce.ui.client.altmanager.menus.GuiDonatorCape
 import net.ccbluex.liquidbounce.ui.client.altmanager.menus.GuiLoginIntoAccount
 import net.ccbluex.liquidbounce.ui.client.altmanager.menus.GuiSessionLogin
 import net.ccbluex.liquidbounce.ui.client.altmanager.menus.altgenerator.GuiTheAltening
-import net.ccbluex.liquidbounce.ui.client.altmanager.menus.altgenerator.GuiHeoMCGen
 import net.ccbluex.liquidbounce.ui.font.AWTFontRenderer.Companion.assumeNonVolatile
 import net.ccbluex.liquidbounce.ui.font.Fonts
 import net.ccbluex.liquidbounce.utils.client.ClientUtils.LOGGER
@@ -95,7 +94,6 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
         }
 
         +GuiButton(11, 5, startPositionY + 24 * 7, 90, 20, translationButton("altManager.cape"))
-        +GuiButton(15, 5, startPositionY + 24 * 8, 90, 20, "HeoMC Alts")
     }
 
     // ? cailonmaskidskidconcak ENHANCED OCEAN GRADIENT BACKGROUND (MATCHING GUIMAINMENU)
@@ -307,7 +305,6 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
                     status = "§cUnable to export due to error: ${e.message}"
                 }
             }
-            15 -> mc.displayGuiScreen(GuiHeoMCGen(this))
             13, 14 -> {
                 val currentAccount = altsList.selectedAccount ?: run {
                     status = "§cSelect an account."

@@ -1,7 +1,7 @@
 /*
- * RinBounce Hacked Client
+ * LiquidBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/rattermc/rinbounce69
+ * https://github.com/CCBlueX/LiquidBounce/
  */
 package net.ccbluex.liquidbounce.features.special
 
@@ -106,7 +106,7 @@ object ClientRichPresence : Configurable("DiscordRPC"), MinecraftInstance, Liste
 
             // Check assets contains logo and set logo
             assets["logo"]?.let {
-                setLargeImage(it, "MC $MINECRAFT_VERSION - RinBounce $clientVersionText")
+                setLargeImage(it, "MC $MINECRAFT_VERSION - $CLIENT_NAME $clientVersionText $clientCommit")
             }
 
             // Check user is in-game
@@ -116,7 +116,10 @@ object ClientRichPresence : Configurable("DiscordRPC"), MinecraftInstance, Liste
                 // Set server info
                 if (showRPCServerIP) {
                     setDetails(customRPCText.ifEmpty {
-                        "Cheating using RinBounce $clientVersionText"
+                        "Server: ${
+                            if (mc.isIntegratedServerRunning || serverData == null) "Singleplayer"
+                            else ServerUtils.hideSensitiveInformation(serverData.serverIP)
+                        }"
                     })
                 }
 
@@ -157,7 +160,7 @@ object ClientRichPresence : Configurable("DiscordRPC"), MinecraftInstance, Liste
      * @throws IOException If reading failed
      */
     private fun loadConfiguration() {
-        val discordConf = HttpClient.get("https://file.theatlantis.asia/discord.json").jsonBody<DiscordConfiguration>() ?: return
+        val discordConf = HttpClient.get("$CLIENT_CLOUD/discord.json").jsonBody<DiscordConfiguration>() ?: return
 
         // Check has app id
         discordConf.appID?.let { appID = it }

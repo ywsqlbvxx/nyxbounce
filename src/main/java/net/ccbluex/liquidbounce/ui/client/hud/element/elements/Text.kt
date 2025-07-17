@@ -1,7 +1,7 @@
 /*
- * RinBounce Hacked Client
+ * LiquidBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/rattermc/rinbounce69
+ * https://github.com/CCBlueX/LiquidBounce/
  */
 package net.ccbluex.liquidbounce.ui.client.hud.element.elements
 
@@ -75,40 +75,6 @@ class Text(x: Double = 10.0, y: Double = 10.0, scale: Float = 1F, side: Side = S
 
         val DECIMAL_FORMAT = DecimalFormat("0.00")
 
-<<<<<<< HEAD
-        /**
-         * Default Client Title
-         */
-        fun defaultClientTitle(): Text {
-            val text = Text(x = 2.0, y = 1.0, scale = 2F)
-
-            text.displayString = "RinBounce"
-            text.shadow = true
-            text.color = text.blueRibbon
-            text.font.set(Fonts.fontRegular45)
-
-            return text
-        }
-
-        /**
-         * Default Client Version
-         */
-        fun defaultClientVersion(): Text {
-            val text = Text(x = 107.0, y = 25.0, scale = 1F)
-
-            text.displayString = "%clientversion%"
-            text.shadow = true
-            text.color = Color.WHITE
-            text.font.set(Fonts.fontExtraBold35)
-
-            return text
-        }
-
-        /**
-         * Default Block Counter
-         */
-=======
->>>>>>> b06f3188daefbda987d3f9d75068f34cb70110a8
         fun defaultBlockCount(): Text {
             val text = Text(x = 486.0, y = 273.0, scale = 1F)
 
@@ -137,41 +103,47 @@ class Text(x: Double = 10.0, y: Double = 10.0, scale: Float = 1F, side: Side = S
         ),
         "Custom"
     )
+    // Pink pastel gradient (formerly Sakura): vivid pink-white
     private val pinkPastelGradient = listOf(
-        floatArrayOf(1.0f, 0.4f, 0.7f, 1.0f),  // deep pink
-        floatArrayOf(1.0f, 0.65f, 0.85f, 1.0f), // medium pink
-        floatArrayOf(1.0f, 0.8f, 0.9f, 1.0f),   // light pink
-        floatArrayOf(1.0f, 0.95f, 1.0f, 1.0f)   // near white
+        floatArrayOf(1.0f, 0.65f, 0.85f, 1.0f),
+        floatArrayOf(1.0f, 0.45f, 0.7f, 1.0f),
+        floatArrayOf(1.0f, 0.85f, 0.95f, 1.0f),
+        floatArrayOf(1.0f, 0.95f, 1.0f, 1.0f)
     )
+    // Red pastel gradient: red to white
     private val redPastelGradient = listOf(
-        floatArrayOf(1.0f, 0.3f, 0.3f, 1.0f),  // deep red
-        floatArrayOf(1.0f, 0.5f, 0.5f, 1.0f),  // medium red
-        floatArrayOf(1.0f, 0.7f, 0.7f, 1.0f),  // light red
-        floatArrayOf(1.0f, 0.9f, 0.9f, 1.0f)   // near white
+        floatArrayOf(1.0f, 0.4f, 0.4f, 1.0f),
+        floatArrayOf(1.0f, 0.7f, 0.7f, 1.0f),
+        floatArrayOf(1.0f, 0.9f, 0.9f, 1.0f),
+        floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)
     )
+    // Yellow pastel gradient
     private val yellowPastelGradient = listOf(
-        floatArrayOf(1.0f, 0.8f, 0.2f, 1.0f),   // deep yellow
-        floatArrayOf(1.0f, 0.9f, 0.4f, 1.0f),   // medium yellow
-        floatArrayOf(1.0f, 0.95f, 0.7f, 1.0f),  // light yellow
-        floatArrayOf(1.0f, 1.0f, 0.9f, 1.0f)    // near white
+        floatArrayOf(1.0f, 0.95f, 0.6f, 1.0f), // light yellow
+        floatArrayOf(1.0f, 0.85f, 0.3f, 1.0f), // pastel yellow
+        floatArrayOf(1.0f, 0.98f, 0.8f, 1.0f), // near white-yellow
+        floatArrayOf(1.0f, 1.0f, 0.9f, 1.0f)   // white
     )
+    // SkyLit (Aqua pastel) gradient
     private val skyLitGradient = listOf(
-        floatArrayOf(0.2f, 0.8f, 1.0f, 1.0f),   // deep aqua
-        floatArrayOf(0.4f, 0.9f, 1.0f, 1.0f),   // medium aqua
-        floatArrayOf(0.7f, 0.95f, 1.0f, 1.0f),  // light aqua
-        floatArrayOf(0.9f, 1.0f, 1.0f, 1.0f)    // near white
+        floatArrayOf(0.6f, 0.85f, 1.0f, 1.0f), // light blue
+        floatArrayOf(0.3f, 0.95f, 1.0f, 1.0f), // aqua
+        floatArrayOf(0.8f, 0.98f, 1.0f, 1.0f), // near white-aqua
+        floatArrayOf(0.9f, 1.0f, 1.0f, 1.0f)   // white
     )
+    // Gray pastel gradient
     private val grayPastelGradient = listOf(
-        floatArrayOf(0.5f, 0.5f, 0.5f, 1.0f),   // deep gray
-        floatArrayOf(0.7f, 0.7f, 0.7f, 1.0f),   // medium gray
-        floatArrayOf(0.85f, 0.85f, 0.85f, 1.0f), // light gray
-        floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)    // white
+        floatArrayOf(0.8f, 0.8f, 0.8f, 1.0f), // light gray
+        floatArrayOf(0.6f, 0.6f, 0.6f, 1.0f), // pastel gray
+        floatArrayOf(0.95f, 0.95f, 0.95f, 1.0f), // near white-gray
+        floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)   // white
     )
+    // Green pastel gradient
     private val greenPastelGradient = listOf(
-        floatArrayOf(0.2f, 0.9f, 0.4f, 1.0f),   // deep green
-        floatArrayOf(0.4f, 0.95f, 0.6f, 1.0f),  // medium green
-        floatArrayOf(0.7f, 1.0f, 0.8f, 1.0f),   // light green
-        floatArrayOf(0.9f, 1.0f, 0.95f, 1.0f)   // near white
+        floatArrayOf(0.6f, 1.0f, 0.7f, 1.0f), // light green
+        floatArrayOf(0.3f, 1.0f, 0.5f, 1.0f), // pastel green
+        floatArrayOf(0.8f, 1.0f, 0.9f, 1.0f), // near white-green
+        floatArrayOf(0.9f, 1.0f, 0.9f, 1.0f)  // white
     )
 
     private val colors = ColorSettingsInteger(this, "TextColor", applyMax = true) { textColorMode == "Custom" }

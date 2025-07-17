@@ -307,14 +307,7 @@ class GuiMainMenu : AbstractScreen() {
         
         // ? cailonmaskidskidconcak VERSION TEXT (TOP LEFT)
         mc.fontRendererObj.drawStringWithShadow(
-<<<<<<< HEAD
-            "b1.1.7",
-            10f,
-            10f,
-            0xFFFFFF // White color
-=======
             "b1.0.1", 10f, 10f, 0xFFFFFF
->>>>>>> b06f3188daefbda987d3f9d75068f34cb70110a8
         )
         
         // ? cailonmaskidskidconcak RESPONSIVE RINBOUNCE TITLE
@@ -358,15 +351,9 @@ class GuiMainMenu : AbstractScreen() {
         
         mc.fontRendererObj.drawStringWithShadow(liquidBounceTitle, scaledTitleX, scaledTitleY, titleColor)
         GlStateManager.popMatrix()
-<<<<<<< HEAD
-
-        // "credit" text in bottom right corner (white color)
-        val creditText = "credit; CCBlueX, RatterMC"
-=======
         
         // ? cailonmaskidskidconcak CREDIT TEXT (BOTTOM RIGHT)
         val creditText = "credit; [idle, deleteduser, welovegiabao]"
->>>>>>> b06f3188daefbda987d3f9d75068f34cb70110a8
         mc.fontRendererObj.drawStringWithShadow(
             creditText,
             width - mc.fontRendererObj.getStringWidth(creditText) - 10f,

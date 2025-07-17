@@ -1,1 +1,1 @@
-server dit cot : https://discord.gg/dcZqmQTSSj
+rinbounce reborn idk fuck u
