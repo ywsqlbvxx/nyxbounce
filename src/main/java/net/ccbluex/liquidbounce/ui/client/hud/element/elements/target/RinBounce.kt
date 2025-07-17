@@ -10,27 +10,24 @@ import net.ccbluex.liquidbounce.utils.render.RenderUtils
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.client.renderer.GlStateManager.*
 import java.awt.Color
-import net.ccbluex.liquidbounce.utils.render.RenderUtils.drawHead
 import net.ccbluex.liquidbounce.ui.font.GameFontRenderer
 import org.lwjgl.opengl.GL11
-import net.ccbluex.liquidbounce.utils.extensions.darker
-import net.minecraft.util.ResourceLocation
 
 class RinBounce(
-    roundedRectRadius: Float,
-    borderStrength: Float,
-    backgroundColor: Color,
-    healthBarColor1: Color,
-    healthBarColor2: Color,
-    roundHealthBarShape: Boolean,
-    borderColor: Color,
-    textColor: Color,
-    titleFont: GameFontRenderer,
-    healthFont: GameFontRenderer,
-    textShadow: Boolean
-) : TargetStyle("RinBounce", true, true) {
+    private val roundedRectRadius: Float,
+    private val borderStrength: Float,
+    private val backgroundColor: Color,
+    private val healthBarColor1: Color,
+    private val healthBarColor2: Color,
+    private val roundHealthBarShape: Boolean,
+    private val borderColor: Color,
+    private val textColor: Color,
+    private val titleFont: GameFontRenderer,
+    private val healthFont: GameFontRenderer,
+    private val textShadow: Boolean
+) : TargetStyle("RinBounce") {
 
-    override fun drawTarget(entity: EntityLivingBase, easingHealth: Float, maxHealth: Float, easingHurtTime: Float, alpha: Double) {
+    override fun drawTarget(entity: EntityLivingBase) {
         val width = (40f + titleFont.getStringWidth(entity.name ?: "")).coerceAtLeast(118F)
         val height = 36F
 
@@ -41,7 +38,7 @@ class RinBounce(
         // Draw head with border
         GL11.glColor4f(1f, 1f, 1f, 1f)
         RenderUtils.drawRoundedRect(2F, 2F, 34F, 34F, 4f, borderColor.rgb)
-        drawHead(entity.skin, 3, 3, 30, 30)
+        RenderUtils.drawHead(entity.skin, 3f, 3f, 30, 30)
 
         // Draw name with custom font
         titleFont.drawString(
@@ -56,15 +53,16 @@ class RinBounce(
         RenderUtils.drawRoundedRect(37F, 22F, width - 2F, 33F, 3f, Color(0, 0, 0, 70).rgb)
 
         // Health bar with gradient
-        val barWidth = (easingHealth / maxHealth) * (width - 39F)
-        if (easingHealth > entity.health) {
-            RenderUtils.drawRoundedRect(38F, 23F, 38F + barWidth, 32F, if (roundHealthBarShape) 3f else 0f, healthBarColor2.darker().rgb)
-        }
+        val barWidth = (entity.health / entity.maxHealth) * (width - 39F)
         RenderUtils.drawRoundedRect(38F, 23F, 38F + barWidth, 32F, if (roundHealthBarShape) 3f else 0f, healthBarColor1.rgb)
+
+        if (entity.hurtTime > 0) {
+            RenderUtils.drawRoundedRect(38F, 23F, 38F + barWidth, 32F, if (roundHealthBarShape) 3f else 0f, healthBarColor2.rgb)
+        }
 
         // Health text with bold and custom font
         healthFont.drawString(
-            "§l${easingHealth.toInt()} HP",
+            "§l${entity.health.toInt()} HP",
             38F,
             14F,
             Color.WHITE.rgb,
@@ -74,7 +72,7 @@ class RinBounce(
         resetColor()
     }
 
-    override fun getBorder(entity: EntityLivingBase, easingHealth: Float, maxHealth: Float): Border? {
+    override fun getBorder(entity: EntityLivingBase): Border {
         val width = (40f + titleFont.getStringWidth(entity.name ?: "")).coerceAtLeast(118F)
         return Border(0F, 0F, width, 36F)
     }
