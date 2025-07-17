@@ -552,37 +552,11 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
                 "aac", "reverse", "smoothreverse", "aaczero", "ghostblock", "intavereduce" -> hasReceivedVelocity = true
 
-                "jumpreset" -> {
-                    // TODO: Recode and make all velocity modes support velocity direction checks
-                    var packetDirection = 0.0
-                    when (packet) {
-                        is S12PacketEntityVelocity -> {
-                            if (packet.entityID != thePlayer.entityId) return@handler
-
-                            val motionX = packet.motionX.toDouble()
-                            val motionZ = packet.motionZ.toDouble()
-
-                            packetDirection = atan2(motionX, motionZ)
-                        }
-
-                        is S27PacketExplosion -> {
-                            val motionX = thePlayer.motionX + packet.field_149152_f
-                            val motionZ = thePlayer.motionZ + packet.field_149159_h
-
-                            packetDirection = atan2(motionX, motionZ)
-                        }
-                    }
-                    val degreePlayer = getDirection()
-                    val degreePacket = Math.floorMod(Math.toDegrees(packetDirection).toInt(), 360).toDouble()
-                    var angle = abs(degreePacket + degreePlayer)
-                    val threshold = 120.0
-                    angle = Math.floorMod(angle.toInt(), 360).toDouble()
-                    val inRange = angle in 180 - threshold / 2..180 + threshold / 2
-                    if (inRange)
-                        hasReceivedVelocity = true
+            "jumpreset" -> {
+                if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
+                    hasReceivedVelocity = true
                 }
-
-                "intave" -> {
+            }                "intave" -> {
                     if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
                         if (intaveSmart) {
                             if (!intaveSmartInAir && !thePlayer.onGround) return@handler
@@ -839,11 +813,8 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         val player = mc.thePlayer ?: return@handler
 
         if (mode == "jumpreset" && hasReceivedVelocity) {
-            if (!player.isJumping && nextInt(endExclusive = 100) < chance && shouldJump() && player.onGround && player.hurtTime > 0) {
+            if (player.onGround && player.hurtTime >= 9 && nextInt(endExclusive = 100) < chance) {
                 player.tryJump()
-                player.motionX *= 0.6
-                player.motionZ *= 0.6
-                limitUntilJump = 0
             }
             hasReceivedVelocity = false
             return@handler
