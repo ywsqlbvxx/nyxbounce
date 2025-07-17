@@ -9,6 +9,7 @@ import net.ccbluex.liquidbounce.features.module.modules.combat.KillAura
 import net.ccbluex.liquidbounce.ui.client.hud.element.Border
 import net.ccbluex.liquidbounce.ui.client.hud.element.Element
 import net.ccbluex.liquidbounce.ui.client.hud.element.ElementInfo
+import net.ccbluex.liquidbounce.ui.client.hud.element.elements.target.LiquidBounce
 import net.ccbluex.liquidbounce.ui.font.AWTFontRenderer.Companion.assumeNonVolatile
 import net.ccbluex.liquidbounce.ui.font.Fonts
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils.getHealth
@@ -219,93 +220,6 @@ class Target : Element("Target") {
                     if (border != null) {
                         width = border.x2
                         height = border.y2
-                    }
-
-                    // background bar
-                    val backgroundBar = {
-                        drawRoundedRect(
-                            healthBarStart,
-                            healthBarTop,
-                            healthBarStart + healthBarTotal,
-                            healthBarTop + healthBarHeight,
-                            Color.BLACK.rgb,
-                            6F,
-                        )
-                    }
-
-                    if (roundHealthBarShape) {
-                        backgroundBar()
-                    }
-
-                    // main bar
-                    withClipping(main = {
-                        if (roundHealthBarShape) {
-                            drawRoundedRect(
-                                healthBarStart,
-                                healthBarTop,
-                                healthBarStart + currentWidth,
-                                healthBarTop + healthBarHeight,
-                                0,
-                                6F
-                            )
-                        } else {
-                            backgroundBar()
-                        }
-                    }, toClip = {
-                        drawGradientRect(
-                            healthBarStart.toInt(),
-                            healthBarTop.toInt(),
-                            healthBarStart.toInt() + currentWidth.toInt(),
-                            healthBarTop.toInt() + healthBarHeight.toInt(),
-                            healthBarColor1.rgb,
-                            healthBarColor2.rgb,
-                            0f
-                        )
-                    })
-
-                    val healthPercentage = (easingHealth / maxHealth * 100).toInt()
-                    val percentageText = "$healthPercentage%"
-                    val textWidth = healthFont.getStringWidth(percentageText)
-                    val calcX = healthBarStart + currentWidth - textWidth
-                    val textX = max(healthBarStart, calcX)
-                    val textY = healthBarTop - Fonts.fontRegular30.fontHeight / 2 - 2F
-                    healthFont.drawString(percentageText, textX, textY, textCustomColor, textShadow)
-
-                    val shouldRenderBody =
-                        (fadeMode && alphaText + alphaBackground + alphaBorder > 100) || (smoothMode && width + height > 100)
-
-                    if (shouldRenderBody) {
-                        val renderer = mc.renderManager.getEntityRenderObject<Entity>(target)
-
-                        if (renderer != null) {
-                            val entityTexture = renderer.getEntityTexture(target)
-
-                            glPushMatrix()
-                            val scale = 1 - easingHurtTime / 10f
-                            val f1 = (0.7F..1F).lerpWith(scale) * this.scale
-                            val color = ColorUtils.interpolateColor(Color.RED, Color.WHITE, scale)
-                            val centerX1 = (4..32).lerpWith(0.5F)
-                            val midY = (4f..28f).lerpWith(0.5F)
-
-                            glTranslatef(centerX1, midY, 0f)
-                            glScalef(f1, f1, f1)
-                            glTranslatef(-centerX1, -midY, 0f)
-
-                            if (entityTexture != null) {
-                                withClipping(main = {
-                                    drawRoundedRect(4f, 4f, 32f, 32f, 0, roundedRectRadius)
-                                }, toClip = {
-                                    drawHead(
-                                        entityTexture, 4, 4, 8f, 8f, 8, 8, 28, 28, 64F, 64F, color
-                                    )
-                                })
-                            }
-                            glPopMatrix()
-                        }
-
-                        target.name?.let {
-                            titleFont.drawString(it, healthBarStart, 6F, textCustomColor, textShadow)
-                        }
                     }
                 }
 
