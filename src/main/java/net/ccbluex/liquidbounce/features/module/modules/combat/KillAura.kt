@@ -116,9 +116,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val scanRange by float("ScanRange", 2f, 0f..10f)
     private val throughWallsRange by float("ThroughWallsRange", 3f, 0f..8f)
     private val rangeSprintReduction by float("RangeSprintReduction", 0f, 0f..0.4f)
-    
-    // Block range
-    private var blockRange by float("BlockRange", 3f, 1f..8f)
 
     // Modes
     // Enhanced targeting system
@@ -199,6 +196,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val blockMaxRange by float("BlockMaxRange", 3f, 1f..8f)
     private val blockDelay by int("BlockDelay", 0, 0..10) { autoBlock != "None" }
     private val unblockDelay by int("UnblockDelay", 0, 0..10) { autoBlock != "None" }
+    private val unblockMode by choices("UnblockMode", arrayOf("Empty", "Instant", "Packet"), "Packet") { autoBlock != "None" }
     private val perfectBlock by boolean("PerfectBlock", true) { autoBlock != "None" }
     private val mainBlockRate by int("BlockRate", 100, 0..100) { autoBlock != "None" }
     
@@ -247,11 +245,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     // Don't block if target isn't holding a sword or an axe
     private val checkWeapon by boolean("CheckEnemyWeapon", true) { smartAutoBlock }
 
-    // TODO: Make block range independent from attack range
+    // Shared block range variable
     private var blockRange: Float by float("BlockRange", range, 1f..8f) {
         smartAutoBlock
-    }.onChange { _, new ->
-        new.coerceAtMost(this@KillAura.range)
     }
 
     // Don't block when you can't get damaged
