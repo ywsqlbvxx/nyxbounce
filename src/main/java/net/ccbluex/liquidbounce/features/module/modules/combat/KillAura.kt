@@ -82,6 +82,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     private val simulateCooldown by boolean("SimulateCooldown", false)
     private val simulateDoubleClicking by boolean("SimulateDoubleClicking", false) { !simulateCooldown }
+    private val pauseOnRightClick by boolean("PauseOnRightClick", false)
     
     // Remove Reduce Damage
     private val removeReduceDmgEnabled by boolean("RemoveReduceDmg", false)
@@ -328,7 +329,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     var target: EntityLivingBase? = null
     private var hittable = false
     private val prevTargetEntities = mutableListOf<Int>()
-
+    
+    // Pause on RightClick
+    private var pausedByRightClick = false
+    
     // Attack delay
     private val attackTimer = MSTimer()
     private var attackDelay = 0
@@ -393,6 +397,11 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     }
 
     fun update() {
+        if (pauseOnRightClick && pausedByRightClick) {
+            target = null
+            return
+        }
+        
         if (cancelRun || (noInventoryAttack && (mc.currentScreen is GuiContainer || System.currentTimeMillis() - containerOpen < noInventoryDelay))) return
 
         // Update target
@@ -419,6 +428,18 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Tick event
      */
     val onTick = handler<GameTickEvent>(priority = 2) {
+        if (pauseOnRightClick) {
+            if (mc.gameSettings.keyBindUseItem.isKeyDown) {
+                if (!pausedByRightClick) {
+                    pausedByRightClick = true
+                    stopBlocking(true)
+                }
+                return@handler // Stop killaura from attacking when hold rightmb
+            } else if (pausedByRightClick) {
+                pausedByRightClick = false
+            }
+        }
+        
         val player = mc.thePlayer ?: return@handler
 
         if (blockStatus && player.heldItem?.item !is ItemSword) {
@@ -553,6 +574,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Render event
      */
     val onRender3D = handler<Render3DEvent> {
+        if (pauseOnRightClick && pausedByRightClick) {
+            return@handler
+        }
+        
         handleFailedSwings()
 
         drawAimPointBox()
