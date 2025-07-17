@@ -4,54 +4,40 @@ import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.event.PacketEvent
 import net.ccbluex.liquidbounce.event.handler
-import net.ccbluex.liquidbounce.event.UpdateEvent
-import net.minecraft.entity.EntityLivingBase
+import net.ccbluex.liquidbounce.utils.client.PacketUtils.sendPacket
 import net.minecraft.network.play.client.C02PacketUseEntity
-import kotlin.math.*
-import java.util.*
+import net.minecraft.network.play.client.C07PacketPlayerDigging
+import net.minecraft.util.BlockPos
+import net.minecraft.util.EnumFacing
 
 object RemoveReduceDame : Module("RemoveReduceDame", Category.COMBAT) {
+    private val delayMs by int("Delay", 40, 0..100)
 
-    private var targetYaw = 0f
-    private var targetPitch = 0f
-    private var shouldApplyRotation = false
-    private val random = Random()
+    private var lastAttackTime = 0L
+    private var blockReleasedAt = 0L
 
     init {
         handler<PacketEvent> { event ->
             val player = mc.thePlayer ?: return@handler
-            val world = mc.theWorld ?: return@handler
             val packet = event.packet
 
             if (packet is C02PacketUseEntity && packet.action == C02PacketUseEntity.Action.ATTACK) {
-                val target = packet.getEntityFromWorld(world) as? EntityLivingBase ?: return@handler
+                val now = System.currentTimeMillis()
 
-                val dx = target.posX - player.posX
-                val dz = target.posZ - player.posZ
-                val dy = (target.posY + target.eyeHeight) - (player.posY + player.eyeHeight)
-                val dist = sqrt(dx * dx + dz * dz)
+                if (now - lastAttackTime < delayMs) return@handler
+                lastAttackTime = now
 
-                val jitterYaw = (-0.5f + random.nextFloat() * 1f)
-                val jitterPitch = (-0.3f + random.nextFloat() * 0.6f)
-
-                targetYaw = Math.toDegrees(atan2(dz, dx)).toFloat() - 90f + jitterYaw
-                targetPitch = -Math.toDegrees(atan2(dy, dist)).toFloat() + jitterPitch
-
-                shouldApplyRotation = true
+                if (player.isBlocking) {
+                    sendPacket(
+                        C07PacketPlayerDigging(
+                            C07PacketPlayerDigging.Action.RELEASE_USE_ITEM,
+                            BlockPos.ORIGIN,
+                            EnumFacing.DOWN
+                        ), false
+                    )
+                    blockReleasedAt = now
+                }
             }
-        }
-
-        handler<UpdateEvent> { event ->
-            val player = mc.thePlayer ?: return@handler
-            if (!shouldApplyRotation) return@handler
-
-            player.rotationYaw = targetYaw
-            player.rotationPitch = targetPitch
-
-            player.rotationYawHead = targetYaw
-            player.renderYawOffset = targetYaw
-
-            shouldApplyRotation = false
         }
     }
 }
