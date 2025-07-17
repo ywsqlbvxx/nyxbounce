@@ -175,6 +175,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             Regen,
             ResourcePackSpoof,
             ReverseStep,
+            RemoveReduceDame,
             Rotations,
             SafeWalk,
             Scaffold,
