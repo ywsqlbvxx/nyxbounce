@@ -1,7 +1,7 @@
 /*
- * LiquidBounce Hacked Client
+ * RinBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/CCBlueX/LiquidBounce/
+ * https://github.com/rattermc/rinbounce69
  */
 package net.ccbluex.liquidbounce.ui.client
 
@@ -307,7 +307,7 @@ class GuiMainMenu : AbstractScreen() {
         
         // ? cailonmaskidskidconcak VERSION TEXT (TOP LEFT)
         mc.fontRendererObj.drawStringWithShadow(
-            "b1.0.1", 10f, 10f, 0xFFFFFF
+            "b1.1.7", 10f, 10f, 0xFFFFFF
         )
         
         // ? cailonmaskidskidconcak RESPONSIVE RINBOUNCE TITLE
@@ -353,7 +353,7 @@ class GuiMainMenu : AbstractScreen() {
         GlStateManager.popMatrix()
         
         // ? cailonmaskidskidconcak CREDIT TEXT (BOTTOM RIGHT)
-        val creditText = "credit; [idle, deleteduser, welovegiabao]"
+        val creditText = "credit: [ CCBlueX, RatterMC ]"
         mc.fontRendererObj.drawStringWithShadow(
             creditText,
             width - mc.fontRendererObj.getStringWidth(creditText) - 10f,
