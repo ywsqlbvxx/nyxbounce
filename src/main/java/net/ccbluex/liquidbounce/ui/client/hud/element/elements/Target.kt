@@ -42,26 +42,27 @@ import kotlin.math.pow
 @ElementInfo(name = "Target")
 class Target : Element("Target") {
     private val targetHudStyle by choices("Style", arrayOf("LiquidBounce"), "LiquidBounce")
+    private val styleOptionsExpanded by boolean("StyleOptions", false)
 
     // LiquidBounce Style Settings
-    private val roundedRectRadius by float("Rounded-Radius", 3F, 0F..5F)
-    private val borderStrength by float("Border-Strength", 3F, 1F..5F)
-    private val backgroundMode by choices("Background-ColorMode", arrayOf("Custom", "Rainbow"), "Custom")
-    private val backgroundColor by color("Background-Color", Color.BLACK.withAlpha(150)) { backgroundMode == "Custom" }
-    private val healthBarColor1 by color("HealthBar-Gradient1", Color(3, 65, 252))
-    private val healthBarColor2 by color("HealthBar-Gradient2", Color(3, 252, 236))
-    private val roundHealthBarShape by boolean("RoundHealthBarShape", true)
+    private val roundedRectRadius by float("Rounded-Radius", 3F, 0F..5F) { styleOptionsExpanded }
+    private val borderStrength by float("Border-Strength", 3F, 1F..5F) { styleOptionsExpanded }
+    private val backgroundMode by choices("Background-ColorMode", arrayOf("Custom", "Rainbow"), "Custom") { styleOptionsExpanded }
+    private val backgroundColor by color("Background-Color", Color.BLACK.withAlpha(150)) { backgroundMode == "Custom" && styleOptionsExpanded }
+    private val healthBarColor1 by color("HealthBar-Gradient1", Color(3, 65, 252)) { styleOptionsExpanded }
+    private val healthBarColor2 by color("HealthBar-Gradient2", Color(3, 252, 236)) { styleOptionsExpanded }
+    private val roundHealthBarShape by boolean("RoundHealthBarShape", true) { styleOptionsExpanded }
 
-    private val borderColor by color("Border-Color", Color.BLACK)
+    private val borderColor by color("Border-Color", Color.BLACK) { styleOptionsExpanded }
 
-    private val textColor by color("TextColor", Color.WHITE)
+    private val textColor by color("TextColor", Color.WHITE) { styleOptionsExpanded }
 
-    private val rainbowX by float("Rainbow-X", -1000F, -2000F..2000F) { backgroundMode == "Rainbow" }
-    private val rainbowY by float("Rainbow-Y", -1000F, -2000F..2000F) { backgroundMode == "Rainbow" }
+    private val rainbowX by float("Rainbow-X", -1000F, -2000F..2000F) { backgroundMode == "Rainbow" && styleOptionsExpanded }
+    private val rainbowY by float("Rainbow-Y", -1000F, -2000F..2000F) { backgroundMode == "Rainbow" && styleOptionsExpanded }
 
-    private val titleFont by font("TitleFont", Fonts.fontSemibold40)
-    private val healthFont by font("HealthFont", Fonts.fontRegular30)
-    private val textShadow by boolean("TextShadow", false)
+    private val titleFont by font("TitleFont", Fonts.fontSemibold40) { styleOptionsExpanded }
+    private val healthFont by font("HealthFont", Fonts.fontRegular30) { styleOptionsExpanded }
+    private val textShadow by boolean("TextShadow", false) { styleOptionsExpanded }
 
     private val fadeSpeed by float("FadeSpeed", 2F, 1F..9F)
     private val absorption by boolean("Absorption", true)
