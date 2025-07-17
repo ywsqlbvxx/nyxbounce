@@ -75,39 +75,8 @@ class Text(x: Double = 10.0, y: Double = 10.0, scale: Float = 1F, side: Side = S
 
         val DECIMAL_FORMAT = DecimalFormat("0.00")
 
-        /**
-         * Default Client Title
-         */
-        fun defaultClientTitle(): Text {
-            val text = Text(x = 2.0, y = 1.0, scale = 2F)
-
-            text.displayString = "%clientName%"
-            text.shadow = true
-            text.color = text.blueRibbon
-            text.font.set(Fonts.fontRegular45)
-
-            return text
-        }
-
-        /**
-         * Default Client Version
-         */
-        fun defaultClientVersion(): Text {
-            val text = Text(x = 107.0, y = 25.0, scale = 1F)
-
-            text.displayString = "%clientversion%"
-            text.shadow = true
-            text.color = Color.WHITE
-            text.font.set(Fonts.fontExtraBold35)
-
-            return text
-        }
-
-        /**
-         * Default Block Counter
-         */
         fun defaultBlockCount(): Text {
-            val text = Text(x = 520.0, y = 245.0, scale = 1F)
+            val text = Text(x = 486.0, y = 273.0, scale = 1F)
 
             text.displayString = "%blockamount%"
             text.shadow = true

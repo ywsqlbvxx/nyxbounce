@@ -25,6 +25,7 @@ import net.ccbluex.liquidbounce.ui.client.clickgui.style.Style
 import net.ccbluex.liquidbounce.ui.client.clickgui.style.styles.BlackStyle
 import net.ccbluex.liquidbounce.ui.client.clickgui.style.styles.LiquidBounceStyle
 import net.ccbluex.liquidbounce.ui.client.clickgui.style.styles.SlowlyStyle
+import net.ccbluex.liquidbounce.ui.client.clickgui.style.styles.RinStyle
 import net.ccbluex.liquidbounce.ui.client.hud.HUD
 import net.ccbluex.liquidbounce.ui.client.hud.designer.GuiHudDesigner
 import net.ccbluex.liquidbounce.ui.client.hud.element.elements.Notification
