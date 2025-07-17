@@ -392,7 +392,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     fun update() {
         if (pauseOnRightClick && pausedByRightClick) {
-            target = null
             return
         }
         
@@ -428,10 +427,20 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                     pausedByRightClick = true
                     stopBlocking(true)
                 }
-                return@handler // Stop killaura from attacking when hold rightmb
             } else if (pausedByRightClick) {
                 pausedByRightClick = false
             }
+        }
+        
+        if (pausedByRightClick) {
+            if (target != null) {
+                clicks = 0
+
+            if (blockStatus) {
+                stopBlocking(true)
+                }
+            }
+            return@handler
         }
         
         val player = mc.thePlayer ?: return@handler
@@ -568,9 +577,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Render event
      */
     val onRender3D = handler<Render3DEvent> {
-        if (pauseOnRightClick && pausedByRightClick) {
-            return@handler
-        }
         
         handleFailedSwings()
 
