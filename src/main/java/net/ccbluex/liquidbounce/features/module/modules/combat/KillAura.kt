@@ -84,7 +84,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     
     // Remove Reduce Damage
     private val removeReduceDmgEnabled by boolean("RemoveReduceDmg", false)
-    private val removeReduceDmgDelay by int("RemoveReduceDmgDelay", 40, 0..100) { removeReduceDmgEnabled }
+    private val removeReduceDmgDelay by int("RemoveReduceDmgDelay", 0, 0..100) { removeReduceDmgEnabled }
     private var lastAttackTime = 0L
     private var blockReleasedAt = 0L
 
