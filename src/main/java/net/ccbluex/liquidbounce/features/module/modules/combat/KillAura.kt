@@ -178,63 +178,24 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val onScaffold by boolean("OnScaffold", false)
     private val onDestroyBlock by boolean("OnDestroyBlock", false)
 
-    // Enhanced AutoBlock System
+    // AutoBlock Settings
     val autoBlock by choices(
         "AutoBlock",
-        arrayOf("Smart", "Packet", "NCP", "Matrix", "Vulcan", "Vanilla", "None"),
+        arrayOf("None", "Packet", "Smart"),
         "Smart"
     )
     
-    // Advanced blocking options
-    private val blockMode by choices(
-        "BlockMode",
-        arrayOf("Always", "HurtTime", "Range", "Health", "Smart"),
-        "Smart"
-    ) { autoBlock != "None" }
-    
-    // Block ranges and timings
-    private val blockMaxRange by float("BlockMaxRange", 3f, 1f..8f)
+    // Basic Block Settings
+    private val blockRange by float("BlockRange", 3f, 1f..8f) { autoBlock != "None" }
     private val blockDelay by int("BlockDelay", 0, 0..10) { autoBlock != "None" }
-    private val unblockDelay by int("UnblockDelay", 0, 0..10) { autoBlock != "None" }
-    private val unblockMode by choices("UnblockMode", arrayOf("Empty", "Instant", "Packet"), "Packet") { autoBlock != "None" }
-    private val perfectBlock by boolean("PerfectBlock", true) { autoBlock != "None" }
-    private val mainBlockRate by int("BlockRate", 100, 0..100) { autoBlock != "None" }
+    private val blockRate by int("BlockRate", 100, 0..100) { autoBlock != "None" }
     
     // Smart block settings
-    private val smartBlock by boolean("SmartBlock", true) { autoBlock != "None" }
-    private val blockDamageOnly by boolean("BlockDamageOnly", true) { smartBlock }
-    private val blockHealthThreshold by float("BlockHealthThreshold", 15f, 1f..20f) { smartBlock }
+    private val smartBlock by boolean("SmartBlock", true) { autoBlock == "Smart" }
     private val instantBlock by boolean("InstantBlock", true) { smartBlock }
-    private val releaseAutoBlock by boolean("ReleaseAutoBlock", true) { autoBlock !in arrayOf("Off", "Fake") }
-    val forceBlockRender by boolean("ForceBlockRender", true) {
-        autoBlock !in arrayOf(
-            "Off", "Fake"
-        ) && releaseAutoBlock
-    }
-    private val ignoreTickRule by boolean("IgnoreTickRule", false) {
-        autoBlock !in arrayOf(
-            "Off", "Fake"
-        ) && releaseAutoBlock
-    }
-    private val altBlockRate by int("AltBlockRate", 100, 1..100) { autoBlock !in arrayOf("Off", "Fake") && releaseAutoBlock }
+    private val blockRender by boolean("BlockRender", true) { autoBlock != "None" }
 
-    private val uncpAutoBlock by boolean("UpdatedNCPAutoBlock", false) {
-        autoBlock !in arrayOf(
-            "Off", "Fake"
-        ) && !releaseAutoBlock
-    }
-
-    private val switchStartBlock by boolean("SwitchStartBlock", false) { autoBlock !in arrayOf("Off", "Fake") }
-
-    private val interactAutoBlock by boolean("InteractAutoBlock", true) { autoBlock !in arrayOf("Off", "Fake") }
-
-    val blinkAutoBlock by boolean("BlinkAutoBlock", false) { autoBlock !in arrayOf("Off", "Fake") }
-
-    private val blinkBlockTicks by int("BlinkBlockTicks", 3, 2..5) {
-        autoBlock !in arrayOf(
-            "Off", "Fake"
-        ) && blinkAutoBlock
-    }
+    private val interactAutoBlock by boolean("InteractAutoBlock", true) { autoBlock != "None" }
 
     // AutoBlock conditions
     private val smartAutoBlock by boolean("SmartAutoBlock", false) { autoBlock == "Packet" }
@@ -1168,7 +1129,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private fun startBlocking(interactEntity: Entity, interact: Boolean, fake: Boolean = false) {
         val player = mc.thePlayer ?: return
 
-        if (blockStatus && (!uncpAutoBlock || !blinkAutoBlock) || shouldPrioritize()) return
+        if (blockStatus || shouldPrioritize() || autoBlock == "None") return
 
         if (mc.thePlayer.isBlocking) {
             blockStatus = true
@@ -1176,12 +1137,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             return
         }
 
-        if (unblockMode == "Empty" && player.inventory.firstEmptyStack !in 0..8) {
-            return
-        }
-
         if (!fake) {
-            if (!(mainBlockRate > 0 && nextInt(endExclusive = 100) <= mainBlockRate)) return
+            if (!(blockRate > 0 && nextInt(endExclusive = 100) <= blockRate)) return
 
             if (interact) {
                 val positionEye = player.eyes
