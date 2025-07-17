@@ -1,5 +1,5 @@
 /*
- * DeletedUser has been commented out for easier coding
+ * LiquidBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
  * https://github.com/CCBlueX/LiquidBounce/
  */
@@ -7,17 +7,8 @@ package net.ccbluex.liquidbounce.ui.client
 
 import net.ccbluex.liquidbounce.LiquidBounce.CLIENT_NAME
 import net.ccbluex.liquidbounce.LiquidBounce.clientVersionText
-import net.ccbluex.liquidbounce.api.ClientUpdate
-import net.ccbluex.liquidbounce.api.ClientUpdate.hasUpdate
-import net.ccbluex.liquidbounce.file.FileManager
-import net.ccbluex.liquidbounce.file.FileManager.valuesConfig
-import net.ccbluex.liquidbounce.lang.translationMenu
 import net.ccbluex.liquidbounce.ui.client.altmanager.GuiAltManager
-import net.ccbluex.liquidbounce.ui.client.fontmanager.GuiFontManager
-import net.ccbluex.liquidbounce.ui.font.Fonts
-import net.ccbluex.liquidbounce.utils.client.JavaVersion
-import net.ccbluex.liquidbounce.utils.client.javaVersion
-import net.ccbluex.liquidbounce.utils.io.MiscUtils
+import net.ccbluex.liquidbounce.utils.render.RenderUtils
 import net.ccbluex.liquidbounce.utils.render.RenderUtils.drawRect
 import net.ccbluex.liquidbounce.utils.ui.AbstractScreen
 import net.minecraft.client.gui.GuiButton
@@ -28,21 +19,49 @@ import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.client.renderer.Tessellator
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.client.resources.I18n
-import org.lwjgl.input.Mouse
 import org.lwjgl.opengl.GL11
-import java.text.SimpleDateFormat
+import java.awt.Color
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.math.sin
+import kotlin.math.*
+import kotlin.random.Random
 
 class GuiMainMenu : AbstractScreen() {
 
-    private var popup: PopupScreen? = null
+    // ? cailonmaskidskidconcak ALL ANIMATION VARIABLES FROM VERSION 26
     private var animationTime = 0f
+    private var fadeAlpha = 255
+    private var fadeIn = true
+    private val particles = mutableListOf<OceanParticle>()
+    private val smokeParticles = mutableListOf<SmokeParticle>()
+    private val buttonAnimations = mutableMapOf<Int, Float>() // Button hover animations
+
+    // ? cailonmaskidskidconcak OCEAN PARTICLE CLASS
+    data class OceanParticle(
+        var x: Float,
+        var y: Float,
+        var vx: Float,
+        var vy: Float,
+        var life: Float,
+        var maxLife: Float,
+        var size: Float,
+        val color: Color
+    )
+
+    // ? cailonmaskidskidconcak SMOKE PARTICLE CLASS  
+    data class SmokeParticle(
+        var x: Float,
+        var y: Float,
+        var vx: Float,
+        var vy: Float,
+        var life: Float,
+        var maxLife: Float,
+        var size: Float,
+        var rotation: Float,
+        var rotationSpeed: Float
+    )
 
     companion object {
-        private var popupOnce = false
         var lastWarningTime: Long? = null
         private val warningInterval = TimeUnit.DAYS.toMillis(7)
 
@@ -50,271 +69,352 @@ class GuiMainMenu : AbstractScreen() {
     }
 
     override fun initGui() {
-        // Left side menu buttons
-        val buttonWidth = 120
-        val buttonHeight = 20
-        val leftMargin = 20
-        val startY = height / 4
+        // ? cailonmaskidskidconcak CENTERED BUTTONS
+        val buttonWidth = 200
+        val buttonHeight = 32
+        val centerX = width / 2 - buttonWidth / 2
+        val startY = height / 2 - 80
 
-        +GuiButton(1, leftMargin, startY, buttonWidth, buttonHeight, I18n.format("menu.singleplayer"))
-        +GuiButton(2, leftMargin, startY + 25, buttonWidth, buttonHeight, I18n.format("menu.multiplayer"))
-        +GuiButton(100, leftMargin, startY + 50, buttonWidth, buttonHeight, translationMenu("altManager"))
-        +GuiButton(0, leftMargin, startY + 75, buttonWidth, buttonHeight, I18n.format("menu.options"))
-        +GuiButton(4, leftMargin, startY + 100, buttonWidth, buttonHeight, I18n.format("menu.quit"))
-        
-        // Additional buttons
-        +GuiButton(103, leftMargin, startY + 125, buttonWidth, buttonHeight, translationMenu("mods"))
-        +GuiButton(109, leftMargin, startY + 150, buttonWidth, buttonHeight, translationMenu("fontManager"))
-        +GuiButton(102, leftMargin, startY + 175, buttonWidth, buttonHeight, translationMenu("configuration"))
-        +GuiButton(101, leftMargin, startY + 200, buttonWidth, buttonHeight, translationMenu("serverStatus"))
-        +GuiButton(108, leftMargin, startY + 225, buttonWidth, buttonHeight, translationMenu("contributors"))
+        +GuiButton(1, centerX, startY, buttonWidth, buttonHeight, I18n.format("menu.singleplayer"))
+        +GuiButton(2, centerX, startY + 40, buttonWidth, buttonHeight, I18n.format("menu.multiplayer"))
+        +GuiButton(100, centerX, startY + 80, buttonWidth, buttonHeight, "Alt Manager")
+        +GuiButton(0, centerX, startY + 120, buttonWidth, buttonHeight, I18n.format("menu.options"))
+        +GuiButton(4, centerX, startY + 160, buttonWidth, buttonHeight, I18n.format("menu.quit"))
+
+        // Initialize button animations
+        buttonAnimations.clear()
+
+        // ? cailonmaskidskidconcak INITIALIZE ALL PARTICLES FROM VERSION 26
+        particles.clear()
+        smokeParticles.clear()
+
+        // Create initial ocean particles
+        repeat(50) {
+            particles.add(createOceanParticle())
+        }
+
+        // Create initial smoke particles
+        repeat(30) {
+            smokeParticles.add(createSmokeParticle())
+        }
     }
 
-    private fun drawGradientBackground() {
-        animationTime += 0.02f
-        
+    // ? cailonmaskidskidconcak CUSTOM BUTTON RENDERING
+    private fun drawCustomButton(button: GuiButton, mouseX: Int, mouseY: Int) {
+        if (!button.visible) return
+
+        val isHovered = mouseX >= button.xPosition && mouseY >= button.yPosition && 
+                       mouseX < button.xPosition + button.width && mouseY < button.yPosition + button.height
+
+        // Update hover animation
+        val currentAnim = buttonAnimations.getOrDefault(button.id, 0f)
+        val targetAnim = if (isHovered) 1f else 0f
+        val newAnim = currentAnim + (targetAnim - currentAnim) * 0.15f
+        buttonAnimations[button.id] = newAnim
+
+        val x = button.xPosition.toFloat()
+        val y = button.yPosition.toFloat()
+        val width = button.width.toFloat()
+        val height = button.height.toFloat()
+        val radius = 8f
+
+        // ? cailonmaskidskidconcak BUTTON BACKGROUND
+        val bgAlpha = (140 + 80 * newAnim).toInt()
+        val bgColor = Color(20, 20, 30, bgAlpha)
+
+        RenderUtils.drawRoundedRect(
+            x, y, x + width, y + height,
+            bgColor.rgb,
+            radius
+        )
+
+        // ? cailonmaskidskidconcak GRADIENT BORDER ON HOVER
+        if (newAnim > 0f) {
+            val borderWidth = 2f * newAnim
+
+            // Create gradient border effect
+            val steps = 20
+            for (i in 0 until steps) {
+                val progress = i.toFloat() / steps
+                val angle = progress * 2 * PI + animationTime * 2
+
+                // Gradient from white to light blue
+                val r = (255 * (1f - progress * 0.3f)).toInt()
+                val g = (255 * (1f - progress * 0.1f)).toInt()
+                val b = 255
+                val alpha = (120 * newAnim * (1f - progress * 0.5f)).toInt()
+
+                val borderColor = Color(r, g, b, alpha)
+
+                RenderUtils.drawRoundedRect(
+                    x - borderWidth * (1f + progress * 0.5f), 
+                    y - borderWidth * (1f + progress * 0.5f),
+                    x + width + borderWidth * (1f + progress * 0.5f), 
+                    y + height + borderWidth * (1f + progress * 0.5f),
+                    borderColor.rgb,
+                    radius + borderWidth * (1f + progress * 0.5f)
+                )
+            }
+        }
+
+        // ? cailonmaskidskidconcak INNER GLOW EFFECT
+        if (newAnim > 0f) {
+            val glowColor = Color(100, 200, 255, (40 * newAnim).toInt())
+            RenderUtils.drawRoundedRect(
+                x + 2, y + 2, x + width - 2, y + height - 2,
+                glowColor.rgb,
+                radius - 2
+            )
+        }
+
+        // ? cailonmaskidskidconcak BUTTON TEXT
+        val font = mc.fontRendererObj
+        val textColor = if (button.enabled) {
+            Color(255, 255, 255, (220 + 35 * newAnim).toInt())
+        } else {
+            Color(120, 120, 120, 200)
+        }
+
+        val textX = x + width / 2 - font.getStringWidth(button.displayString) / 2
+        val textY = y + height / 2 - font.FONT_HEIGHT / 2
+
+        // Text shadow
+        font.drawString(button.displayString, (textX + 1).toInt(), (textY + 1).toInt(), Color(0, 0, 0, 150).rgb)
+        font.drawString(button.displayString, textX.toInt(), textY.toInt(), textColor.rgb)
+    }
+
+    // ? cailonmaskidskidconcak LIGHTER OCEAN BACKGROUND
+    private fun drawOceanBackground() {
         val tessellator = Tessellator.getInstance()
         val worldRenderer = tessellator.worldRenderer
-        
+
         GlStateManager.disableTexture2D()
         GlStateManager.enableBlend()
-        GlStateManager.disableAlpha()
-        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0)
         GlStateManager.shadeModel(GL11.GL_SMOOTH)
-        
+
         worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
-        
-        val time = animationTime
-        // Blue to white gradient
-        val topR = (0.2f + 0.1f * sin(time * 0.3f)).coerceIn(0f, 1f)
-        val topG = (0.5f + 0.2f * sin(time * 0.4f + 1f)).coerceIn(0f, 1f)
-        val topB = (0.8f + 0.2f * sin(time * 0.2f + 2f)).coerceIn(0f, 1f)
-        
-        worldRenderer.pos(width.toDouble(), 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
-        worldRenderer.pos(0.0, 0.0, zLevel.toDouble()).color(topR, topG, topB, 1.0f).endVertex()
-        worldRenderer.pos(0.0, height.toDouble(), zLevel.toDouble()).color(0.95f, 0.98f, 1.0f, 1.0f).endVertex()
-        worldRenderer.pos(width.toDouble(), height.toDouble(), zLevel.toDouble()).color(0.95f, 0.98f, 1.0f, 1.0f).endVertex()
-        
+
+        // ? cailonmaskidskidconcak LIGHTER ANIMATED OCEAN COLORS
+        val time = animationTime * 0.5f
+        val deepOcean = Color(
+            (40 + 30 * sin(time)).toInt().coerceIn(0, 255), 
+            (80 + 40 * sin(time * 0.7f)).toInt().coerceIn(0, 255), 
+            (120 + 50 * cos(time * 0.8f)).toInt().coerceIn(0, 255)
+        )
+        val lightOcean = Color(
+            (80 + 50 * sin(time * 1.2f)).toInt().coerceIn(0, 255), 
+            (140 + 60 * cos(time * 0.9f)).toInt().coerceIn(0, 255), 
+            (180 + 70 * sin(time * 1.1f)).toInt().coerceIn(0, 255)
+        )
+        val surface = Color(
+            (150 + 70 * sin(time * 0.8f)).toInt().coerceIn(0, 255), 
+            (200 + 55 * cos(time)).toInt().coerceIn(0, 255), 
+            (240 + 15 * sin(time * 1.3f)).toInt().coerceIn(0, 255)
+        )
+
+        // Multi-layer gradient
+        worldRenderer.pos(width.toDouble(), 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
+        worldRenderer.pos(0.0, 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
+        worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+
+        worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
+        worldRenderer.pos(0.0, height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
+        worldRenderer.pos(width.toDouble(), height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
+
         tessellator.draw()
-        
+
         GlStateManager.shadeModel(GL11.GL_FLAT)
-        GlStateManager.disableBlend()
-        GlStateManager.enableAlpha()
         GlStateManager.enableTexture2D()
     }
 
-    private fun drawMenuBackground() {
-        // Draw menu background full height
-        val menuWidth = 180 // Keep same width
-        
-        // Lighter semi-transparent background
-        val bgColor = 0x40000000.toInt() // More transparent black
-        
-        drawRect(
-            0f, // Start from left edge
-            0f, // Start from top of screen (full height)
-            menuWidth.toFloat(), // Same width as before
-            height.toFloat(), // Full height to bottom of screen
-            bgColor
-        )
-    }
+    // ? cailonmaskidskidconcak OCEAN PARTICLES SYSTEM
+    private fun updateAndRenderParticles() {
+        particles.removeAll { particle ->
+            particle.life -= 0.016f
+            particle.x += particle.vx
+            particle.y += particle.vy
+            particle.vy += 0.01f
 
-    private fun showWelcomePopup() {
-        popup = PopupScreen {
-            title("§a§lWelcome!")
-            message("""
-                §eThank you for downloading and installing §bRinBounce§e!
-        
-                §6Here is some information you might find useful:§r
-                §a- §fClickGUI:§r Press §7[RightShift]§f to open ClickGUI.
-                §a- §fRight-click modules with a '+' to edit.
-                §a- §fHover over a module to see its description.
-        
-                §6Important Commands:§r
-                §a- §f.bind <module> <key> / .bind <module> none
-                §a- §f.config load <name> / .config list
-        
-                §bNeed help? Contact us!§r
-                - §fYouTube: §9https://youtube.com/ccbluex
-                - §fTwitter: §9https://twitter.com/ccbluex
-                - §fForum: §9https://forums.ccbluex.net/
-            """.trimIndent())
-            button("§aOK")
-            onClose { popup = null }
-        }
-    }
+            if (particle.life > 0) {
+                val alpha = (particle.life / particle.maxLife * 255).toInt().coerceIn(0, 255)
+                val particleColor = Color(particle.color.red, particle.color.green, particle.color.blue, alpha)
 
-    private fun showUpdatePopup() {
-        val newestVersion = ClientUpdate.newestVersion ?: return
-
-        val isReleaseBuild = newestVersion.release
-        val updateType = if (isReleaseBuild) "version" else "development build"
-
-        val dateFormatter = SimpleDateFormat("EEEE, MMMM dd, yyyy, h a z", Locale.ENGLISH)
-        val newestVersionDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse(newestVersion.date)
-        val formattedNewestDate = dateFormatter.format(newestVersionDate)
-
-        popup = PopupScreen {
-            title("§bNew Update Available!")
-            message("""
-                §eA new $updateType of RinBounce is available!
-        
-                - ${if (isReleaseBuild) "§aVersion" else "§aBuild ID"}:§r ${if (isReleaseBuild) newestVersion.lbVersion else newestVersion.buildId}
-                - §aMinecraft Version:§r ${newestVersion.mcVersion}
-                - §aBranch:§r ${newestVersion.branch}
-                - §aDate:§r $formattedNewestDate
-        
-                §6Changes:§r
-                ${newestVersion.message}
-        
-                §bUpgrade now to enjoy the latest features and improvements!§r
-            """.trimIndent())
-            button("§aDownload") { MiscUtils.showURL(newestVersion.url) }
-            onClose { popup = null }
-        }
-    }
-
-    private fun showDiscontinuedWarning() {
-        popup = PopupScreen {
-            title("§c§lUnsupported version")
-            message("""
-                §6§lThis version is discontinued and unsupported.§r
-                
-                §eWe strongly recommend switching to §bRinBounce Nextgen§e, 
-                which offers the following benefits:
-                
-                §a- §fSupports all Minecraft versions from §71.7§f to §71.21+§f.
-                §a- §fFrequent updates with the latest bypasses and features.
-                §a- §fActive development and official support.
-                §a- §fImproved performance and compatibility.
-                
-                §cWhy upgrade?§r
-                - No new bypasses or features will be introduced in this version.
-                - Auto config support will not be actively maintained.
-                - Unofficial forks of this version are discouraged as they lack the full feature set of Nextgen and cannot be trusted.
-        
-                §9Upgrade to RinBounce Nextgen today for a better experience!§r
-            """.trimIndent())
-            button("§aDownload Nextgen") { MiscUtils.showURL("https://liquidbounce.net/download") }
-            button("§eInstallation Tutorial") { MiscUtils.showURL("https://www.youtube.com/watch?v=i_r1i4m-NZc") }
-            onClose {
-                popup = null
-                lastWarningTime = Instant.now().toEpochMilli()
-                FileManager.saveConfig(valuesConfig)
+                drawRect(
+                    particle.x - particle.size/2, particle.y - particle.size/2,
+                    particle.x + particle.size/2, particle.y + particle.size/2,
+                    particleColor.rgb
+                )
             }
+
+            particle.life <= 0
+        }
+
+        if (particles.size < 50 && Random.nextFloat() < 0.3f) {
+            particles.add(createOceanParticle())
         }
     }
 
-    private fun showOutdatedJava8Warning() {
-        popup = PopupScreen {
-            title("§c§lOutdated Java Runtime Environment")
-            message("""
-                §6§lYou are using an outdated version of Java 8 (${javaVersion!!.raw}).§r
-                
-                §fThis might cause unexpected §c§lBUGS§f.
-                Please update it to 8u101+, or get a new one from the Internet.
-            """.trimIndent())
-            button("§aDownload Java") { MiscUtils.showURL(JavaVersion.DOWNLOAD_PAGE) }
-            button("§eI realized")
-            onClose { popup = null }
-        }
-    }
+    // ? cailonmaskidskidconcak SMOKE PARTICLES SYSTEM
+    private fun updateAndRenderSmoke() {
+        smokeParticles.removeAll { smoke ->
+            smoke.life -= 0.02f
+            smoke.x += smoke.vx
+            smoke.y += smoke.vy
+            smoke.rotation += smoke.rotationSpeed
+            smoke.size += 0.1f
 
-    private fun showJava11Warning() {
-        popup = PopupScreen {
-            title("§c§lInappropriate Java Runtime Environment")
-            message("""
-                §6§lThis version of RinBounce is designed for Java 8 environment.§r
-                
-                §fHigher versions of Java might cause bug or crash.
-                You can get JRE 8 from the Internet.
-            """.trimIndent())
-            button("§aDownload Java") { MiscUtils.showURL(JavaVersion.DOWNLOAD_PAGE) }
-            button("§eI realized")
-            onClose { popup = null }
+            if (smoke.life > 0) {
+                val alpha = (smoke.life / smoke.maxLife * 100).toInt().coerceIn(0, 100)
+                val smokeColor = Color(150, 200, 255, alpha)
+
+                GlStateManager.pushMatrix()
+                GlStateManager.translate(smoke.x, smoke.y, 0f)
+                GlStateManager.rotate(smoke.rotation, 0f, 0f, 1f)
+
+                drawRect(
+                    -smoke.size/2, -smoke.size/2,
+                    smoke.size/2, smoke.size/2,
+                    smokeColor.rgb
+                )
+
+                GlStateManager.popMatrix()
+            }
+
+            smoke.life <= 0
+        }
+
+        if (smokeParticles.size < 30 && Random.nextFloat() < 0.2f) {
+            smokeParticles.add(createSmokeParticle())
         }
     }
 
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
-        drawGradientBackground()
-        
-        // Draw menu background first (behind buttons)
-        drawMenuBackground()
+        animationTime += 0.016f
 
-        // b1.0.1 in top left corner (white color)
+        // ? cailonmaskidskidconcak LIGHTER OCEAN BACKGROUND
+        drawOceanBackground()
+
+        // ? cailonmaskidskidconcak PARTICLES AND EFFECTS
+        updateAndRenderParticles()
+        updateAndRenderSmoke()
+
+        // ? cailonmaskidskidconcak CUSTOM BUTTON RENDERING
+        for (button in buttonList) {
+            drawCustomButton(button as GuiButton, mouseX, mouseY)
+        }
+
+        // ? cailonmaskidskidconcak VERSION TEXT (TOP LEFT)
         mc.fontRendererObj.drawStringWithShadow(
-            "b1.1.7",
-            10f,
-            10f,
-            0xFFFFFF // White color
+            "b1.0.1", 10f, 10f, 0xFFFFFF
         )
 
-        // Large "Rinbounce" title moved more to the right (BLUE color)
-        val rinbounceTitle = "Rinbounce"
-        val titleScale = 3.0f
-        
+        // ? cailonmaskidskidconcak RESPONSIVE RINBOUNCE TITLE
+        val liquidBounceTitle = "RinBounce"
+
+        // Calculate button start position (same as initGui)
+        val buttonStartY = height / 2 - 80
+
+        // Responsive scale based on screen height
+        val baseScale = 4.0f
+        val minScale = 2.0f
+        val maxScale = 4.5f
+        val titleScale = when {
+            height < 400 -> minScale // Very small screens
+            height < 600 -> baseScale * 0.7f // Small screens  
+            height < 800 -> baseScale // Normal screens
+            else -> maxScale // Large screens
+        }.coerceIn(minScale, maxScale)
+
+        // Calculate title height when scaled
+        val titleHeight = mc.fontRendererObj.FONT_HEIGHT * titleScale
+
+        // Position title above buttons with proper spacing
+        val titleSpacing = 20f // Space between title and first button
+        val titleY = buttonStartY - titleHeight - titleSpacing
+
+        // Make sure title doesn't go above screen
+        val finalTitleY = maxOf(titleHeight + 10f, titleY)
+
         GlStateManager.pushMatrix()
         GlStateManager.scale(titleScale, titleScale, titleScale)
-        
-        // Move title more to the right (increased X offset)
-        val scaledX = (width * 0.65f - mc.fontRendererObj.getStringWidth(rinbounceTitle) * titleScale / 2f) / titleScale
-        val scaledY = (height / 2f - mc.fontRendererObj.FONT_HEIGHT * titleScale / 2f) / titleScale
-        
-        mc.fontRendererObj.drawStringWithShadow(rinbounceTitle, scaledX, scaledY, 0xFFFFFF) // White color
+
+        val scaledTitleX = (width / 2f - mc.fontRendererObj.getStringWidth(liquidBounceTitle) * titleScale / 2f) / titleScale
+        val scaledTitleY = finalTitleY / titleScale
+
+        // Animated color for title
+        val titleColorR = (200 + 55 * sin(animationTime * 0.8f)).toInt().coerceIn(0, 255)
+        val titleColorG = (220 + 35 * cos(animationTime * 1.2f)).toInt().coerceIn(0, 255)
+        val titleColorB = 255
+        val titleColor = Color(titleColorR, titleColorG, titleColorB).rgb
+
+        mc.fontRendererObj.drawStringWithShadow(liquidBounceTitle, scaledTitleX, scaledTitleY, titleColor)
         GlStateManager.popMatrix()
 
-        // "credit" text in bottom right corner (white color)
-        val creditText = "credit; CCBlueX, RatterMC"
+        // ? cailonmaskidskidconcak CREDIT TEXT (BOTTOM RIGHT)
+        val creditText = "credit; [idle, deleteduser, welovegiabao]"
         mc.fontRendererObj.drawStringWithShadow(
             creditText,
             width - mc.fontRendererObj.getStringWidth(creditText) - 10f,
             height - mc.fontRendererObj.FONT_HEIGHT - 10f,
-            0xFFFFFF // White color
+            0xAAFFFF
         )
 
-        super.drawScreen(mouseX, mouseY, partialTicks)
-
-        if (popup != null) {
-            popup!!.drawScreen(width, height, mouseX, mouseY)
+        // ? cailonmaskidskidconcak FADE EFFECT
+        if (fadeIn) {
+            drawRect(0f, 0f, width.toFloat(), height.toFloat(), Color(0, 50, 100, fadeAlpha).rgb)
+            fadeAlpha -= 3
+            if (fadeAlpha <= 0) {
+                fadeIn = false
+            }
         }
-    }
-
-    override fun mouseClicked(mouseX: Int, mouseY: Int, mouseButton: Int) {
-        if (popup != null) {
-            popup!!.mouseClicked(mouseX, mouseY, mouseButton)
-            return
-        }
-
-        super.mouseClicked(mouseX, mouseY, mouseButton)
     }
 
     override fun actionPerformed(button: GuiButton) {
-        if (popup != null) {
-            return
-        }
-
         when (button.id) {
             0 -> mc.displayGuiScreen(GuiOptions(this, mc.gameSettings))
             1 -> mc.displayGuiScreen(GuiSelectWorld(this))
             2 -> mc.displayGuiScreen(GuiMultiplayer(this))
             4 -> mc.shutdown()
             100 -> mc.displayGuiScreen(GuiAltManager(this))
-            101 -> mc.displayGuiScreen(GuiServerStatus(this))
-            102 -> mc.displayGuiScreen(GuiClientConfiguration(this))
-            103 -> mc.displayGuiScreen(GuiModsMenu(this))
-            108 -> mc.displayGuiScreen(GuiContributors(this))
-            109 -> mc.displayGuiScreen(GuiFontManager(this))
         }
     }
 
-    override fun handleMouseInput() {
-        if (popup != null) {
-            val eventDWheel = Mouse.getEventDWheel()
-            if (eventDWheel != 0) {
-                popup!!.handleMouseWheel(eventDWheel)
-            }
-        }
+    // ? cailonmaskidskidconcak HELPER FUNCTIONS
+    private fun createOceanParticle(): OceanParticle {
+        val colors = listOf(
+            Color(100, 200, 255),
+            Color(150, 220, 255),
+            Color(200, 240, 255),
+            Color(0, 180, 255)
+        )
 
-        super.handleMouseInput()
+        return OceanParticle(
+            x = Random.nextFloat() * width,
+            y = Random.nextFloat() * height,
+            vx = (Random.nextFloat() - 0.5f) * 2f,
+            vy = (Random.nextFloat() - 0.5f) * 2f,
+            life = Random.nextFloat() * 3f + 2f,
+            maxLife = Random.nextFloat() * 3f + 2f,
+            size = Random.nextFloat() * 3f + 1f,
+            color = colors.random()
+        )
     }
+
+    private fun createSmokeParticle(): SmokeParticle {
+        return SmokeParticle(
+            x = Random.nextFloat() * width,
+            y = height + 10f,
+            vx = (Random.nextFloat() - 0.5f) * 1f,
+            vy = -Random.nextFloat() * 2f - 1f,
+            life = Random.nextFloat() * 4f + 3f,
+            maxLife = Random.nextFloat() * 4f + 3f,
+            size = Random.nextFloat() * 2f + 1f,
+            rotation = Random.nextFloat() * 360f,
+            rotationSpeed = (Random.nextFloat() - 0.5f) * 5f
+        )
+    }
+
+    override fun doesGuiPauseGame(): Boolean = false
 }

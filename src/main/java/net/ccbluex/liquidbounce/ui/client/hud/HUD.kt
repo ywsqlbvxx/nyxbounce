@@ -1,7 +1,7 @@
 /*
- * RinBounce Hacked Client
+ * LiquidBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/rattermc/rinbounce69
+ * https://github.com/CCBlueX/LiquidBounce/
  */
 package net.ccbluex.liquidbounce.ui.client.hud
 
@@ -52,16 +52,12 @@ object HUD : MinecraftInstance {
     /** Create default HUD */
     fun setDefault() {
         elements.clear()
-
-        addElement(Text.defaultClientTitle())
-        addElement(Text.defaultClientVersion())
         addElement(Text.defaultBlockCount())
         addElement(Arraylist())
         addElement(ScoreboardElement())
         addElement(Armor())
         addElement(Effects())
         addElement(Notifications())
-        addElement(Keystrokes())
     }
 
     /** Render all elements */
