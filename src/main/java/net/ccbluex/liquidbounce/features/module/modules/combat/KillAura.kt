@@ -94,6 +94,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val adaptiveCPS by boolean("AdaptiveCPS", true) { dynamicCPS }
     private val cpsBypass by boolean("CPSBypass", true)
     
+    // CPS range
+    private val cps by intRange("CPS", 5..8, 1..40)
+    
     // Advanced timing options
     private val attackDecel by float("AttackDeceleration", 0.8f, 0.1f..1f)
     private val attackAccel by float("AttackAcceleration", 1.2f, 1f..2f)
@@ -134,6 +137,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             "Movement"
         ), "Smart"
     )
+    
+    private val priority by string("Priority", "Distance")
 
     // Advanced rotation options
     private val rotationMode by choices(
@@ -141,6 +146,16 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         arrayOf("Advanced", "Matrix", "NCP", "BackTrack", "Smooth", "Predict"),
         "Advanced"
     )
+    
+    data class AdvancedRotationSettings(val module: KillAura) {
+        val predictRotation by module.boolean("PredictRotation", true)
+        val smoothRotation by module.boolean("SmoothRotation", true)
+        val smoothSpeed by module.float("SmoothSpeed", 2f, 1f..5f)
+        val fixedSpeed by module.boolean("FixedSpeed", false)
+        val minTurnSpeed by module.float("MinTurnSpeed", 20f, 0f..180f)
+        val maxTurnSpeed by module.float("MaxTurnSpeed", 180f, 0f..180f)
+        val randomStrafe by module.boolean("RandomStrafe", false)
+    }
     
     private val advancedRotations = AdvancedRotationSettings(this)
     private val smoothRotation by boolean("SmoothRotation", true)
@@ -179,7 +194,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         "Smart"
     ) { autoBlock != "None" }
     
-    private val blockRange by floatRange("BlockRange", 3f..8f, 1f..8f) { autoBlock != "None" }
+    // Block ranges and timings
+    private val blockMaxRange by float("BlockMaxRange", 3f, 1f..8f)
+    private var blockRange by float("BlockRange", 3f, 1f..8f) { autoBlock != "None" }
+    private val unblockMode by choices("UnblockMode", arrayOf("Packet", "Empty", "Instant"), "Packet")
     private val blockDelay by int("BlockDelay", 0, 0..10) { autoBlock != "None" }
     private val unblockDelay by int("UnblockDelay", 0, 0..10) { autoBlock != "None" }
     private val perfectBlock by boolean("PerfectBlock", true) { autoBlock != "None" }
@@ -309,6 +327,13 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         "Advanced"
     )
     
+    // Simulation and prediction settings
+    private val simulateCooldown by boolean("SimulateCooldown", false)
+    private val simulateDoubleClicking by boolean("SimulateDoubleClicking", true)
+    private val predictEnemyPosition by float("PredictEnemyPosition", 1f, 0f..5f)
+    private val predictClientMovement by int("PredictClientMovement", 3, 0..10)
+    private val predictOnlyWhenOutOfRange by boolean("PredictOnlyWhenOutOfRange", false)
+
     private val movementPrediction by floatRange("MovementPrediction", 0.5f..1.5f, 0f..3f)
     private val velocityPrediction by boolean("VelocityPrediction", true)
     private val pingPrediction by boolean("PingPrediction", true)
