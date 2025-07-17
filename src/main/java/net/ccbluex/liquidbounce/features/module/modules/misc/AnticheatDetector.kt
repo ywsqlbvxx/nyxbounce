@@ -7,6 +7,7 @@
 package net.ccbluex.liquidbounce.features.module.modules.misc
 
 import net.ccbluex.liquidbounce.LiquidBounce.hud
+import net.ccbluex.liquidbounce.event.EventState
 import net.ccbluex.liquidbounce.event.GameTickEvent
 import net.ccbluex.liquidbounce.event.PacketEvent
 import net.ccbluex.liquidbounce.event.handler
@@ -14,7 +15,11 @@ import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.ui.client.hud.element.elements.Notification
 import net.ccbluex.liquidbounce.utils.client.chat
+import net.minecraft.network.play.client.C03PacketPlayer
 import net.minecraft.network.play.server.S01PacketJoinGame
+import net.minecraft.network.play.server.S08PacketPlayerPosLook
+import net.minecraft.network.play.server.S12PacketEntityVelocity
+import net.minecraft.network.play.server.S27PacketExplosion
 import net.minecraft.network.play.server.S32PacketConfirmTransaction
 import net.ccbluex.liquidbounce.utils.client.ServerUtils.remoteIp
 
@@ -41,9 +46,9 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
     
 
     private val notificationCooldowns = mutableMapOf<String, Long>()
-    private val cooldownPeriod = 8000L // 8 seconds
+    private val cooldownPeriod = 8000L
     private var lastPeriodicCheck = 0L
-    private val periodicCheckInterval = 15000L // 15 seconds
+    private val periodicCheckInterval = 15000L
 
     val onPacket = handler<PacketEvent> { event ->
         when (event.packet) {
@@ -79,7 +84,7 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
                         incrementFlagPattern("flag_teleport")
                         debugMessage("Flag teleport pattern detected (${timeDiff}ms) - Pattern count: ${getFlagPattern("flag_teleport")}")
                         if (getFlagPattern("flag_teleport") > 3) {
-                            if (remoteIp.lowercase().contains("mineplex")) {
+                            if (remoteIp.contains("mineplex", ignoreCase = true)) {
                                 debugMessage("Mineplex detection triggered by flag teleport pattern (${getFlagPattern("flag_teleport")} occurrences)")
                                 notifyDetection("Mineplex AntiCheat")
                             } else {
@@ -118,7 +123,7 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
                         incrementFlagPattern("rounded_velocity")
                         debugMessage("Rounded velocity detected (X=${velocity.first}, Z=${velocity.third}) - Pattern count: ${getFlagPattern("rounded_velocity")}")
                         if (getFlagPattern("rounded_velocity") > 2) {
-                            if (remoteIp.lowercase().contains("vulcan")) {
+                            if (remoteIp.contains("vulcan", ignoreCase = true)) {
                                 debugMessage("Vulcan detection triggered by rounded velocity pattern (${getFlagPattern("rounded_velocity")} occurrences)")
                                 notifyDetection("Vulcan")
                             } else {
@@ -130,7 +135,7 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
                 }
             }
             is S27PacketExplosion -> {
-                if (check && event.packet.field_149159_h == 0.0 && event.packet.func_149147_e() == 0.0) {
+                if (check && event.packet.field_149159_h == 0.0f && event.packet.func_149147_e() == 0.0f) {
                     incrementFlagPattern("zero_explosion_motion")
                     debugMessage("Zero explosion motion detected - Pattern count: ${getFlagPattern("zero_explosion_motion")}")
                     if (getFlagPattern("zero_explosion_motion") > 1) {
@@ -165,7 +170,7 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
             notifyDetection("None").also { reset() }
         }
         
-        // Periodic anticheat checking when ReduceSpam is enabled
+
         if (reduceSpam && check) {
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastPeriodicCheck > periodicCheckInterval) {
@@ -338,7 +343,7 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
         }
         
         // Check for server-specific indicators
-        if (remoteIp.lowercase().contains("hypixel")) {
+        if (remoteIp.contains("hypixel", ignoreCase = true)) {
             debugMessage("Periodic check: Hypixel server detected")
             notifyDetection("Watchdog")
         }
