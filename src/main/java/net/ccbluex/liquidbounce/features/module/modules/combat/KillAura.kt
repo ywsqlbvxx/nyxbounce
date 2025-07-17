@@ -72,6 +72,7 @@ import org.lwjgl.input.Keyboard
 import java.awt.Color
 import kotlin.math.max
 import kotlin.math.roundToInt
+import java.util.Locale
 
 object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     /**
@@ -110,14 +111,14 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     private val clickOnly by boolean("ClickOnly", false)
 
-    // Range
-    // TODO: Make block range independent from attack range
-    private val range: Float by float("Range", 3.7f, 1f..8f).onChanged {
-        blockRange = blockRange.coerceAtMost(it)
-    }
+    // Range settings
+    private val range: Float by float("Range", 3.7f, 1f..8f)
     private val scanRange by float("ScanRange", 2f, 0f..10f)
     private val throughWallsRange by float("ThroughWallsRange", 3f, 0f..8f)
     private val rangeSprintReduction by float("RangeSprintReduction", 0f, 0f..0.4f)
+    
+    // Block range
+    private var blockRange by float("BlockRange", 3f, 1f..8f)
 
     // Modes
     // Enhanced targeting system
@@ -138,7 +139,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         ), "Smart"
     )
     
-    private val priority by string("Priority", "Distance")
+    private val priority by choices("Priority", arrayOf("Distance", "Health", "Angle", "Armor"), "Distance")
 
     // Advanced rotation options
     private val rotationMode by choices(
@@ -196,12 +197,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     
     // Block ranges and timings
     private val blockMaxRange by float("BlockMaxRange", 3f, 1f..8f)
-    private var blockRange by float("BlockRange", 3f, 1f..8f) { autoBlock != "None" }
-    private val unblockMode by choices("UnblockMode", arrayOf("Packet", "Empty", "Instant"), "Packet")
     private val blockDelay by int("BlockDelay", 0, 0..10) { autoBlock != "None" }
     private val unblockDelay by int("UnblockDelay", 0, 0..10) { autoBlock != "None" }
     private val perfectBlock by boolean("PerfectBlock", true) { autoBlock != "None" }
-    private val blockRate by int("BlockRate", 100, 0..100) { autoBlock != "None" }
+    private val mainBlockRate by int("BlockRate", 100, 0..100) { autoBlock != "None" }
     
     // Smart block settings
     private val smartBlock by boolean("SmartBlock", true) { autoBlock != "None" }
@@ -219,7 +218,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             "Off", "Fake"
         ) && releaseAutoBlock
     }
-    private val blockRate by int("BlockRate", 100, 1..100) { autoBlock !in arrayOf("Off", "Fake") && releaseAutoBlock }
+    private val altBlockRate by int("AltBlockRate", 100, 1..100) { autoBlock !in arrayOf("Off", "Fake") && releaseAutoBlock }
 
     private val uncpAutoBlock by boolean("UpdatedNCPAutoBlock", false) {
         autoBlock !in arrayOf(
@@ -661,7 +660,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         val hittableColor = if (hittable) Color(37, 126, 255, 70) else Color(255, 0, 0, 70)
 
         if (targetMode != "Multi") {
-            when (mark.lowercase()) {
+            when (mark.lowercase(Locale.ROOT)) {
                 "none" -> return@handler
                 "platform" -> drawPlatform(target!!, hittableColor)
                 "box" -> drawEntityBox(target!!, hittableColor, boxOutline)
@@ -1186,7 +1185,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         }
 
         if (!fake) {
-            if (!(blockRate > 0 && nextInt(endExclusive = 100) <= blockRate)) return
+            if (!(mainBlockRate > 0 && nextInt(endExclusive = 100) <= mainBlockRate)) return
 
             if (interact) {
                 val positionEye = player.eyes
