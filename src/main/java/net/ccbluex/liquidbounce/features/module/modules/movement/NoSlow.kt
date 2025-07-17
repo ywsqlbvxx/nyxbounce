@@ -34,7 +34,7 @@ object NoSlow : Module("NoSlow", Category.MOVEMENT, gameDetecting = false) {
 
     private val swordMode by choices(
         "SwordMode",
-        arrayOf("None", "NCP", "UpdatedNCP", "AAC5", "SwitchItem", "InvalidC08", "Blink", "OldGrim", "Intave14"),
+        arrayOf("None", "NCP", "UpdatedNCP", "AAC5", "SwitchItem", "InvalidC08", "Blink", "OldGrim", "Intave14", "GrimTest"),
         "None"
     )
 
@@ -221,6 +221,23 @@ object NoSlow : Module("NoSlow", Category.MOVEMENT, gameDetecting = false) {
                             sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
                             val blockPos = BlockPos(-1, -1, -1)
                             sendPacket(C08PacketPlayerBlockPlacement(blockPos, 255, heldItem, 0f, 0f, 0f))
+                        }
+                    }
+                }
+
+                "grimtest" -> {
+                    if (event.eventState == EventState.PRE) {
+                        if (player.isMoving) {
+                            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+                            
+                            if (player.ticksExisted % 2 == 0) {
+                                val pos = BlockPos(player.posX.toInt(), (player.posY - 1).toInt(), player.posZ.toInt())
+                                sendPacket(C08PacketPlayerBlockPlacement(pos, 1, heldItem, 0f, 0f, 0f))
+                            }
+                        }
+                    } else if (event.eventState == EventState.POST) {
+                        if (!player.isBlocking && KillAura.blockStatus) {
+                            sendPacket(C08PacketPlayerBlockPlacement(BlockPos.ORIGIN, 255, heldItem, 0f, 0f, 0f))
                         }
                     }
                 }
