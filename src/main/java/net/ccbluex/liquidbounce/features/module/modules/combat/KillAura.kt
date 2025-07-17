@@ -185,36 +185,37 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         "Smart"
     )
     
-    // Basic Block Settings
-    private val blockRange by float("BlockRange", 3f, 1f..8f) { autoBlock != "None" }
-    private val blockDelay by int("BlockDelay", 0, 0..10) { autoBlock != "None" }
-    private val blockRate by int("BlockRate", 100, 0..100) { autoBlock != "None" }
-    
-    // Smart block settings
-    private val smartBlock by boolean("SmartBlock", true) { autoBlock == "Smart" }
-    private val instantBlock by boolean("InstantBlock", true) { smartBlock }
-    private val blockRender by boolean("BlockRender", true) { autoBlock != "None" }
+// Basic Block Settings
+private val blockRange by float("BlockRange", 3f, 1f..8f) { autoBlock != "None" }
+private val blockDelay by int("BlockDelay", 0, 0..10) { autoBlock != "None" }
+private val blockRate by int("BlockRate", 100, 0..100) { autoBlock != "None" }
+private val blockMaxRange = blockRange
 
-    private val interactAutoBlock by boolean("InteractAutoBlock", true) { autoBlock != "None" }
+// Smart block settings
+private val smartBlock by boolean("SmartBlock", true) { autoBlock == "Smart" }
+private val instantBlock by boolean("InstantBlock", true) { smartBlock }
+private val blockRender by boolean("BlockRender", true) { autoBlock != "None" }
 
-    // AutoBlock conditions
-    private val smartAutoBlock by boolean("SmartAutoBlock", false) { autoBlock == "Packet" }
+// AutoBlock options
+private val interactAutoBlock by boolean("InteractAutoBlock", true) { autoBlock != "None" }
+private val blinkAutoBlock by boolean("BlinkAutoBlock", false)
+private val blinkBlockTicks by int("BlinkBlockTicks", 5, 1..10) { blinkAutoBlock }
+private val releaseAutoBlock by boolean("ReleaseAutoBlock", true)
+private val ignoreTickRule by boolean("IgnoreTickRule", false)
+private val switchStartBlock by boolean("SwitchStartBlock", false)
+private val unblockMode by choices("UnblockMode", arrayOf("Vanilla", "Packet", "Smart"), "Smart")
 
-    // Ignore all blocking conditions, except for block rate, when standing still
-    private val forceBlock by boolean("ForceBlockWhenStill", true) { smartAutoBlock }
+// AutoBlock conditions
+private val smartAutoBlock by boolean("SmartAutoBlock", false) { autoBlock == "Packet" }
 
-    // Don't block if target isn't holding a sword or an axe
-    private val checkWeapon by boolean("CheckEnemyWeapon", true) { smartAutoBlock }
+// Ignore all blocking conditions, except for block rate, when standing still
+private val forceBlock by boolean("ForceBlockWhenStill", true) { smartAutoBlock }
 
-    // Shared block range variable
-    private var blockRange: Float by float("BlockRange", range, 1f..8f) {
-        smartAutoBlock
-    }
+// Don't block if target isn't holding a sword or an axe  
+private val checkWeapon by boolean("CheckEnemyWeapon", true) { smartAutoBlock }
 
-    // Don't block when you can't get damaged
-    private val maxOwnHurtTime by int("MaxOwnHurtTime", 3, 0..10) { smartAutoBlock }
-
-    // Don't block if target isn't looking at you
+// Don't block when you can't get damaged
+private val maxOwnHurtTime by int("MaxOwnHurtTime", 3, 0..10) { smartAutoBlock }    // Don't block if target isn't looking at you
     private val maxDirectionDiff by float("MaxOpponentDirectionDiff", 60f, 30f..180f) { smartAutoBlock }
 
     // Don't block if target is swinging an item and therefore cannot attack
