@@ -20,8 +20,8 @@ import java.awt.Color
 import kotlin.math.*
 
 class RinBounce(
-    private val roundedRectRadius: Float = 6f,
-    private val borderStrength: Float = 1.5f,
+    private val roundedRectRadius: Float = 8f, 
+    private val borderStrength: Float = 2f,
     private val backgroundColor: Color = Color(20, 20, 20),
     private val healthBarColor1: Color = Color(144, 238, 144),
     private val healthBarColor2: Color = Color(173, 216, 230),
@@ -63,7 +63,7 @@ class RinBounce(
         drawRoundedRect(
             0F, 0F, width, height,
             BLACK_BACKGROUND.rgb,
-            6F,
+            roundedRectRadius,
             RenderUtils.RoundedCorners.ALL
         )
 
@@ -81,7 +81,7 @@ class RinBounce(
             healthBarStart + healthBarTotal,
             healthBarTop + healthBarHeight,
             BLACK_MODULE_BACKGROUND.rgb,
-            4F,
+            roundedRectRadius * 0.75f, 
             RenderUtils.RoundedCorners.ALL
         )
 
@@ -129,7 +129,7 @@ class RinBounce(
             drawRoundedRect(
                 4f, 4f, 32f, 32f,
                 BLACK_MODULE_BACKGROUND.rgb,
-                4F,
+                roundedRectRadius * 0.6f, 
                 RenderUtils.RoundedCorners.ALL
             )
             

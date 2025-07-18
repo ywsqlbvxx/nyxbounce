@@ -102,9 +102,9 @@ class Text(x: Double = 10.0, y: Double = 10.0, scale: Float = 1F, side: Side = S
         "Text-ColorMode",
         arrayOf(
             "Custom", "Rainbow", "Gradient", "PinkPastel", "RedPastel",
-            "YellowPastel", "SkyLit", "GrayPastel", "GreenPastel"
+            "YellowPastel", "SkyLit", "GrayPastel", "GreenPastel", "RinStyle"
         ),
-        "Custom"
+        "RinStyle"
     )
     private val pinkPastelGradient = listOf(
         floatArrayOf(1.0f, 0.4f, 0.7f, 1.0f),  // deep pink
@@ -141,6 +141,12 @@ class Text(x: Double = 10.0, y: Double = 10.0, scale: Float = 1F, side: Side = S
         floatArrayOf(0.4f, 0.95f, 0.6f, 1.0f),  // medium green
         floatArrayOf(0.7f, 1.0f, 0.8f, 1.0f),   // light green
         floatArrayOf(0.9f, 1.0f, 0.95f, 1.0f)   // near white
+    )
+    
+    private val rinStyleGradient = listOf(
+        floatArrayOf(0.565f, 0.933f, 0.565f, 1.0f), 
+        floatArrayOf(0.678f, 0.847f, 0.902f, 1.0f), 
+        floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)  
     )
 
     private val colors = ColorSettingsInteger(this, "TextColor", applyMax = true) { textColorMode == "Custom" }
@@ -467,6 +473,20 @@ class Text(x: Double = 10.0, y: Double = 10.0, scale: Float = 1F, side: Side = S
                         gradientX,
                         gradientY,
                         greenPastelGradient,
+                        2.5f,
+                        gradientOffset
+                    ).use {
+                        fontRenderer.drawString(displayText, 0F, 2 - heightPadding, Color.WHITE.rgb, shadow)
+                        if (editMode && mc.currentScreen is GuiHudDesigner && editTicks <= 40) {
+                            fontRenderer.drawString("_", width - underscoreWidth, 0F, Color.WHITE.rgb, shadow)
+                        }
+                    }
+                } else if (textColorMode == "RinStyle") {
+                    GradientFontShader.begin(
+                        true,
+                        gradientX,
+                        gradientY,
+                        rinStyleGradient,
                         2.5f,
                         gradientOffset
                     ).use {
