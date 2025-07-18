@@ -509,32 +509,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
                     hasReceivedVelocity = true
                 }
-            }                "intave" -> {
-                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
-                        if (!intaveJump && !intaveSmart) {
-                            return@handler
-                        }
- modification in certain conditions
-                        if (intaveSmart) {
-                            if (!intaveSmartInAir && !thePlayer.onGround) return@handler
-                            if (thePlayer.fallDistance > intaveSmartFallDistance) return@handler
-                        }
-
-                        if (intaveJump && thePlayer.onGround && thePlayer.hurtTime >= 9) {
-                            if (nextInt(endExclusive = 100) <= intaveJumpChance) {
-                                thePlayer.tryJump()
-                                event.cancelEvent()
-                                return@handler
-                            }
-                        }
-
-                        if (intaveJump || intaveSmart) {
-                            event.cancelEvent()
-                        }
-                    }
-                }
-                
-                "glitch" -> {
+                }                "glitch" -> {
                     if (!thePlayer.onGround)
                         return@handler
 
@@ -598,15 +573,17 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 "intave" -> {
                     if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
                         if (thePlayer.hurtTime > 0) {
-                            if (++intaveCount % intaveTimes == 0 && System.currentTimeMillis() - intaveLastAttackTime <= 8000) {
+                            intaveCount++
+                            
+                            if (intaveCount % intaveTimes == 0 && System.currentTimeMillis() - intaveLastAttackTime <= 8000) {
                                 packet.motionX = (packet.motionX * intaveHReduce).toInt()
                                 packet.motionZ = (packet.motionZ * intaveHReduce).toInt()
-                                ClientUtils.displayChatMessage("[Intave] Reduced velocity after $intaveCount attacks")
+                                ClientUtils.displayChatMessage("[Intave] Reduced velocity after $intaveCount hits")
                             }
                             intaveLastAttackTime = System.currentTimeMillis()
                         }
                     } else if (packet is S27PacketExplosion) {
-                        event.cancelEvent()
+                        event.cancelEvent() 
                     }
                 }
 
