@@ -1,7 +1,7 @@
 /*
- * RinBounce Hacked Client
+ * LiquidBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/rattermc/rinbounce69
+ * https://github.com/CCBlueX/LiquidBounce/
  */
 package net.ccbluex.liquidbounce.ui.client.altmanager
 
@@ -99,16 +99,16 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
     // ? cailonmaskidskidconcak ENHANCED OCEAN GRADIENT BACKGROUND (MATCHING GUIMAINMENU)
     private fun drawOceanBackground() {
         animationTime += 0.016f
-        
+
         val tessellator = Tessellator.getInstance()
         val worldRenderer = tessellator.worldRenderer
-        
+
         GlStateManager.disableTexture2D()
         GlStateManager.enableBlend()
         GlStateManager.shadeModel(GL11.GL_SMOOTH)
-        
+
         worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
-        
+
         // ? cailonmaskidskidconcak ANIMATED OCEAN COLORS (MATCHING GUIMAINMENU)
         val time = animationTime * 0.5f
         val deepOcean = Color(
@@ -126,20 +126,20 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
             (200 + 55 * kotlin.math.cos(time)).toInt().coerceIn(0, 255), 
             (240 + 15 * sin(time * 1.3f)).toInt().coerceIn(0, 255)
         )
-        
+
         // Multi-layer gradient
         worldRenderer.pos(width.toDouble(), 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
         worldRenderer.pos(0.0, 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
         worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
         worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
-        
+
         worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
         worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
         worldRenderer.pos(0.0, height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
         worldRenderer.pos(width.toDouble(), height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
-        
+
         tessellator.draw()
-        
+
         GlStateManager.shadeModel(GL11.GL_FLAT)
         GlStateManager.enableTexture2D()
     }
@@ -149,7 +149,7 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
             // ? cailonmaskidskidconcak USE ENHANCED OCEAN BACKGROUND
             drawOceanBackground()
             altsList.drawScreen(mouseX, mouseY, partialTicks)
-            
+
             // Animated title with ocean colors
             val titleTime = animationTime * 1.5f
             val titleColor = Color(
@@ -157,13 +157,13 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
                 (150 + 80 * sin(titleTime + 1f)).toInt().coerceIn(0, 255),
                 255
             ).rgb
-            
+
             Fonts.fontSemibold40.drawCenteredString(translationMenu("altManager"), width / 2f, 6f, titleColor)
-            
+
             // Glowing text with ocean theme
             val textGlow = (0.7f + 0.3f * sin(animationTime * 2.5f)).coerceIn(0f, 1f)
             val textColor = Color(200, 230, 255, (255 * textGlow).toInt()).rgb
-            
+
             Fonts.fontSemibold35.drawCenteredString(
                 if (searchField.text.isEmpty()) "${accountsConfig.accounts.size} Alts" else altsList.accounts.size.toString() + " Search Results",
                 width / 2f, 18f, textColor
@@ -179,7 +179,7 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
                     else "Cracked"
                 }", 6f, 15f, textColor
             )
-            
+
             searchField.drawTextBox()
             if (searchField.text.isEmpty() && !searchField.isFocused) {
                 val placeholderGlow = (0.5f + 0.3f * sin(animationTime * 1.5f)).coerceIn(0f, 1f)
@@ -313,11 +313,11 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
                 val currentIndex = altsList.accounts.indexOf(currentAccount)
                 val targetIndex = if (button.id == 13) currentIndex - 1 else currentIndex + 1
                 if (targetIndex < 0 || targetIndex >= altsList.accounts.size) return
-                
+
                 val targetElement = altsList.accounts[targetIndex]
                 val targetOriginalIndex = accountsConfig.accounts.indexOf(targetElement)
                 val currentOriginalIndex = accountsConfig.accounts.indexOf(currentAccount)
-                
+
                 accountsConfig.accounts.swap(targetOriginalIndex, currentOriginalIndex)
                 accountsConfig.saveConfig()
                 altsList.selectedSlot += if (button.id == 13) -1 else 1
@@ -425,13 +425,13 @@ class GuiAltManager(private val prevGui: GuiScreen) : AbstractScreen() {
             val accountColor = Color(180, 220, 255, (255 * accountGlow).toInt()).rgb
 
             Fonts.fontSemibold40.drawCenteredString(accountName, width / 2f, y + 2f, accountColor, true)
-            
+
             val typeColor = if (minecraftAccount is CrackedAccount) {
                 Color(150, 150, 150, (255 * accountGlow).toInt()).rgb
             } else {
                 Color(118, 255, 95, (255 * accountGlow).toInt()).rgb
             }
-            
+
             Fonts.fontSemibold40.drawCenteredString(
                 when (minecraftAccount) {
                     is CrackedAccount -> "Cracked"

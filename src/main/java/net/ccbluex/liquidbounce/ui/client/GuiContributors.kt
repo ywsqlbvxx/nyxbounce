@@ -59,16 +59,16 @@ class GuiContributors(private val prevGui: GuiScreen) : AbstractScreen() {
     // ? cailonmaskidskidconcak ENHANCED OCEAN GRADIENT BACKGROUND (MATCHING GUIMAINMENU)
     private fun drawOceanBackground() {
         animationTime += 0.016f
-        
+
         val tessellator = Tessellator.getInstance()
         val worldRenderer = tessellator.worldRenderer
-        
+
         disableTexture2D()
         enableBlend()
         shadeModel(GL_SMOOTH)
-        
+
         worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
-        
+
         // ? cailonmaskidskidconcak ANIMATED OCEAN COLORS (MATCHING GUIMAINMENU)
         val time = animationTime * 0.5f
         val deepOcean = Color(
@@ -86,20 +86,20 @@ class GuiContributors(private val prevGui: GuiScreen) : AbstractScreen() {
             (200 + 55 * kotlin.math.cos(time)).toInt().coerceIn(0, 255), 
             (240 + 15 * sin(time * 1.3f)).toInt().coerceIn(0, 255)
         )
-        
+
         // Multi-layer gradient
         worldRenderer.pos(width.toDouble(), 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
         worldRenderer.pos(0.0, 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
         worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
         worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
-        
+
         worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
         worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
         worldRenderer.pos(0.0, height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
         worldRenderer.pos(width.toDouble(), height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
-        
+
         tessellator.draw()
-        
+
         shadeModel(GL_FLAT)
         enableTexture2D()
     }
@@ -114,7 +114,7 @@ class GuiContributors(private val prevGui: GuiScreen) : AbstractScreen() {
             // Enhanced glowing rect with ocean theme
             val glowIntensity = (0.4f + 0.6f * sin(animationTime * 2f)).coerceIn(0f, 1f)
             val rectColor = Color(25, 50, 80, (120 * glowIntensity).toInt()).rgb
-            
+
             drawRect(width / 4f, 40f, width.toFloat(), height - 40f, rectColor)
 
             if (credits.isNotEmpty()) {
@@ -207,7 +207,7 @@ class GuiContributors(private val prevGui: GuiScreen) : AbstractScreen() {
                 } else {
                     val loadingGlow = (0.7f + 0.3f * sin(animationTime * 3f)).coerceIn(0f, 1f)
                     val loadingColor = Color(150, 200, 255, (255 * loadingGlow).toInt()).rgb
-                    
+
                     Fonts.fontSemibold40.drawCenteredString("Loading...", width / 8f, height / 2f, loadingColor)
                     drawLoadingCircle(width / 8f, height / 2f - 40)
                 }

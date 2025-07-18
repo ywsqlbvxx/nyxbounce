@@ -41,6 +41,7 @@ object RinStyle : Style() {
     private val BLACK_BACKGROUND = Color(20, 20, 20)
     private val BLACK_MODULE_BACKGROUND = Color(35, 35, 35)
     private val WHITE_TEXT = Color(255, 255, 255)
+    private val DISABLED_TEXT = Color(180, 180, 180) 
     private val ACTIVE_MODULE_COLOR = Color(173, 216, 230)
 
     private var animatedGradientStartColor = Color(144, 238, 144)
@@ -137,7 +138,7 @@ object RinStyle : Style() {
 
         val moduleNameWidth = fontSemibold35.getStringWidth(moduleElement.displayName)
         val xPos = moduleElement.x + (moduleElement.width - moduleNameWidth) / 2
-        val textColor = if (moduleElement.module.state) Color.BLACK.rgb else WHITE_TEXT.rgb
+        val textColor = if (moduleElement.module.state) Color.BLACK.rgb else DISABLED_TEXT.rgb
         fontSemibold35.drawString(moduleElement.displayName, xPos, moduleElement.y + 6, textColor)
 
         val moduleValues = moduleElement.module.values.filter { it.shouldRender() }

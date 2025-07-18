@@ -66,6 +66,7 @@ import net.minecraft.network.play.client.C02PacketUseEntity
 import net.minecraft.network.play.client.C02PacketUseEntity.Action.*
 import net.minecraft.network.play.client.C07PacketPlayerDigging
 import net.minecraft.network.play.client.C07PacketPlayerDigging.Action.RELEASE_USE_ITEM
+import net.minecraft.network.play.client.C09PacketHeldItemChange
 import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
 import net.minecraft.potion.Potion
 import net.minecraft.util.*
@@ -81,6 +82,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     private val simulateCooldown by boolean("SimulateCooldown", false)
     private val simulateDoubleClicking by boolean("SimulateDoubleClicking", false) { !simulateCooldown }
+    private val pauseOnRightClick by boolean("PauseOnRightClick", false)
     
     // Remove Reduce Damage
     private val removeReduceDmgEnabled by boolean("RemoveReduceDmg", false)
@@ -143,7 +145,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val onDestroyBlock by boolean("OnDestroyBlock", false)
 
     // AutoBlock
-    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent"), "Packet")
+    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent", "Test"), "Packet")
     private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" || autoBlock == "Silent" }
     private val unblockMode by choices(
         "UnblockMode", arrayOf("Stop", "Switch", "Empty"), "Stop"
@@ -327,7 +329,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     var target: EntityLivingBase? = null
     private var hittable = false
     private val prevTargetEntities = mutableListOf<Int>()
-
+    
+    // Pause on RightClick
+    private var pausedByRightClick = false
+    
     // Attack delay
     private val attackTimer = MSTimer()
     private var attackDelay = 0
@@ -367,6 +372,11 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         if (autoBlock == "RightHold") {
             mc.gameSettings.keyBindUseItem.pressed = false
         }
+        
+        if (autoBlock == "Test") { 
+             mc.netHandler.addToSendQueue(C09PacketHeldItemChange(mc.thePlayer.inventory.currentItem % 8 + 1)) 
+             mc.netHandler.addToSendQueue(C09PacketHeldItemChange(mc.thePlayer.inventory.currentItem)) 
+         }
 
         if (blinkAutoBlock) {
             BlinkUtils.unblink()
@@ -387,6 +397,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     }
 
     fun update() {
+        if (pauseOnRightClick && pausedByRightClick) {
+            return
+        }
+        
         if (cancelRun || (noInventoryAttack && (mc.currentScreen is GuiContainer || System.currentTimeMillis() - containerOpen < noInventoryDelay))) return
 
         // Update target
@@ -413,6 +427,28 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Tick event
      */
     val onTick = handler<GameTickEvent>(priority = 2) {
+        if (pauseOnRightClick) {
+            if (mc.gameSettings.keyBindUseItem.isKeyDown) {
+                if (!pausedByRightClick) {
+                    pausedByRightClick = true
+                    stopBlocking(true)
+                }
+            } else if (pausedByRightClick) {
+                pausedByRightClick = false
+            }
+        }
+        
+        if (pausedByRightClick) {
+            if (target != null) {
+                clicks = 0
+
+            if (blockStatus) {
+                stopBlocking(true)
+                }
+            }
+            return@handler
+        }
+        
         val player = mc.thePlayer ?: return@handler
 
         if (blockStatus && player.heldItem?.item !is ItemSword) {
@@ -547,6 +583,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Render event
      */
     val onRender3D = handler<Render3DEvent> {
+        
         handleFailedSwings()
 
         drawAimPointBox()

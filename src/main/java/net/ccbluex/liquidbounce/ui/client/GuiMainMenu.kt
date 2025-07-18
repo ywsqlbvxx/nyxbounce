@@ -1,7 +1,7 @@
 /*
- * RinBounce Hacked Client
+ * LiquidBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/rattermc/rinbounce69
+ * https://github.com/CCBlueX/LiquidBounce/
  */
 package net.ccbluex.liquidbounce.ui.client
 
@@ -35,7 +35,7 @@ class GuiMainMenu : AbstractScreen() {
     private val particles = mutableListOf<OceanParticle>()
     private val smokeParticles = mutableListOf<SmokeParticle>()
     private val buttonAnimations = mutableMapOf<Int, Float>() // Button hover animations
-    
+
     // ? cailonmaskidskidconcak OCEAN PARTICLE CLASS
     data class OceanParticle(
         var x: Float,
@@ -47,7 +47,7 @@ class GuiMainMenu : AbstractScreen() {
         var size: Float,
         val color: Color
     )
-    
+
     // ? cailonmaskidskidconcak SMOKE PARTICLE CLASS  
     data class SmokeParticle(
         var x: Float,
@@ -64,7 +64,7 @@ class GuiMainMenu : AbstractScreen() {
     companion object {
         var lastWarningTime: Long? = null
         private val warningInterval = TimeUnit.DAYS.toMillis(7)
-        
+
         fun shouldShowWarning() = lastWarningTime == null || Instant.now().toEpochMilli() - lastWarningTime!! > warningInterval
     }
 
@@ -80,19 +80,19 @@ class GuiMainMenu : AbstractScreen() {
         +GuiButton(100, centerX, startY + 80, buttonWidth, buttonHeight, "Alt Manager")
         +GuiButton(0, centerX, startY + 120, buttonWidth, buttonHeight, I18n.format("menu.options"))
         +GuiButton(4, centerX, startY + 160, buttonWidth, buttonHeight, I18n.format("menu.quit"))
-        
+
         // Initialize button animations
         buttonAnimations.clear()
-        
+
         // ? cailonmaskidskidconcak INITIALIZE ALL PARTICLES FROM VERSION 26
         particles.clear()
         smokeParticles.clear()
-        
+
         // Create initial ocean particles
         repeat(50) {
             particles.add(createOceanParticle())
         }
-        
+
         // Create initial smoke particles
         repeat(30) {
             smokeParticles.add(createSmokeParticle())
@@ -102,50 +102,50 @@ class GuiMainMenu : AbstractScreen() {
     // ? cailonmaskidskidconcak CUSTOM BUTTON RENDERING
     private fun drawCustomButton(button: GuiButton, mouseX: Int, mouseY: Int) {
         if (!button.visible) return
-        
+
         val isHovered = mouseX >= button.xPosition && mouseY >= button.yPosition && 
                        mouseX < button.xPosition + button.width && mouseY < button.yPosition + button.height
-        
+
         // Update hover animation
         val currentAnim = buttonAnimations.getOrDefault(button.id, 0f)
         val targetAnim = if (isHovered) 1f else 0f
         val newAnim = currentAnim + (targetAnim - currentAnim) * 0.15f
         buttonAnimations[button.id] = newAnim
-        
+
         val x = button.xPosition.toFloat()
         val y = button.yPosition.toFloat()
         val width = button.width.toFloat()
         val height = button.height.toFloat()
         val radius = 8f
-        
+
         // ? cailonmaskidskidconcak BUTTON BACKGROUND
         val bgAlpha = (140 + 80 * newAnim).toInt()
         val bgColor = Color(20, 20, 30, bgAlpha)
-        
+
         RenderUtils.drawRoundedRect(
             x, y, x + width, y + height,
             bgColor.rgb,
             radius
         )
-        
+
         // ? cailonmaskidskidconcak GRADIENT BORDER ON HOVER
         if (newAnim > 0f) {
             val borderWidth = 2f * newAnim
-            
+
             // Create gradient border effect
             val steps = 20
             for (i in 0 until steps) {
                 val progress = i.toFloat() / steps
                 val angle = progress * 2 * PI + animationTime * 2
-                
+
                 // Gradient from white to light blue
                 val r = (255 * (1f - progress * 0.3f)).toInt()
                 val g = (255 * (1f - progress * 0.1f)).toInt()
                 val b = 255
                 val alpha = (120 * newAnim * (1f - progress * 0.5f)).toInt()
-                
+
                 val borderColor = Color(r, g, b, alpha)
-                
+
                 RenderUtils.drawRoundedRect(
                     x - borderWidth * (1f + progress * 0.5f), 
                     y - borderWidth * (1f + progress * 0.5f),
@@ -156,7 +156,7 @@ class GuiMainMenu : AbstractScreen() {
                 )
             }
         }
-        
+
         // ? cailonmaskidskidconcak INNER GLOW EFFECT
         if (newAnim > 0f) {
             val glowColor = Color(100, 200, 255, (40 * newAnim).toInt())
@@ -166,7 +166,7 @@ class GuiMainMenu : AbstractScreen() {
                 radius - 2
             )
         }
-        
+
         // ? cailonmaskidskidconcak BUTTON TEXT
         val font = mc.fontRendererObj
         val textColor = if (button.enabled) {
@@ -174,10 +174,10 @@ class GuiMainMenu : AbstractScreen() {
         } else {
             Color(120, 120, 120, 200)
         }
-        
+
         val textX = x + width / 2 - font.getStringWidth(button.displayString) / 2
         val textY = y + height / 2 - font.FONT_HEIGHT / 2
-        
+
         // Text shadow
         font.drawString(button.displayString, (textX + 1).toInt(), (textY + 1).toInt(), Color(0, 0, 0, 150).rgb)
         font.drawString(button.displayString, textX.toInt(), textY.toInt(), textColor.rgb)
@@ -187,13 +187,13 @@ class GuiMainMenu : AbstractScreen() {
     private fun drawOceanBackground() {
         val tessellator = Tessellator.getInstance()
         val worldRenderer = tessellator.worldRenderer
-        
+
         GlStateManager.disableTexture2D()
         GlStateManager.enableBlend()
         GlStateManager.shadeModel(GL11.GL_SMOOTH)
-        
+
         worldRenderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
-        
+
         // ? cailonmaskidskidconcak LIGHTER ANIMATED OCEAN COLORS
         val time = animationTime * 0.5f
         val deepOcean = Color(
@@ -211,20 +211,20 @@ class GuiMainMenu : AbstractScreen() {
             (200 + 55 * cos(time)).toInt().coerceIn(0, 255), 
             (240 + 15 * sin(time * 1.3f)).toInt().coerceIn(0, 255)
         )
-        
+
         // Multi-layer gradient
         worldRenderer.pos(width.toDouble(), 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
         worldRenderer.pos(0.0, 0.0, 0.0).color(surface.red, surface.green, surface.blue, 255).endVertex()
         worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
         worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
-        
+
         worldRenderer.pos(width.toDouble(), height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
         worldRenderer.pos(0.0, height * 0.3, 0.0).color(lightOcean.red, lightOcean.green, lightOcean.blue, 255).endVertex()
         worldRenderer.pos(0.0, height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
         worldRenderer.pos(width.toDouble(), height.toDouble(), 0.0).color(deepOcean.red, deepOcean.green, deepOcean.blue, 255).endVertex()
-        
+
         tessellator.draw()
-        
+
         GlStateManager.shadeModel(GL11.GL_FLAT)
         GlStateManager.enableTexture2D()
     }
@@ -236,21 +236,21 @@ class GuiMainMenu : AbstractScreen() {
             particle.x += particle.vx
             particle.y += particle.vy
             particle.vy += 0.01f
-            
+
             if (particle.life > 0) {
                 val alpha = (particle.life / particle.maxLife * 255).toInt().coerceIn(0, 255)
                 val particleColor = Color(particle.color.red, particle.color.green, particle.color.blue, alpha)
-                
+
                 drawRect(
                     particle.x - particle.size/2, particle.y - particle.size/2,
                     particle.x + particle.size/2, particle.y + particle.size/2,
                     particleColor.rgb
                 )
             }
-            
+
             particle.life <= 0
         }
-        
+
         if (particles.size < 50 && Random.nextFloat() < 0.3f) {
             particles.add(createOceanParticle())
         }
@@ -264,27 +264,27 @@ class GuiMainMenu : AbstractScreen() {
             smoke.y += smoke.vy
             smoke.rotation += smoke.rotationSpeed
             smoke.size += 0.1f
-            
+
             if (smoke.life > 0) {
                 val alpha = (smoke.life / smoke.maxLife * 100).toInt().coerceIn(0, 100)
                 val smokeColor = Color(150, 200, 255, alpha)
-                
+
                 GlStateManager.pushMatrix()
                 GlStateManager.translate(smoke.x, smoke.y, 0f)
                 GlStateManager.rotate(smoke.rotation, 0f, 0f, 1f)
-                
+
                 drawRect(
                     -smoke.size/2, -smoke.size/2,
                     smoke.size/2, smoke.size/2,
                     smokeColor.rgb
                 )
-                
+
                 GlStateManager.popMatrix()
             }
-            
+
             smoke.life <= 0
         }
-        
+
         if (smokeParticles.size < 30 && Random.nextFloat() < 0.2f) {
             smokeParticles.add(createSmokeParticle())
         }
@@ -292,30 +292,30 @@ class GuiMainMenu : AbstractScreen() {
 
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
         animationTime += 0.016f
-        
+
         // ? cailonmaskidskidconcak LIGHTER OCEAN BACKGROUND
         drawOceanBackground()
-        
+
         // ? cailonmaskidskidconcak PARTICLES AND EFFECTS
         updateAndRenderParticles()
         updateAndRenderSmoke()
-        
+
         // ? cailonmaskidskidconcak CUSTOM BUTTON RENDERING
         for (button in buttonList) {
             drawCustomButton(button as GuiButton, mouseX, mouseY)
         }
-        
+
         // ? cailonmaskidskidconcak VERSION TEXT (TOP LEFT)
         mc.fontRendererObj.drawStringWithShadow(
-            "b1.1.7", 10f, 10f, 0xFFFFFF
+            "b1.0.1", 10f, 10f, 0xFFFFFF
         )
-        
+
         // ? cailonmaskidskidconcak RESPONSIVE RINBOUNCE TITLE
         val liquidBounceTitle = "RinBounce"
-        
+
         // Calculate button start position (same as initGui)
         val buttonStartY = height / 2 - 80
-        
+
         // Responsive scale based on screen height
         val baseScale = 4.0f
         val minScale = 2.0f
@@ -326,41 +326,41 @@ class GuiMainMenu : AbstractScreen() {
             height < 800 -> baseScale // Normal screens
             else -> maxScale // Large screens
         }.coerceIn(minScale, maxScale)
-        
+
         // Calculate title height when scaled
         val titleHeight = mc.fontRendererObj.FONT_HEIGHT * titleScale
-        
+
         // Position title above buttons with proper spacing
         val titleSpacing = 20f // Space between title and first button
         val titleY = buttonStartY - titleHeight - titleSpacing
-        
+
         // Make sure title doesn't go above screen
         val finalTitleY = maxOf(titleHeight + 10f, titleY)
-        
+
         GlStateManager.pushMatrix()
         GlStateManager.scale(titleScale, titleScale, titleScale)
-        
+
         val scaledTitleX = (width / 2f - mc.fontRendererObj.getStringWidth(liquidBounceTitle) * titleScale / 2f) / titleScale
         val scaledTitleY = finalTitleY / titleScale
-        
+
         // Animated color for title
         val titleColorR = (200 + 55 * sin(animationTime * 0.8f)).toInt().coerceIn(0, 255)
         val titleColorG = (220 + 35 * cos(animationTime * 1.2f)).toInt().coerceIn(0, 255)
         val titleColorB = 255
         val titleColor = Color(titleColorR, titleColorG, titleColorB).rgb
-        
+
         mc.fontRendererObj.drawStringWithShadow(liquidBounceTitle, scaledTitleX, scaledTitleY, titleColor)
         GlStateManager.popMatrix()
-        
+
         // ? cailonmaskidskidconcak CREDIT TEXT (BOTTOM RIGHT)
-        val creditText = "credit: [ CCBlueX, RatterMC ]"
+        val creditText = "credit; [idle, deleteduser, welovegiabao]"
         mc.fontRendererObj.drawStringWithShadow(
             creditText,
             width - mc.fontRendererObj.getStringWidth(creditText) - 10f,
             height - mc.fontRendererObj.FONT_HEIGHT - 10f,
             0xAAFFFF
         )
-        
+
         // ? cailonmaskidskidconcak FADE EFFECT
         if (fadeIn) {
             drawRect(0f, 0f, width.toFloat(), height.toFloat(), Color(0, 50, 100, fadeAlpha).rgb)
@@ -389,7 +389,7 @@ class GuiMainMenu : AbstractScreen() {
             Color(200, 240, 255),
             Color(0, 180, 255)
         )
-        
+
         return OceanParticle(
             x = Random.nextFloat() * width,
             y = Random.nextFloat() * height,
@@ -401,7 +401,7 @@ class GuiMainMenu : AbstractScreen() {
             color = colors.random()
         )
     }
-    
+
     private fun createSmokeParticle(): SmokeParticle {
         return SmokeParticle(
             x = Random.nextFloat() * width,
