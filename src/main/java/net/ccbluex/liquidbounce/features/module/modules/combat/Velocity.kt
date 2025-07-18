@@ -60,10 +60,10 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     )
 
     // GrimReduce
-    private val GrimReduceFactor by float("GrimReduceFactor", 0.6f, 0f..1f) { mode == "GrimReduce" }
-    private val GrimMinHurtTime by int("GrimMinHurtTime", 5, 0..10) { mode == "GrimReduce" }
-    private val GrimMaxHurtTime by int("GrimMaxHurtTime", 10, 0..20) { mode == "GrimReduce" }
-    private val GrimOnGround by boolean("OnlyGround", false) { mode == "GrimReduce" }
+    private val reduceGrimFactor by float("GrimReduceFactor", 0.6f, 0f..1f) { mode == "GrimReduce" }
+    private val reduceGrimMinHurtTime by int("GrimMinHurtTime", 5, 0..10) { mode == "GrimReduce" }
+    private val reduceGrimMaxHurtTime by int("GrimMaxHurtTime", 10, 0..20) { mode == "GrimReduce" }
+    private val reduceGrimOnlyGround by boolean("OnlyGround", false) { mode == "GrimReduce" }
 
     private val horizontal by float("Horizontal", 0F, -1F..1F) { mode in arrayOf("Simple", "AAC", "Legit") }
     private val vertical by float("Vertical", 0F, -1F..1F) { mode in arrayOf("Simple", "Legit") }
@@ -216,12 +216,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
         when (mode.lowercase()) {
             "grimreduce" -> {
-                if (hasReceivedVelocity && thePlayer.hurtTime in GrimMinHurtTime..GrimMaxHurtTime) {
-                    thePlayer.motionX *= GrimReduceFactor
-                    thePlayer.motionY *= GrimReduceFactor
-                    thePlayer.motionZ *= GrimReduceFactor
+                if (hasReceivedVelocity && thePlayer.hurtTime in reduceGrimMinHurtTime..reduceGrimMaxHurtTime) {
+                    thePlayer.motionX *= reduceGrimFactor
+                    thePlayer.motionY *= reduceGrimFactor
+                    thePlayer.motionZ *= reduceGrimFactor
                     
-                    if (GrimOnGround && !thePlayer.onGround) {
+                    if (reduceGrimOnlyGround && !thePlayer.onGround) {
                         hasReceivedVelocity = false
                     }
                 }
