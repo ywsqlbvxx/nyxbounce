@@ -308,6 +308,7 @@ class GuiMainMenu : AbstractScreen() {
         // ? cailonmaskidskidconcak VERSION TEXT (TOP LEFT)
         mc.fontRendererObj.drawStringWithShadow(
             "b1.1.7", 10f, 10f, 0xFFFFFF
+
         )
 
         // ? cailonmaskidskidconcak RESPONSIVE RINBOUNCE TITLE

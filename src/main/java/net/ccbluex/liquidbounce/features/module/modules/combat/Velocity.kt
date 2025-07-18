@@ -509,7 +509,32 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
                     hasReceivedVelocity = true
                 }
-                }                "glitch" -> {
+            }                "intave" -> {
+                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
+                        if (!intaveJump && !intaveSmart) {
+                            return@handler
+                        }
+ modification in certain conditions
+                        if (intaveSmart) {
+                            if (!intaveSmartInAir && !thePlayer.onGround) return@handler
+                            if (thePlayer.fallDistance > intaveSmartFallDistance) return@handler
+                        }
+
+                        if (intaveJump && thePlayer.onGround && thePlayer.hurtTime >= 9) {
+                            if (nextInt(endExclusive = 100) <= intaveJumpChance) {
+                                thePlayer.tryJump()
+                                event.cancelEvent()
+                                return@handler
+                            }
+                        }
+
+                        if (intaveJump || intaveSmart) {
+                            event.cancelEvent()
+                        }
+                    }
+                }
+                
+                "glitch" -> {
                     if (!thePlayer.onGround)
                         return@handler
 
