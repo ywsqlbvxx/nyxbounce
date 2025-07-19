@@ -5,14 +5,13 @@
  */
 package net.ccbluex.liquidbounce.features.module.modules.combat
 
+import net.ccbluex.liquidbounce.event.EventTarget
 import net.ccbluex.liquidbounce.event.AttackEvent
 import net.ccbluex.liquidbounce.event.MotionEvent
 import net.ccbluex.liquidbounce.event.UpdateEvent
-import net.ccbluex.liquidbounce.event.handler
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
-import net.ccbluex.liquidbounce.utils.MinecraftInstance.mc
-import net.ccbluex.liquidbounce.utils.timing.TimerUtils
+import net.ccbluex.liquidbounce.utils.timing.MSTimer
 import net.ccbluex.liquidbounce.utils.extensions.getDistanceToEntityBox
 import net.ccbluex.liquidbounce.utils.client.chat
 import net.minecraft.entity.EntityLivingBase
@@ -36,9 +35,9 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
     private var waitTimerReset = false
     private var target: EntityLivingBase? = null
 
-    private val resetTimer = TimerUtils()
-    private val clickTimer = TimerUtils()
-    private val maxWaitTimer = TimerUtils()
+    private val resetTimer = MSTimer()
+    private val clickTimer = MSTimer()
+    private val maxWaitTimer = MSTimer()
 
     override fun onDisable() {
         reset()
@@ -47,12 +46,13 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
         }
     }
 
-    val onAttack = handler<AttackEvent> { event ->
-        this.target = event.targetEntity as? EntityLivingBase
+    @EventTarget
+    fun onAttack(event: AttackEvent) {
+        target = event.targetEntity as? EntityLivingBase
     }
 
-    val onUpdate = handler<UpdateEvent> {
-        if (!handleEvents()) return@handler
+    @EventTarget
+    fun onUpdate(event: UpdateEvent) {
 
         val thePlayer = mc.thePlayer ?: return@handler
         val target = target ?: run {
@@ -121,9 +121,8 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
         }
     }
 
-    val onMotion = handler<MotionEvent> {
-        if (!handleEvents()) return@handler
-        
+    @EventTarget
+    fun onMotion(event: MotionEvent) {
         if (isWTapping && wTap) {
             mc.gameSettings.keyBindForward.pressed = false
             isWTapping = false
@@ -137,5 +136,4 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
         target = null
         isWTapping = false
     }
-}
 }
