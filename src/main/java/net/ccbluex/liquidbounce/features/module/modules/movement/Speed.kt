@@ -72,7 +72,7 @@ object Speed : Module("Speed", Category.MOVEMENT) {
         VulcanGround288,
 
         // Matrix
-        OldMatrixHop,
+        MatrixNew,
         MatrixHop,
         MatrixSlowHop,
 
