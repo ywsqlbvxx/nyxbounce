@@ -1,35 +1,35 @@
+/*
+ * RinBounce Hacked Client
+ * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
+ * https://github.com/rattermc/rinbounce69
+ */
 package net.ccbluex.liquidbounce.features.module.modules.combat
 
+import net.ccbluex.liquidbounce.event.AttackEvent
 import net.ccbluex.liquidbounce.event.EventTarget
 import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.event.MotionEvent
-import net.ccbluex.liquidbounce.event.AttackEvent
+import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
-import net.ccbluex.liquidbounce.features.module.ModuleCategory
-import net.ccbluex.liquidbounce.features.module.ModuleInfo
-import net.ccbluex.liquidbounce.utils.timer.MSTimer
-import net.ccbluex.liquidbounce.value.FloatValue
-import net.ccbluex.liquidbounce.value.BoolValue
 import net.ccbluex.liquidbounce.utils.EntityUtils
+import net.ccbluex.liquidbounce.utils.timer.MSTimer
 import net.ccbluex.liquidbounce.utils.extensions.getDistanceToEntityBox
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.util.MathHelper
-import org.lwjgl.input.Keyboard
 
-@ModuleInfo(name = "AutoHitselect", description = "Automatically hit selects in order to start combos.", category = ModuleCategory.COMBAT)
-class AutoHitselect : Module() {
+object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
 
-    private val maxWaitTimeValue = FloatValue("MaxWaitTime", 500f, 100f, 1000f)
-    private val rangeValue = FloatValue("Range", 8f, 1f, 8f)
-    private val maxAngleValue = FloatValue("MaxAngle", 120f, 30f, 180f)
-    private val resetTimeValue = FloatValue("ResetTime", 250f, 100f, 500f)
-    private val clickDelayValue = FloatValue("ClickDelay", 100f, 50f, 200f)
-    private val distanceValue = FloatValue("Distance", 3f, 1f, 6f)
-    private val wTapValue = BoolValue("WTap", true)
-    private val debugValue = BoolValue("Debug", false)
+    private val maxWaitTime by float("MaxWaitTime", 500f, 100f..1000f)
+    private val range by float("Range", 8f, 1f..8f)
+    private val maxAngle by float("MaxAngle", 120f, 30f..180f)
+    private val resetTime by float("ResetTime", 250f, 100f..500f)
+    private val clickDelay by float("ClickDelay", 100f, 50f..200f)
+    private val distance by float("Distance", 3f, 1f..6f)
+    private val wTap by boolean("WTap", true)
+    private val debug by boolean("Debug", false)
 
     private var blockClicking = false
-    private var wTap = false
+    private var isWTapping = false
     private var shouldClick = false
     private var startedCombo = false
     private var waitTimerReset = false
@@ -39,50 +39,37 @@ class AutoHitselect : Module() {
     private val clickTimer = MSTimer()
     private val maxWaitTimer = MSTimer()
 
-    override fun onEnable() {
-        blockClicking = false
-        startedCombo = false
-        shouldClick = false
-        target = null
-    }
-
     override fun onDisable() {
-        blockClicking = false
-        startedCombo = false
-        shouldClick = false
-        target = null
-        if (wTapValue.get()) {
+        reset()
+        if (wTap) {
             mc.gameSettings.keyBindForward.pressed = true
         }
     }
 
-    @EventTarget
-    fun onAttack(event: AttackEvent) {
-        val target = event.targetEntity as? EntityLivingBase ?: return
-        this.target = target
+    val onAttack = handler<AttackEvent> { event ->
+        this.target = event.targetEntity as? EntityLivingBase
     }
 
-    @EventTarget
-    fun onUpdate(event: UpdateEvent) {
-        val target = this.target ?: EntityUtils.getClosestEntityInRange(rangeValue.get()) ?: run {
+    val onUpdate = handler<UpdateEvent> {
+        val target = this.target ?: EntityUtils.getClosestEntityInRange(range) ?: run {
             reset()
-            return
+            return@handler
         }
 
         val calcYaw = (MathHelper.atan2(mc.thePlayer.posZ - target.posZ, 
                                       mc.thePlayer.posX - target.posX) * 180.0 / Math.PI - 90.0).toFloat()
         val diffX = Math.abs(MathHelper.wrapAngleTo180_float(calcYaw - target.rotationYawHead))
 
-        if (diffX > maxAngleValue.get()) {
+        if (diffX > maxAngle) {
             reset()
-            return
+            return@handler
         }
 
         val playerHurt = mc.thePlayer.hurtTime > 0
         val targetHurt = target.hurtTime > 0
 
         if (!playerHurt && !targetHurt) {
-            if (resetTimer.hasTimePassed(resetTimeValue.get().toLong())) {
+            if (resetTimer.hasTimePassed(resetTime.toLong())) {
                 startedCombo = false
                 clickTimer.reset()
                 shouldClick = false
@@ -91,7 +78,7 @@ class AutoHitselect : Module() {
             resetTimer.reset()
         }
 
-        if (mc.thePlayer.getDistanceToEntityBox(target) < distanceValue.get()) {
+        if (mc.thePlayer.getDistanceToEntityBox(target) < distance) {
             if (!waitTimerReset) {
                 maxWaitTimer.reset()
                 waitTimerReset = true
@@ -100,7 +87,7 @@ class AutoHitselect : Module() {
             waitTimerReset = false
         }
 
-        if (!playerHurt && !targetHurt && maxWaitTimer.hasTimePassed(maxWaitTimeValue.get().toLong())) {
+        if (!playerHurt && !targetHurt && maxWaitTimer.hasTimePassed(maxWaitTime.toLong())) {
             clickTimer.time = Long.MAX_VALUE
             shouldClick = true
             startedCombo = true
@@ -108,32 +95,32 @@ class AutoHitselect : Module() {
 
         if (!startedCombo) {
             if (playerHurt && !targetHurt) {
-                if (clickTimer.hasTimePassed(clickDelayValue.get().toLong())) {
+                if (clickTimer.hasTimePassed(clickDelay.toLong())) {
                     shouldClick = true
                     startedCombo = true
-                    if (wTapValue.get()) wTap = true
+                    if (wTap) isWTapping = true
                 } else {
                     blockClicking = true
-                    return
+                    return@handler
                 }
             } else {
                 blockClicking = true
-                return
+                return@handler
             }
         }
 
         blockClicking = !shouldClick && (!playerHurt || !targetHurt)
 
-        if (debugValue.get()) {
-            mc.thePlayer.addChatMessage("§8[§9§lAuto Hit Select§8] §7blockClicking=$blockClicking shouldClick=$shouldClick startedCombo=$startedCombo")
+        if (debug) {
+            chat("§8[§9§lAuto Hit Select§8] §7blockClicking=$blockClicking shouldClick=$shouldClick startedCombo=$startedCombo")
+        }
         }
     }
 
-    @EventTarget
-    fun onMotion(event: MotionEvent) {
-        if (wTap && wTapValue.get()) {
+    val onMotion = handler<MotionEvent> {
+        if (isWTapping && wTap) {
             mc.gameSettings.keyBindForward.pressed = false
-            wTap = false
+            isWTapping = false
         }
     }
 
@@ -142,6 +129,7 @@ class AutoHitselect : Module() {
         startedCombo = false
         shouldClick = false
         target = null
+        isWTapping = false
     }
 }
 }
