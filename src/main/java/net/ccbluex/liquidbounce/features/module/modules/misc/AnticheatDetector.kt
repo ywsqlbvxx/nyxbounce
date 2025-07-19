@@ -798,8 +798,7 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
     }
 
     private fun handleTransaction(action: Int) {
-        actionNumbers.add(action)
-        debugMessage("Transaction ID: $action")
+        actionNumbers.add(action).also { if (debug) chat("ID: $action") }
         ticksPassed = 0
         if (actionNumbers.size >= 5) analyzeActionNumbers()
     }
@@ -807,8 +806,6 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
     private fun analyzeActionNumbers() {
         val diffs = actionNumbers.windowed(2) { it[1] - it[0] }
         val first = actionNumbers.first()
-        
-        debugMessage("Analyzing transaction pattern: Numbers=${actionNumbers.joinToString()}, Diffs=${diffs.joinToString()}, First=$first")
         
         when {
             // Server-specific detection rules

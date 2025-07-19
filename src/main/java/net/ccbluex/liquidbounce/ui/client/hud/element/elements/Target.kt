@@ -10,6 +10,7 @@ import net.ccbluex.liquidbounce.ui.client.hud.element.Border
 import net.ccbluex.liquidbounce.ui.client.hud.element.Element
 import net.ccbluex.liquidbounce.ui.client.hud.element.ElementInfo
 import net.ccbluex.liquidbounce.ui.client.hud.element.elements.target.LiquidBounce
+import net.ccbluex.liquidbounce.ui.client.hud.element.elements.target.RinBounce
 import net.ccbluex.liquidbounce.ui.font.AWTFontRenderer.Companion.assumeNonVolatile
 import net.ccbluex.liquidbounce.ui.font.Fonts
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils.getHealth
@@ -41,7 +42,7 @@ import kotlin.math.pow
  */
 @ElementInfo(name = "Target")
 class Target : Element("Target") {
-    private val targetHudStyle by choices("Style", arrayOf("LiquidBounce"), "LiquidBounce")
+    private val targetHudStyle by choices("Style", arrayOf("LiquidBounce", "RinBounce"), "RinBounce")
 
     // LiquidBounce Style Settings
     private val roundedRectRadius by float("Rounded-Radius", 3F, 0F..5F)
@@ -106,9 +107,21 @@ class Target : Element("Target") {
         val stringWidth = (40f + (target.name?.let(titleFont::getStringWidth) ?: 0)).coerceAtLeast(118F)
 
         assumeNonVolatile {
-            // Initialize current style
             val style = when (targetHudStyle.lowercase()) {
                 "liquidbounce" -> LiquidBounce(
+                    roundedRectRadius,
+                    borderStrength,
+                    backgroundColor,
+                    healthBarColor1,
+                    healthBarColor2,
+                    roundHealthBarShape,
+                    borderColor,
+                    textColor,
+                    titleFont,
+                    healthFont,
+                    textShadow
+                )
+                "rinbounce" -> RinBounce(
                     roundedRectRadius,
                     borderStrength,
                     backgroundColor,

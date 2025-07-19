@@ -46,8 +46,14 @@ class Arraylist(
 ) : Element("Arraylist", x, y, scale, side) {
 
     private val textColorMode by choices(
-        "Text-Mode", arrayOf("Custom", "Fade", "Random", "Rainbow", "Gradient", "Sakura", "RedPastel", "Skylit", "PurplePastel", "GreenPastel", "GrayPastel", "YellowPastel"), "Custom"
+        "Text-Mode", arrayOf("Custom", "Fade", "Random", "Rainbow", "Gradient", "Sakura", "RedPastel", "Skylit", "PurplePastel", "GreenPastel", "GrayPastel", "YellowPastel", "RinStyle"), "RinStyle"
     )
+    private val rinGradient = listOf(
+        floatArrayOf(0.565f, 0.933f, 0.565f, 1.0f), 
+        floatArrayOf(0.678f, 0.847f, 0.902f, 1.0f), 
+        floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)  
+    )
+
     private val sakuraGradient = listOf(
         floatArrayOf(1.0f, 0.65f, 0.85f, 1.0f), // vivid pink
         floatArrayOf(1.0f, 0.80f, 0.92f, 1.0f), // lighter pink
@@ -87,7 +93,7 @@ class Arraylist(
         floatArrayOf(0.5f, 1.0f, 1.0f, 1.0f), // lighter aqua
         floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)  // white
     )
-    private val textColors = ColorSettingsInteger(this, "TextColor") { textColorMode == "Custom" }.with(blueRibbon)
+    private val textColors = ColorSettingsInteger(this, "TextColor") { textColorMode == "Custom" }.with(0, )
     private val textFadeColors = ColorSettingsInteger(this, "Text-Fade") { textColorMode == "Fade" }.with(0, 111, 255)
 
     private val textFadeDistance by int("Text-Fade-Distance", 50, 0..100) { textColorMode == "Fade" }
@@ -106,7 +112,7 @@ class Arraylist(
         "Rect-ColorMode", arrayOf("Custom", "Fade", "Random", "Rainbow", "Gradient"), "Custom"
     ) { rectMode != "None" }
     private val rectColors =
-        ColorSettingsInteger(this, "RectColor", applyMax = true) { isCustomRectSupported }.with(blueRibbon)
+        ColorSettingsInteger(this, "RectColor", applyMax = false) { isCustomRectSupported }.with(blueRibbon)
     private val rectFadeColors = ColorSettingsInteger(this, "Rect-Fade", applyMax = true) { rectColorMode == "Fade" }
 
     private val rectFadeDistance by int("Rect-Fade-Distance", 50, 0..100) { rectColorMode == "Fade" }
@@ -143,7 +149,7 @@ class Arraylist(
     ) { backgroundMode == "Gradient" && it <= maxBackgroundGradientColors }
 
     // Icons
-    private val displayIcons by boolean("DisplayIcons", true)
+    private val displayIcons by boolean("DisplayIcons", false)
     private val iconShadows by boolean("IconShadows", true) { displayIcons }
     private val xDistance by float("ShadowXDistance", 0F, -2F..2F) { iconShadows }
     private val yDistance by float("ShadowYDistance", 0F, -2F..2F) { iconShadows }
@@ -475,6 +481,23 @@ class Arraylist(
                                     textShadow
                                 )
                             }
+                        } else if (!markAsInactive && textColorMode == "RinStyle") {
+                            GradientFontShader.begin(
+                                true,
+                                gradientX,
+                                gradientY,
+                                rinGradient,
+                                gradientTextSpeed,
+                                gradientOffset
+                            ).use {
+                                font.drawString(
+                                    displayString,
+                                    xPos + 1 - if (rectMode == "Right") 3 else 0,
+                                    yPos + textY,
+                                    Color.WHITE.rgb,
+                                    textShadow
+                                )
+                            }
                         } else {
                             GradientFontShader.begin(
                                 !markAsInactive && textColorMode == "Gradient",
@@ -724,6 +747,23 @@ class Arraylist(
                                 gradientX,
                                 gradientY,
                                 yellowPastelGradient,
+                                gradientTextSpeed,
+                                gradientOffset
+                            ).use {
+                                font.drawString(
+                                    displayString,
+                                    xPos - 1,
+                                    yPos + textY,
+                                    Color.WHITE.rgb,
+                                    textShadow
+                                )
+                            }
+                        } else if (!markAsInactive && textColorMode == "RinStyle") {
+                            GradientFontShader.begin(
+                                true,
+                                gradientX,
+                                gradientY,
+                                rinGradient,
                                 gradientTextSpeed,
                                 gradientOffset
                             ).use {

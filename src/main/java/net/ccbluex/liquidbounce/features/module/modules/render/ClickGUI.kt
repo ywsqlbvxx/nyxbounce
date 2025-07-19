@@ -14,6 +14,7 @@ import net.ccbluex.liquidbounce.ui.client.clickgui.ClickGui
 import net.ccbluex.liquidbounce.ui.client.clickgui.style.styles.BlackStyle
 import net.ccbluex.liquidbounce.ui.client.clickgui.style.styles.LiquidBounceStyle
 import net.ccbluex.liquidbounce.ui.client.clickgui.style.styles.NullStyle
+import net.ccbluex.liquidbounce.ui.client.clickgui.style.styles.RinStyle
 import net.ccbluex.liquidbounce.ui.client.clickgui.style.styles.SlowlyStyle
 import net.minecraft.network.play.server.S2EPacketCloseWindow
 import org.lwjgl.input.Keyboard
@@ -22,7 +23,7 @@ import java.awt.Color
 object ClickGUI : Module("ClickGUI", Category.RENDER, Keyboard.KEY_RSHIFT, canBeEnabled = false) {
     private val style by choices(
         "Style",
-        arrayOf("LiquidBounce", "Null", "Slowly", "Black"),
+        arrayOf("LiquidBounce", "Null", "Slowly", "Black", "RinStyle"),
         "LiquidBounce"
     ).onChanged {
         updateStyle()
@@ -49,6 +50,7 @@ object ClickGUI : Module("ClickGUI", Category.RENDER, Keyboard.KEY_RSHIFT, canBe
         clickGui.style = when (style) {
             "LiquidBounce" -> LiquidBounceStyle
             "Null" -> NullStyle
+            "RinStyle" -> RinStyle
             "Slowly" -> SlowlyStyle
             "Black" -> BlackStyle
             else -> return
