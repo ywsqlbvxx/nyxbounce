@@ -5,10 +5,11 @@
  */
 package net.ccbluex.liquidbounce.features.module.modules.combat
 
-import net.ccbluex.liquidbounce.event.EventTarget
+import net.ccbluex.liquidbounce.event.Event
 import net.ccbluex.liquidbounce.event.AttackEvent
 import net.ccbluex.liquidbounce.event.MotionEvent
 import net.ccbluex.liquidbounce.event.UpdateEvent
+import net.ccbluex.liquidbounce.event.EventManager.callEvent
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.utils.timing.MSTimer
@@ -46,15 +47,14 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
         }
     }
 
-    @EventTarget
     fun onAttack(event: AttackEvent) {
-        target = event.targetEntity as? EntityLivingBase
+        if (event.targetEntity !is EntityLivingBase) return
+        target = event.targetEntity as EntityLivingBase
     }
 
-    @EventTarget
-    fun onUpdate(event: UpdateEvent) {
+    fun onUpdate() {
 
-        val thePlayer = mc.thePlayer ?: return@handler
+        val thePlayer = mc.thePlayer ?: return
         val target = target ?: run {
             reset()
             return@handler
@@ -92,7 +92,7 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
         }
 
         if (!playerHurt && !targetHurt && maxWaitTimer.hasTimePassed(maxWaitTime.toLong())) {
-            clickTimer.time = Long.MAX_VALUE
+            clickTimer.reset()
             shouldClick = true
             startedCombo = true
         }
@@ -121,8 +121,7 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
         }
     }
 
-    @EventTarget
-    fun onMotion(event: MotionEvent) {
+    fun onMotion() {
         if (isWTapping && wTap) {
             mc.gameSettings.keyBindForward.pressed = false
             isWTapping = false
