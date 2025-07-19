@@ -72,8 +72,7 @@ import net.minecraft.potion.Potion
 import net.minecraft.util.*
 import org.lwjgl.input.Keyboard
 import java.awt.Color
-import kotlin.math.max
-import kotlin.math.roundToInt
+import kotlin.math.*
 
 object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     /**
@@ -317,6 +316,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val duration by float(
         "Duration", 1.5F, 0.5F..3F, suffix = "Seconds"
     ) { animateCircleY || animateHeight }.subjective()
+    
+    private fun getAnimationProgress() = (System.currentTimeMillis() % (duration * 1000L)) / (duration * 1000L)
 
     // Box option
     private val boxOutline by boolean("Outline", true) { mark == "Box" }.subjective()
@@ -618,38 +619,40 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                 "platform" -> drawPlatform(target!!, hittableColor)
                 "box" -> drawEntityBox(target!!, hittableColor, boxOutline)
                 "circle" -> {
-                    val time = System.currentTimeMillis() / 1000.0
-                    val hueShift = (sin(time * 0.5) * 0.1 + 0.1).toFloat()
+                    val progress = getAnimationProgress()
+                    val yOffset = if (animateCircleY) {
+                        circleYRange.first + (circleYRange.last - circleYRange.first) * progress
+                    } else 0f
                     
-                    val startHSB = Color.RGBtoHSB(circleStartColor.red, circleStartColor.green, circleStartColor.blue, null)
-                    val endHSB = Color.RGBtoHSB(circleEndColor.red, circleEndColor.green, circleEndColor.blue, null)
-                    
-                    val animatedStartColor = Color.getHSBColor(startHSB[0] + hueShift, startHSB[1], startHSB[2])
-                    val animatedEndColor = Color.getHSBColor(endHSB[0] + hueShift, endHSB[1], endHSB[2])
-
-                    val heightOffset = if (animateHeight) {
-                        val heightProgress = (sin(time * Math.PI / duration) + 1) / 2
-                        heightRange.first + (heightRange.last - heightRange.first) * heightProgress
-                    } else {
-                        heightRange.first
+                    if (fillInnerCircle) {
+                        drawCircle(
+                            target!!.posX,
+                            target!!.posY + yOffset,
+                            target!!.posZ,
+                            target!!.width + extraWidth,
+                            circleStartColor,
+                            circleEndColor,
+                            10,
+                            true
+                        )
                     }
 
-                    val circleY = if (animateCircleY) {
-                        val progress = (sin(time * Math.PI / duration) + 1) / 2
-                        circleYRange.first + (circleYRange.last - circleYRange.first) * progress
-                    } else 0F
-
-                    drawCircle(
-                        target!!,
-                        duration * 1000F,
-                        heightRange.first..heightOffset,
-                        extraWidth,
-                        fillInnerCircle,
-                        withHeight,
-                        if (animateCircleY) circleYRange else null,
-                        animatedStartColor.rgb,
-                        animatedEndColor.rgb
-                    )
+                    if (withHeight) {
+                        val height = if (animateHeight) {
+                            heightRange.first + (heightRange.last - heightRange.first) * progress
+                        } else heightRange.first
+                        
+                        drawCircle(
+                            target!!.posX,
+                            target!!.posY + yOffset + height,
+                            target!!.posZ,
+                            target!!.width + extraWidth,
+                            circleStartColor,
+                            circleEndColor,
+                            10,
+                            false
+                        )
+                    }
                 }
             }
         }
