@@ -55,9 +55,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce", 
             "Delay", "Hypixel", "HypixelAir",
             "Click", "BlocksMC", "3FMC", "GrimReduce", "Intave",
-            "GrimTest"
+            "GrimTest", "Block"
         ), "Simple"
     )
+    
+    // Block mode options
+    private val renderSlot by boolean("RenderSlot", true) { mode == "Block" }
 
     // GrimReduce
     private val reduceGrimFactor by float("GrimReduceFactor", 0.6f, 0f..1f) { mode == "GrimReduce" }
@@ -117,10 +120,8 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val grimReduceVertical by float("GrimReduceVertical", 0.62f, 0f..1f) { mode == "grimreduce" }
 
     // Intave options
-    private val intaveHReduce by float("IntaveHReduce", 0.3f, 0f..1f) { mode == "Intave" }
-    private val intaveTimes by int("IntaveAttacksToWork", 4, 1..10) { mode == "Intave" }
-    private var intaveCount = 0
-    private var intaveLastAttackTime = 0L
+    private val reduceFactor by float("Factor", 0.6f, 0.6f..1f) { mode == "IntaveReduce" || mode == "Intave" }
+    private val hurtTime by int("HurtTime", 9, 1..10) { mode == "IntaveReduce" }
 
     private val pauseOnExplosion by boolean("PauseOnExplosion", true)
     private val ticksToPause by int("TicksToPause", 20, 1..50) { pauseOnExplosion }
@@ -213,6 +214,40 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
         if (thePlayer.isInLiquid || thePlayer.isInWeb || thePlayer.isDead)
             return@handler
+            
+        if (mode == "Block") {
+            if (mc.thePlayer.hurtTime > 5) {
+                val block = InventoryUtils.findBlockInHotbar()
+                if (block != null) {
+                    SilentHotbar.selectSlotSilently(
+                        this,
+                        block,
+                        immediate = true,
+                        render = renderSlot,
+                        resetManually = true
+                    )
+                }
+                var i = 60
+                while (i >= 45) {
+                    mc.thePlayer.rotationPitch = i.toFloat()
+                    val mop = mc.objectMouseOver
+                    if (mop?.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK) {
+                        mc.playerController.onPlayerRightClick(
+                            mc.thePlayer,
+                            mc.theWorld,
+                            mc.thePlayer.heldItem,
+                            mop.blockPos,
+                            mop.sideHit,
+                            mop.hitVec
+                        )
+                    }
+                    i -= 5
+                }
+            } else {
+                RotationUtils.resetRotation()
+            }
+            return@handler
+        }
 
         when (mode.lowercase()) {
             "grimreduce" -> {
@@ -570,20 +605,18 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     }
                 }
                 
-                "intave" -> {
+                "intavea" -> {
                     if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
-                        if (thePlayer.hurtTime > 0) {
-                            intaveCount++
-                            
-                            if (intaveCount % intaveTimes == 0 && System.currentTimeMillis() - intaveLastAttackTime <= 8000) {
-                                packet.motionX = (packet.motionX * intaveHReduce).toInt()
-                                packet.motionZ = (packet.motionZ * intaveHReduce).toInt()
-                                ClientUtils.displayChatMessage("[Intave] Reduced velocity after $intaveCount hits")
+                        hasReceivedVelocity = true
+                        intaveTick++
+                        if (thePlayer.hurtTime == 2) {
+                            intaveDamageTick++
+                            if (thePlayer.onGround && intaveTick % 2 == 0 && intaveDamageTick <= 10) {
+                                thePlayer.tryJump()
+                                intaveTick = 0
                             }
-                            intaveLastAttackTime = System.currentTimeMillis()
+                            hasReceivedVelocity = false
                         }
-                    } else if (packet is S27PacketExplosion) {
-                        event.cancelEvent() 
                     }
                 }
 
