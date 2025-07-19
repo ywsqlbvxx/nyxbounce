@@ -620,39 +620,18 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                 "box" -> drawEntityBox(target!!, hittableColor, boxOutline)
                 "circle" -> {
                     val progress = getAnimationProgress()
-                    val yOffset = if (animateCircleY) {
-                        circleYRange.first + (circleYRange.last - circleYRange.first) * progress
-                    } else 0f
                     
-                    if (fillInnerCircle) {
-                        drawCircle(
-                            target!!.posX,
-                            target!!.posY + yOffset,
-                            target!!.posZ,
-                            target!!.width + extraWidth,
-                            circleStartColor,
-                            circleEndColor,
-                            10,
-                            true
-                        )
-                    }
-
-                    if (withHeight) {
-                        val height = if (animateHeight) {
-                            heightRange.first + (heightRange.last - heightRange.first) * progress
-                        } else heightRange.first
-                        
-                        drawCircle(
-                            target!!.posX,
-                            target!!.posY + yOffset + height,
-                            target!!.posZ,
-                            target!!.width + extraWidth,
-                            circleStartColor,
-                            circleEndColor,
-                            10,
-                            false
-                        )
-                    }
+                    drawCircle(
+                        target!!,
+                        duration * 1000F,
+                        heightRange,
+                        target!!.width + extraWidth,
+                        fillInnerCircle,
+                        withHeight,
+                        if (animateCircleY) circleYRange else null,
+                        circleStartColor.rgb,
+                        circleEndColor.rgb
+                    )
                 }
             }
         }
