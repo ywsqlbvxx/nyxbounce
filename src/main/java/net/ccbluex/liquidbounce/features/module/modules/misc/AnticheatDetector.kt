@@ -24,17 +24,32 @@ import net.minecraft.network.play.server.S32PacketConfirmTransaction
 import net.minecraft.network.Packet
 import net.ccbluex.liquidbounce.utils.client.ServerUtils.remoteIp
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
     private val debug by boolean("Debug", true)
     private val reduceSpam by boolean("ReduceSpam", true)
-    private val spamDelaySeconds by float("SpamDelaySeconds", 8.0f, 1.0f..30.0f)
+    private val spamDelaySeconds by float("SpamDelaySeconds", 8.0f, 1.0f..30.0f) { reduceSpam }
 
     private val detectVelocityModification by boolean("DetectVelocityModification", true)
     private val detectTeleportPatterns by boolean("DetectTeleportPatterns", true)
     private val detectMovementFlags by boolean("DetectMovementFlags", true)
     private val usePacketIDs by boolean("UsePacketIDs", true)
     private val detectAdvancedAnticheats by boolean("DetectAdvancedAnticheats", true)
+
+    // Enhanced detection options
+    private val detectACCPatterns by boolean("DetectACC", true)
+    private val detectVulcanPatterns by boolean("DetectVulcan", true)
+    private val detectMatrixPatterns by boolean("DetectMatrix", true)
+    private val detectKarhuPatterns by boolean("DetectKarhu", true)
+    private val detectSpartanPatterns by boolean("DetectSpartan", true)
+    private val detectNegativePatterns by boolean("DetectNegative", true)
+    private val detectThemisPatterns by boolean("DetectThemis", true)
+    private val detectVerusPatterns by boolean("DetectVerus", true)
+
+    private val enableAdaptiveSpamControl by boolean("AdaptiveSpamControl", true) { reduceSpam }
+    private val maxNotificationsPerMinute by int("MaxNotificationsPerMinute", 10, 1..50) { enableAdaptiveSpamControl && reduceSpam }
+    private val quietMode by boolean("QuietMode", false)
 
     // Packet ID constants for better compatibility
     private object PacketIDs {
@@ -74,7 +89,19 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
     private val sparkyPatterns = mutableMapOf<String, Int>()
     private val themisPatterns = mutableMapOf<String, Int>()
     private val negativityPatterns = mutableMapOf<String, Int>()
+
+    // Additional anticheat patterns
+    private val accPatterns = mutableMapOf<String, Int>()
+    private val matrixPatterns = mutableMapOf<String, Int>()
+    private val karhuPatterns = mutableMapOf<String, Int>()
+    private val spartanPatterns = mutableMapOf<String, Int>()
+    private val verusPatterns = mutableMapOf<String, Int>()
+
     private var consecutiveZeroVelocities = 0
+
+    // Enhanced notification tracking
+    private var notificationCount = 0
+    private var lastNotificationMinute = System.currentTimeMillis()
 
     // Packet ID tracking for enhanced detection
     private val packetIdSequence = mutableListOf<Int>()
@@ -102,6 +129,10 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
                         if (transactionTimings.size > 10) transactionTimings.removeAt(0)
 
                         handleTransaction(event.packet.actionNumber.toInt())
+
+                        // Enhanced anticheat detection for transactions
+                        detectACCPatterns(event.packet)
+
                         analyzeTransactionTiming()
                         analyzeAdvancedPatterns(packetId, currentTime)
                     }
@@ -114,6 +145,10 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
                 PacketIDs.S08_PLAYER_POS_LOOK -> {
                     if (detectTeleportPatterns && check && event.packet is S08PacketPlayerPosLook) {
                         handleTeleportPattern(event.packet)
+
+                        // Enhanced anticheat detection for teleports
+                        detectVulcanPatterns(event.packet)
+
                         analyzeAdvancedPatterns(packetId, System.currentTimeMillis())
                     }
                 }
@@ -121,12 +156,25 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
                     if (detectVelocityModification && check && event.packet is S12PacketEntityVelocity
                         && event.packet.entityID == mc.thePlayer?.entityId) {
                         handleVelocityPattern(event.packet)
+
+                        // Enhanced anticheat detection
+                        detectACCPatterns(event.packet)
+                        detectVulcanPatterns(event.packet)
+                        detectMatrixPatterns(event.packet)
+                        detectKarhuPatterns(event.packet)
+                        detectSpartanPatterns(event.packet)
+                        detectVerusPatterns(event.packet)
+
                         analyzeAdvancedPatterns(packetId, System.currentTimeMillis())
                     }
                 }
                 PacketIDs.S27_EXPLOSION -> {
                     if (check && event.packet is S27PacketExplosion) {
                         handleExplosionPattern(event.packet)
+
+                        // Enhanced anticheat detection for explosions
+                        detectMatrixPatterns(event.packet)
+
                         analyzeAdvancedPatterns(packetId, System.currentTimeMillis())
                     }
                 }
@@ -514,6 +562,202 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
         }
     }
 
+    // Enhanced ACC detection patterns
+    private fun detectACCPatterns(packet: Packet<*>) {
+        if (!detectACCPatterns) return
+
+        when (packet) {
+            is S12PacketEntityVelocity -> {
+                // ACC has specific velocity modification patterns
+                val velocity = Triple(packet.motionX, packet.motionY, packet.motionZ)
+
+                // ACC often reduces velocity by specific percentages
+                if (abs(velocity.first) in 1000..3000 && abs(velocity.third) in 1000..3000) {
+                    incrementPattern(accPatterns, "acc_reduced_velocity")
+                    if (getPattern(accPatterns, "acc_reduced_velocity") > 2) {
+                        notifyDetection("ACC")
+                    }
+                }
+
+                // ACC velocity timing patterns
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastVelocityTime in 45..55) {
+                    incrementPattern(accPatterns, "acc_timing_pattern")
+                    if (getPattern(accPatterns, "acc_timing_pattern") > 3) {
+                        notifyDetection("ACC")
+                    }
+                }
+            }
+
+            is S32PacketConfirmTransaction -> {
+                // ACC transaction patterns
+                if (packet.actionNumber.toInt() in 1..100) {
+                    incrementPattern(accPatterns, "acc_transaction_range")
+                    if (getPattern(accPatterns, "acc_transaction_range") > 5) {
+                        notifyDetection("ACC")
+                    }
+                }
+            }
+        }
+    }
+
+    // Enhanced Vulcan detection patterns
+    private fun detectVulcanPatterns(packet: Packet<*>) {
+        if (!detectVulcanPatterns) return
+
+        when (packet) {
+            is S12PacketEntityVelocity -> {
+                val velocity = Triple(packet.motionX, packet.motionY, packet.motionZ)
+
+                // Vulcan specific velocity patterns
+                if (velocity.first == 0 && velocity.third == 0 && velocity.second in 2000..4000) {
+                    incrementPattern(vulcanPatterns, "vulcan_vertical_only")
+                    if (getPattern(vulcanPatterns, "vulcan_vertical_only") > 2) {
+                        notifyDetection("Vulcan")
+                    }
+                }
+
+                // Vulcan velocity reduction patterns
+                if (abs(velocity.first) < 1000 && abs(velocity.third) < 1000 && velocity.second > 0) {
+                    incrementPattern(vulcanPatterns, "vulcan_reduced_horizontal")
+                    if (getPattern(vulcanPatterns, "vulcan_reduced_horizontal") > 3) {
+                        notifyDetection("Vulcan")
+                    }
+                }
+            }
+
+            is S08PacketPlayerPosLook -> {
+                // Vulcan teleport patterns
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastPosLookTime < 100) {
+                    incrementPattern(vulcanPatterns, "vulcan_rapid_teleport")
+                    if (getPattern(vulcanPatterns, "vulcan_rapid_teleport") > 1) {
+                        notifyDetection("Vulcan")
+                    }
+                }
+                lastPosLookTime = currentTime
+            }
+        }
+    }
+
+    // Enhanced Matrix detection patterns
+    private fun detectMatrixPatterns(packet: Packet<*>) {
+        if (!detectMatrixPatterns) return
+
+        when (packet) {
+            is S12PacketEntityVelocity -> {
+                val velocity = Triple(packet.motionX, packet.motionY, packet.motionZ)
+
+                // Matrix velocity patterns
+                if (velocity.first % 100 == 0 && velocity.third % 100 == 0) {
+                    incrementPattern(matrixPatterns, "matrix_rounded_velocity")
+                    if (getPattern(matrixPatterns, "matrix_rounded_velocity") > 2) {
+                        notifyDetection("Matrix")
+                    }
+                }
+
+                // Matrix specific velocity ranges
+                if (abs(velocity.first) in 500..1500 && abs(velocity.third) in 500..1500) {
+                    incrementPattern(matrixPatterns, "matrix_velocity_range")
+                    if (getPattern(matrixPatterns, "matrix_velocity_range") > 3) {
+                        notifyDetection("Matrix")
+                    }
+                }
+            }
+
+            is S27PacketExplosion -> {
+                // Matrix explosion handling
+                if (packet.field_149152_f == 0.0f && packet.field_149159_h == 0.0f) {
+                    incrementPattern(matrixPatterns, "matrix_zero_explosion")
+                    if (getPattern(matrixPatterns, "matrix_zero_explosion") > 1) {
+                        notifyDetection("Matrix")
+                    }
+                }
+            }
+        }
+    }
+
+    // Enhanced Karhu detection patterns
+    private fun detectKarhuPatterns(packet: Packet<*>) {
+        if (!detectKarhuPatterns) return
+
+        when (packet) {
+            is S12PacketEntityVelocity -> {
+                val velocity = Triple(packet.motionX, packet.motionY, packet.motionZ)
+
+                // Karhu velocity patterns
+                if (velocity.first != 0 && velocity.third != 0 && velocity.second == 0) {
+                    incrementPattern(karhuPatterns, "karhu_horizontal_only")
+                    if (getPattern(karhuPatterns, "karhu_horizontal_only") > 2) {
+                        notifyDetection("Karhu")
+                    }
+                }
+
+                // Karhu specific velocity modifications
+                if (abs(velocity.first) in 2000..6000 && abs(velocity.third) in 2000..6000) {
+                    incrementPattern(karhuPatterns, "karhu_velocity_range")
+                    if (getPattern(karhuPatterns, "karhu_velocity_range") > 3) {
+                        notifyDetection("Karhu")
+                    }
+                }
+            }
+        }
+    }
+
+    // Enhanced Spartan detection patterns
+    private fun detectSpartanPatterns(packet: Packet<*>) {
+        if (!detectSpartanPatterns) return
+
+        when (packet) {
+            is S12PacketEntityVelocity -> {
+                val velocity = Triple(packet.motionX, packet.motionY, packet.motionZ)
+
+                // Spartan velocity patterns
+                if (velocity.first == velocity.third && velocity.first != 0) {
+                    incrementPattern(spartanPatterns, "spartan_equal_horizontal")
+                    if (getPattern(spartanPatterns, "spartan_equal_horizontal") > 2) {
+                        notifyDetection("Spartan")
+                    }
+                }
+
+                // Spartan specific velocity values
+                if (abs(velocity.first) == 4000 && abs(velocity.third) == 4000) {
+                    incrementPattern(spartanPatterns, "spartan_4000_velocity")
+                    if (getPattern(spartanPatterns, "spartan_4000_velocity") > 1) {
+                        notifyDetection("Spartan")
+                    }
+                }
+            }
+        }
+    }
+
+    // Enhanced Verus detection patterns
+    private fun detectVerusPatterns(packet: Packet<*>) {
+        if (!detectVerusPatterns) return
+
+        when (packet) {
+            is S12PacketEntityVelocity -> {
+                val velocity = Triple(packet.motionX, packet.motionY, packet.motionZ)
+
+                // Verus velocity patterns
+                if (velocity.first == 0 && velocity.third == 0 && velocity.second > 5000) {
+                    incrementPattern(verusPatterns, "verus_high_vertical")
+                    if (getPattern(verusPatterns, "verus_high_vertical") > 1) {
+                        notifyDetection("Verus")
+                    }
+                }
+
+                // Verus specific velocity modifications
+                if (abs(velocity.first) < 500 && abs(velocity.third) < 500 && velocity.second > 0) {
+                    incrementPattern(verusPatterns, "verus_low_horizontal")
+                    if (getPattern(verusPatterns, "verus_low_horizontal") > 3) {
+                        notifyDetection("Verus")
+                    }
+                }
+            }
+        }
+    }
+
     private fun analyzeTransactionTiming() {
         if (transactionTimings.size >= 5) {
             val intervals = transactionTimings.windowed(2) { it[1] - it[0] }
@@ -684,6 +928,11 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
     }
 
     private fun notifyDetection(anticheat: String) {
+        if (quietMode) {
+            debugMessage("Quiet mode: Detection suppressed for '$anticheat'")
+            return
+        }
+
         if (reduceSpam) {
             val currentTime = System.currentTimeMillis()
             val lastNotification = notificationCooldowns[anticheat] ?: 0L
@@ -692,6 +941,23 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
             if (currentTime - lastNotification < cooldownPeriod) {
                 debugMessage("Notification for '$anticheat' suppressed due to cooldown (${spamDelaySeconds}s)")
                 return
+            }
+
+            // Enhanced adaptive spam control
+            if (enableAdaptiveSpamControl) {
+                // Reset notification count every minute
+                if (currentTime - lastNotificationMinute > 60000) {
+                    notificationCount = 0
+                    lastNotificationMinute = currentTime
+                }
+
+                // Check if we've exceeded the per-minute limit
+                if (notificationCount >= maxNotificationsPerMinute) {
+                    debugMessage("Adaptive spam control: Max notifications per minute reached ($maxNotificationsPerMinute)")
+                    return
+                }
+
+                notificationCount++
             }
 
             notificationCooldowns[anticheat] = currentTime
@@ -730,8 +996,50 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
         
         vulcanPatterns.forEach { (pattern, count) ->
             when (pattern) {
-                "vulcan_micro_teleport", "vulcan_all_rounded" -> {
+                "vulcan_micro_teleport", "vulcan_all_rounded", "vulcan_vertical_only",
+                "vulcan_reduced_horizontal", "vulcan_rapid_teleport" -> {
                     if (count > 1) notifyDetection("Vulcan")
+                }
+            }
+        }
+
+        // Enhanced anticheat pattern checking
+        accPatterns.forEach { (pattern, count) ->
+            when (pattern) {
+                "acc_reduced_velocity", "acc_timing_pattern", "acc_transaction_range" -> {
+                    if (count > 2) notifyDetection("ACC")
+                }
+            }
+        }
+
+        matrixPatterns.forEach { (pattern, count) ->
+            when (pattern) {
+                "matrix_rounded_velocity", "matrix_velocity_range", "matrix_zero_explosion" -> {
+                    if (count > 1) notifyDetection("Matrix")
+                }
+            }
+        }
+
+        karhuPatterns.forEach { (pattern, count) ->
+            when (pattern) {
+                "karhu_horizontal_only", "karhu_velocity_range" -> {
+                    if (count > 2) notifyDetection("Karhu")
+                }
+            }
+        }
+
+        spartanPatterns.forEach { (pattern, count) ->
+            when (pattern) {
+                "spartan_equal_horizontal", "spartan_4000_velocity" -> {
+                    if (count > 1) notifyDetection("Spartan")
+                }
+            }
+        }
+
+        verusPatterns.forEach { (pattern, count) ->
+            when (pattern) {
+                "verus_high_vertical", "verus_low_horizontal" -> {
+                    if (count > 1) notifyDetection("Verus")
                 }
             }
         }
@@ -817,13 +1125,173 @@ object AnticheatDetector : Module("AnticheatDetector", Category.MISC) {
         ticksPassed = 0
         check = false
         consecutiveZeroVelocities = 0
-        
+
+        // Clear all pattern maps
+        grimPatterns.clear()
+        intavePatterns.clear()
+        vulcanPatterns.clear()
+        kauraPatterns.clear()
+        sparkyPatterns.clear()
+        themisPatterns.clear()
+        negativityPatterns.clear()
+        accPatterns.clear()
+        matrixPatterns.clear()
+        karhuPatterns.clear()
+        spartanPatterns.clear()
+        verusPatterns.clear()
+
+        // Clear tracking data
+        velocityChecks.clear()
+        positionHistory.clear()
+        flagPatterns.clear()
+        velocityTimings.clear()
+        transactionTimings.clear()
+        packetIdSequence.clear()
+        packetTimings.clear()
+
         if (reduceSpam) {
             val currentTime = System.currentTimeMillis()
             val cleanupThreshold = (spamDelaySeconds * 4 * 1000).toLong() // Keep entries for 4x the spam delay
             notificationCooldowns.entries.removeIf { (_, time) ->
                 currentTime - time > cleanupThreshold
             }
+        }
+
+        debugMessage("AnticheatDetector reset - all patterns and tracking data cleared")
+    }
+
+    // Enhanced utility methods for better anticheat detection
+    private fun analyzePacketFrequency() {
+        val currentTime = System.currentTimeMillis()
+        packetTimings.forEach { (packetId, timings) ->
+            if (timings.size >= 5) {
+                val intervals = timings.windowed(2) { it[1] - it[0] }
+                val avgInterval = intervals.average()
+                val variance = intervals.map { (it - avgInterval) * (it - avgInterval) }.average()
+
+                // Detect suspiciously consistent timing (possible anticheat)
+                if (variance < 1.0 && avgInterval in 45.0..55.0) {
+                    when (packetId) {
+                        PacketIDs.S32_CONFIRM_TRANSACTION -> {
+                            incrementPattern(grimPatterns, "grim_consistent_transaction_timing")
+                            if (getPattern(grimPatterns, "grim_consistent_transaction_timing") > 3) {
+                                notifyDetection("Grim AC")
+                            }
+                        }
+                        PacketIDs.S12_ENTITY_VELOCITY -> {
+                            incrementPattern(vulcanPatterns, "vulcan_consistent_velocity_timing")
+                            if (getPattern(vulcanPatterns, "vulcan_consistent_velocity_timing") > 2) {
+                                notifyDetection("Vulcan")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Clean old timings (keep only last 10)
+            if (timings.size > 10) {
+                timings.removeAt(0)
+            }
+        }
+    }
+
+    private fun detectAdvancedPatterns() {
+        // Cross-pattern analysis for more accurate detection
+        val grimScore = grimPatterns.values.sum()
+        val intaveScore = intavePatterns.values.sum()
+        val vulcanScore = vulcanPatterns.values.sum()
+        val accScore = accPatterns.values.sum()
+        val matrixScore = matrixPatterns.values.sum()
+
+        debugMessage("Pattern scores - Grim: $grimScore, Intave: $intaveScore, Vulcan: $vulcanScore, ACC: $accScore, Matrix: $matrixScore")
+
+        // Multi-pattern detection for higher confidence
+        when {
+            grimScore >= 5 && vulcanScore >= 3 -> notifyDetection("Grim AC + Vulcan Hybrid")
+            intaveScore >= 4 && accScore >= 3 -> notifyDetection("Intave + ACC Hybrid")
+            matrixScore >= 3 && vulcanScore >= 2 -> notifyDetection("Matrix + Vulcan Hybrid")
+            grimScore >= 8 -> notifyDetection("Grim AC (High Confidence)")
+            intaveScore >= 6 -> notifyDetection("Intave (High Confidence)")
+            vulcanScore >= 5 -> notifyDetection("Vulcan (High Confidence)")
+            accScore >= 5 -> notifyDetection("ACC (High Confidence)")
+            matrixScore >= 4 -> notifyDetection("Matrix (High Confidence)")
+        }
+    }
+
+    private fun analyzeVelocitySequence() {
+        if (velocityChecks.size >= 5) {
+            val horizontalVelocities = velocityChecks.map { sqrt((it.first * it.first + it.third * it.third).toDouble()) }
+            val verticalVelocities = velocityChecks.map { it.second.toDouble() }
+
+            // Detect patterns in velocity sequences
+            val horizontalPattern = horizontalVelocities.windowed(3) { window ->
+                window[0] > window[1] && window[1] > window[2] // Decreasing pattern
+            }.count { it }
+
+            val verticalPattern = verticalVelocities.windowed(3) { window ->
+                window.all { it == window[0] } // Consistent pattern
+            }.count { it }
+
+            if (horizontalPattern >= 2) {
+                incrementPattern(grimPatterns, "grim_decreasing_velocity_sequence")
+                if (getPattern(grimPatterns, "grim_decreasing_velocity_sequence") > 1) {
+                    notifyDetection("Grim AC")
+                }
+            }
+
+            if (verticalPattern >= 2) {
+                incrementPattern(vulcanPatterns, "vulcan_consistent_vertical_sequence")
+                if (getPattern(vulcanPatterns, "vulcan_consistent_vertical_sequence") > 1) {
+                    notifyDetection("Vulcan")
+                }
+            }
+        }
+    }
+
+    private fun detectServerSpecificPatterns() {
+        val serverIP = mc.currentServerData?.serverIP?.lowercase() ?: return
+
+        // Server-specific anticheat detection
+        when {
+            serverIP.contains("hypixel") -> {
+                // Hypixel Watchdog patterns
+                if (velocityChecks.any { it.first == 0 && it.third == 0 && it.second > 0 }) {
+                    incrementPattern(grimPatterns, "hypixel_watchdog_vertical_only")
+                    if (getPattern(grimPatterns, "hypixel_watchdog_vertical_only") > 2) {
+                        notifyDetection("Hypixel Watchdog")
+                    }
+                }
+            }
+            serverIP.contains("minemen") -> {
+                // Minemen anticheat patterns
+                if (actionNumbers.any { it in -1000..-500 }) {
+                    incrementPattern(accPatterns, "minemen_acc_pattern")
+                    if (getPattern(accPatterns, "minemen_acc_pattern") > 2) {
+                        notifyDetection("Minemen ACC")
+                    }
+                }
+            }
+            serverIP.contains("pvpland") || serverIP.contains("pvp.land") -> {
+                // PvPLand Vulcan patterns
+                if (velocityChecks.any { abs(it.first) < 1000 && abs(it.third) < 1000 }) {
+                    incrementPattern(vulcanPatterns, "pvpland_vulcan_pattern")
+                    if (getPattern(vulcanPatterns, "pvpland_vulcan_pattern") > 2) {
+                        notifyDetection("PvPLand Vulcan")
+                    }
+                }
+            }
+        }
+    }
+
+    // Debug command for manual testing
+    fun printDetectionReport() {
+        if (debug) {
+            debugMessage("=== AnticheatDetector Report ===")
+            debugMessage("Detected Anticheat: ${detectedAnticheat ?: "None"}")
+            debugMessage("Pattern counts - Grim: ${grimPatterns.values.sum()}, Intave: ${intavePatterns.values.sum()}")
+            debugMessage("Vulcan: ${vulcanPatterns.values.sum()}, ACC: ${accPatterns.values.sum()}")
+            debugMessage("Matrix: ${matrixPatterns.values.sum()}, Karhu: ${karhuPatterns.values.sum()}")
+            debugMessage("Packets analyzed - Velocity: ${velocityChecks.size}, Transactions: ${transactionTimings.size}")
         }
     }
 

@@ -22,13 +22,63 @@ object Spammer : Module("Spammer", Category.MISC, subjective = true) {
 
     private val custom by boolean("Custom", false)
 
-    val onUpdate = loopSequence {
-        mc.thePlayer?.sendChatMessage(
-            if (custom) replace(message)
-            else message + " >" + randomString(nextInt(5, 11)) + "<"
-        )
+    // Enhanced spam options
+    private val randomizeDelay by boolean("RandomizeDelay", true)
+    private val delayVariation by int("DelayVariation", 200, 0..1000) { randomizeDelay }
+    private val enableSpamProtection by boolean("SpamProtection", true)
+    private val maxMessagesPerMinute by int("MaxMessagesPerMinute", 30, 1..100) { enableSpamProtection }
 
-        delay(delay.random().toLong())
+    // Message tracking for spam protection
+    private var messageCount = 0
+    private var lastMinuteReset = System.currentTimeMillis()
+
+    val onUpdate = loopSequence {
+        val player = mc.thePlayer
+        val world = mc.theWorld
+
+        // Enhanced null safety checks
+        if (player == null || world == null || !player.sendQueue.networkManager.isChannelOpen) {
+            delay(1000) // Wait longer if not connected
+            return@loopSequence
+        }
+
+        // Spam protection check
+        if (enableSpamProtection) {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastMinuteReset > 60000) {
+                messageCount = 0
+                lastMinuteReset = currentTime
+            }
+
+            if (messageCount >= maxMessagesPerMinute) {
+                delay(5000) // Wait 5 seconds if spam limit reached
+                return@loopSequence
+            }
+        }
+
+        try {
+            val finalMessage = if (custom) replace(message) else message + " >" + randomString(nextInt(5, 11)) + "<"
+            player.sendChatMessage(finalMessage)
+
+            if (enableSpamProtection) {
+                messageCount++
+            }
+        } catch (e: Exception) {
+            // Handle any chat sending errors gracefully
+            delay(2000)
+            return@loopSequence
+        }
+
+        // Enhanced delay calculation
+        val baseDelay = delay.random().toLong()
+        val finalDelay = if (randomizeDelay) {
+            val variation = nextInt(-delayVariation, delayVariation + 1)
+            (baseDelay + variation).coerceAtLeast(100) // Minimum 100ms delay
+        } else {
+            baseDelay
+        }
+
+        delay(finalDelay)
     }
 
     private fun replace(text: String): String {
