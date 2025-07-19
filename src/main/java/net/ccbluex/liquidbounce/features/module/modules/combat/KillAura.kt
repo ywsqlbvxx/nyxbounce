@@ -82,6 +82,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     private val simulateCooldown by boolean("SimulateCooldown", false)
     private val simulateDoubleClicking by boolean("SimulateDoubleClicking", false) { !simulateCooldown }
+    private val pauseOnRightClick by boolean("PauseOnRightClick", false)
     
     // Remove Reduce Damage
     private val removeReduceDmgEnabled by boolean("RemoveReduceDmg", false)
@@ -304,9 +305,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val aimPointBoxSize by float("AimPointBoxSize", 0.1f, 0f..0.2F) { renderAimPointBox }.subjective()
 
     // Circle options
-    private val circleStartColor by color("CircleStartColor", Color.BLUE) { mark == "Circle" }.subjective()
-    private val circleEndColor by color("CircleEndColor", Color.CYAN.withAlpha(0)) { mark == "Circle" }.subjective()
-    private val fillInnerCircle by boolean("FillInnerCircle", false) { mark == "Circle" }.subjective()
+    private val circleStartColor by color("CircleStartColor", Color(144, 238, 144)) { mark == "Circle" }.subjective() 
+    private val circleEndColor by color("CircleEndColor", Color(173, 216, 230).withAlpha(120)) { mark == "Circle" }.subjective() 
+    private val fillInnerCircle by boolean("FillInnerCircle", true) { mark == "Circle" }.subjective() 
     private val withHeight by boolean("WithHeight", true) { mark == "Circle" }.subjective()
     private val animateHeight by boolean("AnimateHeight", false) { withHeight }.subjective()
     private val heightRange by floatRange("HeightRange", 0.0f..0.4f, -2f..2f) { withHeight }.subjective()
@@ -328,7 +329,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     var target: EntityLivingBase? = null
     private var hittable = false
     private val prevTargetEntities = mutableListOf<Int>()
-
+    
+    // Pause on RightClick
+    private var pausedByRightClick = false
+    
     // Attack delay
     private val attackTimer = MSTimer()
     private var attackDelay = 0
@@ -393,6 +397,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     }
 
     fun update() {
+        if (pauseOnRightClick && pausedByRightClick) {
+            return
+        }
+        
         if (cancelRun || (noInventoryAttack && (mc.currentScreen is GuiContainer || System.currentTimeMillis() - containerOpen < noInventoryDelay))) return
 
         // Update target
@@ -419,6 +427,28 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Tick event
      */
     val onTick = handler<GameTickEvent>(priority = 2) {
+        if (pauseOnRightClick) {
+            if (mc.gameSettings.keyBindUseItem.isKeyDown) {
+                if (!pausedByRightClick) {
+                    pausedByRightClick = true
+                    stopBlocking(true)
+                }
+            } else if (pausedByRightClick) {
+                pausedByRightClick = false
+            }
+        }
+        
+        if (pausedByRightClick) {
+            if (target != null) {
+                clicks = 0
+
+            if (blockStatus) {
+                stopBlocking(true)
+                }
+            }
+            return@handler
+        }
+        
         val player = mc.thePlayer ?: return@handler
 
         if (blockStatus && player.heldItem?.item !is ItemSword) {
@@ -553,6 +583,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Render event
      */
     val onRender3D = handler<Render3DEvent> {
+        
         handleFailedSwings()
 
         drawAimPointBox()
