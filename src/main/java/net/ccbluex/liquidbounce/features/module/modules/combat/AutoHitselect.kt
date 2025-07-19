@@ -6,27 +6,28 @@
 package net.ccbluex.liquidbounce.features.module.modules.combat
 
 import net.ccbluex.liquidbounce.event.AttackEvent
-import net.ccbluex.liquidbounce.event.EventTarget
-import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.event.MotionEvent
+import net.ccbluex.liquidbounce.event.UpdateEvent
+import net.ccbluex.liquidbounce.event.handler
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
-import net.ccbluex.liquidbounce.utils.EntityUtils
-import net.ccbluex.liquidbounce.utils.timer.MSTimer
+import net.ccbluex.liquidbounce.utils.MinecraftInstance.mc
+import net.ccbluex.liquidbounce.utils.timing.TimerUtils
 import net.ccbluex.liquidbounce.utils.extensions.getDistanceToEntityBox
+import net.ccbluex.liquidbounce.utils.client.chat
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.util.MathHelper
 
 object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
 
-    private val maxWaitTime by float("MaxWaitTime", 500f, 100f..1000f)
-    private val range by float("Range", 8f, 1f..8f)
-    private val maxAngle by float("MaxAngle", 120f, 30f..180f)
-    private val resetTime by float("ResetTime", 250f, 100f..500f)
-    private val clickDelay by float("ClickDelay", 100f, 50f..200f)
-    private val distance by float("Distance", 3f, 1f..6f)
-    private val wTap by boolean("WTap", true)
-    private val debug by boolean("Debug", false)
+    var maxWaitTime = 500L
+    var range = 8f
+    var maxAngle = 120f
+    var resetTime = 250L
+    var clickDelay = 100L
+    var distance = 3f
+    var wTap = true
+    var debug = false
 
     private var blockClicking = false
     private var isWTapping = false
@@ -35,9 +36,9 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
     private var waitTimerReset = false
     private var target: EntityLivingBase? = null
 
-    private val resetTimer = MSTimer()
-    private val clickTimer = MSTimer()
-    private val maxWaitTimer = MSTimer()
+    private val resetTimer = TimerUtils()
+    private val clickTimer = TimerUtils()
+    private val maxWaitTimer = TimerUtils()
 
     override fun onDisable() {
         reset()
@@ -51,7 +52,10 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
     }
 
     val onUpdate = handler<UpdateEvent> {
-        val target = this.target ?: EntityUtils.getClosestEntityInRange(range) ?: run {
+        if (!handleEvents()) return@handler
+
+        val thePlayer = mc.thePlayer ?: return@handler
+        val target = target ?: run {
             reset()
             return@handler
         }
@@ -118,6 +122,8 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
     }
 
     val onMotion = handler<MotionEvent> {
+        if (!handleEvents()) return@handler
+        
         if (isWTapping && wTap) {
             mc.gameSettings.keyBindForward.pressed = false
             isWTapping = false
