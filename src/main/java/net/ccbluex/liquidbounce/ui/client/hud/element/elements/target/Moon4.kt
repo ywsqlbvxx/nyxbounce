@@ -8,7 +8,6 @@ import net.ccbluex.liquidbounce.ui.client.hud.element.Border
 import net.ccbluex.liquidbounce.ui.font.Fonts
 import net.ccbluex.liquidbounce.utils.render.RenderUtils
 import net.ccbluex.liquidbounce.utils.render.ColorUtils
-import net.ccbluex.liquidbounce.utils.render.Stencil
 import net.minecraft.client.renderer.GlStateManager.*
 import net.minecraft.entity.EntityLivingBase
 import org.lwjgl.opengl.GL11.*
@@ -41,8 +40,8 @@ class Moon4(
         val healthInt = entity.health.toInt()
         val percentText = "§l${healthInt}HP"
 
-        val nameLength = (Fonts.fontSF40.getStringWidth(name)).coerceAtLeast(
-            Fonts.fontSF35.getStringWidth(percentText)
+        val nameLength = (Fonts.fontRegular40.getStringWidth(name)).coerceAtLeast(
+            Fonts.fontRegular35.getStringWidth(percentText)
         ).toFloat() + 20F
 
         val healthPercent = (entity.health / entity.maxHealth).coerceIn(0F, 1F)
@@ -55,23 +54,21 @@ class Moon4(
         RenderUtils.drawRoundedRect(-2F, -2F, 3F + nameLength + 36F, 2F + 36F, bgColor.rgb, 3f)
         RenderUtils.drawRoundedRect(-1F, -1F, 2F + nameLength + 36F, 1F + 36F, BLACK_BG.rgb, 3f)
 
-        // Head with Stencil
+        // Head with Clipping
         mc.netHandler.getPlayerInfo(entity.uniqueID)?.let { playerInfo ->
-            Stencil.write(false)
-            glDisable(GL_TEXTURE_2D)
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-            RenderUtils.drawRoundedRect(1f, 0.5f, 1f + 35f, 0.5f + 35f, WHITE_TEXT.rgb, 7F)
-            glDisable(GL_BLEND)
-            glEnable(GL_TEXTURE_2D)
-            Stencil.erase(true)
-            RenderUtils.drawHead(playerInfo.locationSkin, 1, 0, 35, 35, 1f)
-            Stencil.dispose()
+            RenderUtils.withClipping(
+                {
+                    RenderUtils.drawRoundedRect(1f, 0.5f, 1f + 35f, 0.5f + 35f, WHITE_TEXT.rgb, 7F)
+                },
+                {
+                    RenderUtils.drawHead(playerInfo.locationSkin, 1f, 0f, 35, 35, 1)
+                }
+            )
         }
 
         // Text
-        Fonts.fontSF40.drawString(name, 2F + 36F, 2F, -1)
-        Fonts.fontSF35.drawString(percentText, 38F, 15F, WHITE_TEXT.rgb)
+        Fonts.fontRegular40.drawString(name, 2F + 36F, 2F, -1)
+        Fonts.fontRegular35.drawString(percentText, 38F, 15F, WHITE_TEXT.rgb)
 
         // Health Bar
         RenderUtils.drawRoundedRect(37F, 23F, 37F + nameLength, 33f, Color(0, 0, 0, 100).rgb, 3f)
@@ -82,7 +79,7 @@ class Moon4(
     }
 
     override fun getBorder(entity: EntityLivingBase, easingHealth: Float, maxHealth: Float): Border {
-        val nameLength = (40f + (entity.name?.let { Fonts.fontSF40.getStringWidth(it) } ?: 0)).coerceAtLeast(118F)
+        val nameLength = (40f + (entity.name?.let { Fonts.fontRegular40.getStringWidth(it) } ?: 0)).coerceAtLeast(118F)
         return Border(0F, 0F, nameLength + 40F, 40F)
     }
 }

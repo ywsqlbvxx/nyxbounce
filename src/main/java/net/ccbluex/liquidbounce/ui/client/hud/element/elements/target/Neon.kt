@@ -47,11 +47,11 @@ class Neon(
 
         // Head
         mc.netHandler.getPlayerInfo(entity.uniqueID)?.let {
-            RenderUtils.drawHead(it.locationSkin, 8, 8, 44, 44, 1f)
+            RenderUtils.drawHead(it.locationSkin, 8f, 8f, 44, 44, 1)
         }
 
         // Name
-        Fonts.font40.drawString(entity.name, 60F, 12F, Color.WHITE.rgb)
+        Fonts.fontRegular40.drawString(entity.name, 60F, 12F, Color.WHITE.rgb)
 
         // Health bar
         val healthPercent = this.easingHealth / entity.maxHealth
@@ -73,9 +73,9 @@ class Neon(
 
         // Health text
         val healthText = "${decimalFormat.format(this.easingHealth)} / ${entity.maxHealth}"
-        Fonts.font35.drawString(
+        Fonts.fontRegular35.drawString(
             healthText,
-            width - Fonts.font35.getStringWidth(healthText) - 15F,
+            width - Fonts.fontRegular35.getStringWidth(healthText) - 15F,
             barY + 2F,
             neonColor.brighter().rgb
         )
@@ -83,7 +83,7 @@ class Neon(
         // Distance
         val distance = mc.thePlayer.getDistanceToEntity(entity)
         val distanceText = "${decimalFormat.format(distance)}m"
-        Fonts.font35.drawString(
+        Fonts.fontRegular35.drawString(
             distanceText,
             barX,
             barY + barHeight + 5F,
