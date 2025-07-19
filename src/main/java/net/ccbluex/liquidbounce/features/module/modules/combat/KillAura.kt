@@ -617,17 +617,40 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                 "none" -> return@handler
                 "platform" -> drawPlatform(target!!, hittableColor)
                 "box" -> drawEntityBox(target!!, hittableColor, boxOutline)
-                "circle" -> drawCircle(
-                    target!!,
-                    duration * 1000F,
-                    heightRange.takeIf { animateHeight } ?: heightRange.endInclusive..heightRange.endInclusive,
-                    extraWidth,
-                    fillInnerCircle,
-                    withHeight,
-                    circleYRange.takeIf { animateCircleY },
-                    circleStartColor.rgb,
-                    circleEndColor.rgb
-                )
+                "circle" -> {
+                    val time = System.currentTimeMillis() / 1000.0
+                    val hueShift = (sin(time * 0.5) * 0.1 + 0.1).toFloat()
+                    
+                    val startHSB = Color.RGBtoHSB(circleStartColor.red, circleStartColor.green, circleStartColor.blue, null)
+                    val endHSB = Color.RGBtoHSB(circleEndColor.red, circleEndColor.green, circleEndColor.blue, null)
+                    
+                    val animatedStartColor = Color.getHSBColor(startHSB[0] + hueShift, startHSB[1], startHSB[2])
+                    val animatedEndColor = Color.getHSBColor(endHSB[0] + hueShift, endHSB[1], endHSB[2])
+
+                    val heightOffset = if (animateHeight) {
+                        val heightProgress = (sin(time * Math.PI / duration) + 1) / 2
+                        heightRange.first + (heightRange.last - heightRange.first) * heightProgress
+                    } else {
+                        heightRange.first
+                    }
+
+                    val circleY = if (animateCircleY) {
+                        val progress = (sin(time * Math.PI / duration) + 1) / 2
+                        circleYRange.first + (circleYRange.last - circleYRange.first) * progress
+                    } else 0F
+
+                    drawCircle(
+                        target!!,
+                        duration * 1000F,
+                        heightRange.first..heightOffset,
+                        extraWidth,
+                        fillInnerCircle,
+                        withHeight,
+                        if (animateCircleY) circleYRange else null,
+                        animatedStartColor.rgb,
+                        animatedEndColor.rgb
+                    )
+                }
             }
         }
     }
