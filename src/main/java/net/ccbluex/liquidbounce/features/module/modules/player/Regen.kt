@@ -1,4 +1,4 @@
-     /*
+/*
  * RinBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
  * https://github.com/rattermc/rinbounce69
@@ -71,7 +71,7 @@ object Regen : Module("Regen", Category.PLAYER) {
         "oldgrim" -> {
             repeat(speed) {
                 sendPacket(
-                    C06PacketPlayerPosLook(
+                    C03PacketPlayer.C06PacketPlayerPosLook(
                         thePlayer.posX,
                         thePlayer.posY,
                         thePlayer.posZ,
