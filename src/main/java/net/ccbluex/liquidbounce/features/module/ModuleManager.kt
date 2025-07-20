@@ -218,7 +218,8 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             SnakeGame,
             AutoPlace,
             AutoHitselect,
-            CombatHelper
+            CombatHelper,
+            CaptchaSlover
         )
 
         registerModules(modules = modules)
