@@ -1,54 +1,56 @@
 package net.ccbluex.liquidbounce.features.module.modules.misc
 
-import net.ccbluex.liquidbounce.features.module.Category
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.ccbluex.liquidbounce.features.module.Module
-import net.ccbluex.liquidbounce.event.PacketEvent
-import net.ccbluex.liquidbounce.event.EventState
-import net.ccbluex.liquidbounce.event.handler
-import net.minecraft.network.play.server.S34PacketMaps
-import kotlinx.coroutines.*
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.Base64
+import net.ccbluex.liquidbounce.features.module.Category
+import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
+import net.ccbluex.liquidbounce.utils.io.HttpClient
+import net.ccbluex.liquidbounce.utils.io.post
+import net.minecraft.item.ItemMap
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody
+import org.json.JSONObject
 
-object CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
-	private var hotbarJob: Job? = null
-	private val mode by choices("Mode", arrayOf("3fmc"), "3fmc")
+class CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
+	private var lastMapData: String? = null
 
-	private val ocrApiUrl = "https://60f254355a67.ngrok-free.app/ocr"
-		val match = Regex(""""result"\s*:\s*"(.*?)"""").find(response)
-	private var lastMapData: ByteArray? = null
-
-	val onPacket = handler<PacketEvent> { event ->
-		if (mode != "3fmc") return@handler
-		if (event.eventType != EventState.RECEIVE) return@handler
-		val packet = event.packet
-		if (packet is S34PacketMaps) {
-			val mapData = try {
-				val field = S34PacketMaps::class.java.getDeclaredField("mapDataBytes")
-				field.isAccessible = true
-				field.get(packet) as? ByteArray
-			} catch (e: Exception) {
-				null
+	init {
+		CoroutineScope(Dispatchers.Default).launch {
+			while (true) {
+				withContext(Dispatchers.Main) {
+					solveCaptchaIfNeeded()
+				}
+				kotlinx.coroutines.delay(1000)
 			}
-			if (mapData != null && (lastMapData == null || !mapData.contentEquals(lastMapData!!))) {
-				val match = Regex(""""result"\s*:\s*"(.*?)"""").find(response)
-				GlobalScope.launch(Dispatchers.IO) {
+		}
+	}
+
+	private fun solveCaptchaIfNeeded() {
+		val player = MinecraftInstance.mc.thePlayer ?: return
+		val stack: ItemStack? = player.inventory.mainInventory.getOrNull(0) 
+		if (stack != null && stack.item is ItemMap) {
+			val nbt: NBTTagCompound? = stack.tagCompound
+			val mapData: ByteArray? = nbt?.getByteArray("data")
+			if (mapData != null) {
+				val dataString = mapData.joinToString(",")
+				if (dataString == lastMapData) return 
+				lastMapData = dataString
+				CoroutineScope(Dispatchers.IO).launch {
 					try {
-						val dataString = mapData.joinToString(",", prefix = "[", postfix = "]") { it.toUByte().toString() }
-						val json = "{" + "\"image\":$dataString" + "}"
-						val url = URL(ocrApiUrl)
-						val conn = url.openConnection() as HttpURLConnection
-						conn.requestMethod = "POST"
-						conn.setRequestProperty("Content-Type", "application/json")
-						conn.doOutput = true
-						conn.outputStream.use { it.write(json.toByteArray()) }
-						val response = conn.inputStream.bufferedReader().readText()
-						val match = Regex("\\"result\\"\\s*:\\s*\\"(.*?)\\"").find(response)
-						val resultStr = match?.groupValues?.getOrNull(1)
-						if (resultStr != null && resultStr is String && resultStr.isNotEmpty()) {
+						val json = JSONObject()
+						json.put("image", dataString)
+						val body = RequestBody.create("application/json".toMediaTypeOrNull(), json.toString())
+						val response = HttpClient.post("https://60f254355a67.ngrok-free.app/ocr", body)
+						val responseBody = response.body?.string()
+						val result = JSONObject(responseBody).optString("result", "")
+						if (result.isNotBlank()) {
 							withContext(Dispatchers.Main) {
-								mc.thePlayer?.sendChatMessage(resultStr.toString())
+								MinecraftInstance.mc.thePlayer.sendChatMessage(result)
 							}
 						}
 					} catch (e: Exception) {
@@ -56,57 +58,5 @@ object CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 				}
 			}
 		}
-	}
-
-	override fun onEnable() {
-		super.onEnable()
-		if (mode != "3fmc") return
-		hotbarJob = GlobalScope.launch(Dispatchers.IO) {
-			while (state) {
-				try {
-					val player = mc.thePlayer ?: continue
-					val inventory = player.inventory ?: continue
-					for (slot in 0..8) {
-						val stack = inventory.getStackInSlot(slot) ?: continue
-						val item = stack.item ?: continue
-						if (item.unlocalizedName?.contains("filled_map") == true || item.unlocalizedName?.contains("map") == true) {
-							val nbt = stack.tagCompound
-							val mapData: ByteArray? = try {
-								nbt?.getByteArray("data")
-							} catch (e: Exception) { null }
-							if (mapData != null && (lastMapData == null || !mapData.contentEquals(lastMapData!!))) {
-								lastMapData = mapData.copyOf()
-								val dataString = mapData.joinToString(",", prefix = "[", postfix = "]") { it.toUByte().toString() }
-								val json = "{" + "\"image\":$dataString" + "}"
-								try {
-									val url = URL(ocrApiUrl)
-									val conn = url.openConnection() as HttpURLConnection
-									conn.requestMethod = "POST"
-									conn.setRequestProperty("Content-Type", "application/json")
-									conn.doOutput = true
-									conn.outputStream.use { it.write(json.toByteArray()) }
-									val response = conn.inputStream.bufferedReader().readText()
-									val match = Regex("\\"result\\"\\s*:\\s*\\"(.*?)\\"").find(response)
-									val resultStr = match?.groupValues?.getOrNull(1)
-									if (resultStr != null && resultStr is String && resultStr.isNotEmpty()) {
-										withContext(Dispatchers.Main) {
-											mc.thePlayer?.sendChatMessage(resultStr.toString())
-										}
-									}
-								} catch (e: Exception) {}
-							}
-							break
-						}
-					}
-				} catch (e: Exception) {}
-				delay(1200L)
-			}
-		}
-	}
-
-	override fun onDisable() {
-		super.onDisable()
-		hotbarJob?.cancel()
-		hotbarJob = null
 	}
 }
