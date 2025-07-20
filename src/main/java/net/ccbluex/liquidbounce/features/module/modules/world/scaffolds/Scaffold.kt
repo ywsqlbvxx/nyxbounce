@@ -141,7 +141,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val autoAdjust by boolean("AutoAdjust", true) { isGodBridgeEnabled }
 
     // GodBridge bypass settings
-    private val bypassMode by choices(
+    private var bypassMode by choices(
         "BypassMode", arrayOf("None", "Jump", "Sneak", "Random"), "None"
     ) { scaffoldMode == "GodBridge" }
     private var currentBypassMode = "None" 
