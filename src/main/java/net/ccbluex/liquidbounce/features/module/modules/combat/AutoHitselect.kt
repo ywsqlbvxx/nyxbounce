@@ -6,15 +6,16 @@
 package net.ccbluex.liquidbounce.features.module.modules.combat
 
 import net.ccbluex.liquidbounce.event.GameTickEvent
-import net.ccbluex.liquidbounce.event.MoveInputEvent
+import net.ccbluex.liquidbounce.event.MovementInputEvent
 import net.ccbluex.liquidbounce.event.handler
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils.isSelected
-import net.ccbluex.liquidbounce.utils.attack.EntityUtils.getDistanceToEntityBox
+import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
 import net.ccbluex.liquidbounce.utils.extensions.*
 import net.ccbluex.liquidbounce.config.*
 import net.minecraft.entity.EntityLivingBase
+import net.minecraft.util.MovementInput
 import net.minecraft.util.MathHelper
 import kotlin.math.abs
 
@@ -69,7 +70,7 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
             lastResetTime = System.currentTimeMillis()
         }
 
-        if (getDistanceToEntityBox(target) < 3) {
+                    if (mc.thePlayer.getDistanceToEntityBox(target) < 3) {
             if (!waitTimerReset) {
                 waitStartTime = System.currentTimeMillis()
                 waitTimerReset = true
@@ -103,9 +104,9 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
         blockClicking = !shouldClick && (!playerHurt || !targetHurt)
     }
 
-    val onMoveInput = handler<MoveInputEvent> { event ->
+    val onMoveInput = handler<MovementInputEvent> { event ->
         if (wTap) {
-            event.setForward(0)
+            event.originalInput.moveForward = 0f
             wTap = false
         }
     }
@@ -122,8 +123,8 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
 
         return entities.asSequence()
             .filterIsInstance<EntityLivingBase>()
-            .filter { isSelected(it, true) && getDistanceToEntityBox(it) <= rangeValue }
-            .minByOrNull { getDistanceToEntityBox(it) }
+            .filter { isSelected(it, true) && mc.thePlayer.getDistanceToEntityBox(it) <= rangeValue }
+            .minByOrNull { mc.thePlayer.getDistanceToEntityBox(it) }
     }
 
     override val tag
