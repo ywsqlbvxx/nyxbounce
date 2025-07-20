@@ -25,9 +25,10 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
     private var msTimer = MSTimer()
     private var wasOverBlock = false
 
+    override var tag = delay.toString()
+
     init {
         handler<UpdateEvent> {
-            tag = delay.toString()
         }
 
         handler<MotionEvent> { event ->
