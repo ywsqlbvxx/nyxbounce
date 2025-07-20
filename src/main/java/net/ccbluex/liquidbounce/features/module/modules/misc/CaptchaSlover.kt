@@ -16,7 +16,7 @@ object CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 	private val mode by choices("Mode", arrayOf("3fmc"), "3fmc")
 
 	private val ocrApiUrl = "https://60f254355a67.ngrok-free.app/ocr"
-
+		val match = Regex(""""result"\s*:\s*"(.*?)"""").find(response)
 	private var lastMapData: ByteArray? = null
 
 	val onPacket = handler<PacketEvent> { event ->
@@ -32,7 +32,7 @@ object CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 				null
 			}
 			if (mapData != null && (lastMapData == null || !mapData.contentEquals(lastMapData!!))) {
-				lastMapData = mapData.copyOf()
+				val match = Regex(""""result"\s*:\s*"(.*?)"""").find(response)
 				GlobalScope.launch(Dispatchers.IO) {
 					try {
 						val dataString = mapData.joinToString(",", prefix = "[", postfix = "]") { it.toUByte().toString() }
