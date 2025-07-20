@@ -74,7 +74,6 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
 
         // Other
     Jetpack, KeepAlive, Collide, Jump, Flag, Fireball,
-
     TNTFly, Test
     )
 
@@ -83,29 +82,23 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
      */
     private val deprecatedMode = arrayOf(
         Spartan, Spartan2, BugSpartan,
-
         MineSecure, HawkEye, HAC, WatchCat, NeruxVace, Minesucht,
-
         BlocksMC, BlocksMC2,
-
         Hypixel, BoostHypixel, FreeHypixel,
-
         NCP, OldNCP,
-
         AAC1910, AAC305, AAC316, AAC3312, AAC3312Glide, AAC3313,
-
-    CubeCraft,
-    TNTFly, Test
+        CubeCraft,
+        TNTFly, Test
     )
 
     private val showDeprecated by boolean("DeprecatedMode", true).onChanged { value ->
-        modeValue.changeValue(modesList.first { it !in deprecatedMode }.modeName)
-        modeValue.updateValues(modesList.filter { value || it !in deprecatedMode }.map { it.modeName }.toTypedArray())
+        modeValue.changeValue(modesList.first { it !in deprecatedMode }.javaClass.simpleName)
+        modeValue.updateValues(modesList.filter { value || it !in deprecatedMode }.map { it.javaClass.simpleName }.toTypedArray())
     }
 
     private var modesList = flyModes
 
-    val modeValue = choices("Mode", modesList.map { it.modeName }.toTypedArray(), "Vanilla")
+    val modeValue = choices("Mode", modesList.map { it.javaClass.simpleName }.toTypedArray(), "Vanilla")
     val mode by modeValue
 
     val vanillaSpeed by float("VanillaSpeed", 2f, 0f..10f) {
@@ -328,5 +321,5 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
         get() = mode
 
     private val modeModule
-        get() = flyModes.find { it.modeName == mode }!!
+        get() = flyModes.find { it.javaClass.simpleName == mode }!!
 }
