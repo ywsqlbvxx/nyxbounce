@@ -45,8 +45,8 @@ object CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 						conn.outputStream.use { it.write(json.toByteArray()) }
 						val response = conn.inputStream.bufferedReader().readText()
 						val match = Regex("\\"result\\"\\s*:\\s*\\"(.*?)\\"").find(response)
-						val resultStr = match?.groups?.get(1)?.value
-						if (!resultStr.isNullOrEmpty()) {
+						val resultStr = match?.groupValues?.getOrNull(1)
+						if (resultStr != null && resultStr.isNotEmpty()) {
 							withContext(Dispatchers.Main) {
 								mc.thePlayer?.sendChatMessage(resultStr)
 							}
@@ -87,8 +87,8 @@ object CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 									conn.outputStream.use { it.write(json.toByteArray()) }
 									val response = conn.inputStream.bufferedReader().readText()
 									val match = Regex("\\"result\\"\\s*:\\s*\\"(.*?)\\"").find(response)
-									val resultStr = match?.groups?.get(1)?.value
-									if (!resultStr.isNullOrEmpty()) {
+									val resultStr = match?.groupValues?.getOrNull(1)
+									if (resultStr != null && resultStr.isNotEmpty()) {
 										withContext(Dispatchers.Main) {
 											mc.thePlayer?.sendChatMessage(resultStr)
 										}
