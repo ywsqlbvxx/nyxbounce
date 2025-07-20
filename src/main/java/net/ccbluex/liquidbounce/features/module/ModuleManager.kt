@@ -35,7 +35,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
         LOGGER.info("[ModuleManager] Loading modules...")
 
         // Register modules
-        val modules = arrayOf(
+    val modules = arrayOf(
             AbortBreaking,
             Aimbot,
             Ambience,
@@ -218,7 +218,8 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             SnakeGame,
             AutoPlace,
             AutoHitselect,
-            CombatHelper
+            CombatHelper,
+            CaptchaSlover()
         )
 
         registerModules(modules = modules)
