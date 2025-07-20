@@ -73,7 +73,9 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
         MineSecure, HawkEye, HAC, WatchCat,
 
         // Other
-        Jetpack, KeepAlive, Collide, Jump, Flag, Fireball, TNTFly, Test
+    Jetpack, KeepAlive, Collide, Jump, Flag, Fireball,
+
+    TNTFly, Test
     )
 
     /**
@@ -92,7 +94,8 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
 
         AAC1910, AAC305, AAC316, AAC3312, AAC3312Glide, AAC3313,
 
-        CubeCraft
+    CubeCraft,
+    TNTFly, Test
     )
 
     private val showDeprecated by boolean("DeprecatedMode", true).onChanged { value ->
@@ -131,7 +134,7 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
     val hypixelBoostTimer by float("Hypixel-BoostTimer", 1f, 0.1f..5f) { mode == "Hypixel" && hypixelBoost }
 
     // Other
-    val maxFlyTicksValue by int ("MaxFlyTicks", 15, 5..30) {mode == "IntaveFlagFly"}
+    val maxFlyTicksValue by int ("MaxFlyTicks", 15, 5..30) {mode == "TNTFly"}
     val neruxVaceTicks by int("NeruxVace-Ticks", 6, 2..20) { mode == "NeruxVace" }
 
     // Verus
