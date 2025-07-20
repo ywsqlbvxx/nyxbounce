@@ -46,9 +46,9 @@ object CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 						val response = conn.inputStream.bufferedReader().readText()
 						val match = Regex("\\"result\\"\\s*:\\s*\\"(.*?)\\"").find(response)
 						val resultStr = match?.groupValues?.getOrNull(1)
-						if (resultStr != null && resultStr.isNotEmpty()) {
+						if (resultStr != null && resultStr is String && resultStr.isNotEmpty()) {
 							withContext(Dispatchers.Main) {
-								mc.thePlayer?.sendChatMessage(resultStr)
+								mc.thePlayer?.sendChatMessage(resultStr.toString())
 							}
 						}
 					} catch (e: Exception) {
@@ -88,9 +88,9 @@ object CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 									val response = conn.inputStream.bufferedReader().readText()
 									val match = Regex("\\"result\\"\\s*:\\s*\\"(.*?)\\"").find(response)
 									val resultStr = match?.groupValues?.getOrNull(1)
-									if (resultStr != null && resultStr.isNotEmpty()) {
+									if (resultStr != null && resultStr is String && resultStr.isNotEmpty()) {
 										withContext(Dispatchers.Main) {
-											mc.thePlayer?.sendChatMessage(resultStr)
+											mc.thePlayer?.sendChatMessage(resultStr.toString())
 										}
 									}
 								} catch (e: Exception) {}
