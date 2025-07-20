@@ -17,6 +17,8 @@ import net.minecraft.item.ItemSword
 import net.minecraft.util.MathHelper
 import net.minecraft.util.Vec3
 import net.minecraft.client.settings.KeyBinding
+import net.minecraft.util.MovementInput
+import net.ccbluex.liquidbounce.utils.EntityUtils
 import kotlin.math.*
 
 /**
@@ -154,7 +156,7 @@ object CombatHelper : Module("CombatHelper", Category.COMBAT) {
         return world.loadedEntityList
             .asSequence()
             .filterIsInstance<EntityLivingBase>()
-            .filter { isSelected(it, true) && thePlayer.getDistanceToEntityBox(it) <= publicSearchRange * 2 }
+            .filter { EntityUtils.isSelected(it, true) && thePlayer.getDistanceToEntityBox(it) <= publicSearchRange * 2 }
             .minByOrNull { thePlayer.getDistanceToEntityBox(it) }
     }
 
