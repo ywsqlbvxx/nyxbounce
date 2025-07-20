@@ -29,9 +29,7 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
         handler<UpdateEvent> {
             tag = delay.toString()
         }
-    }
 
-    init {
         handler<MotionEvent> { event ->
             val thePlayer = mc.thePlayer ?: return@handler
             val theWorld = mc.theWorld ?: return@handler
