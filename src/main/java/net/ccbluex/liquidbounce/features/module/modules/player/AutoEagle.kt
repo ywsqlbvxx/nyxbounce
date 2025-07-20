@@ -6,6 +6,7 @@
 package net.ccbluex.liquidbounce.features.module.modules.player
 
 import net.ccbluex.liquidbounce.event.MotionEvent
+import net.ccbluex.liquidbounce.event.EventState
 import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.event.handler
 import net.ccbluex.liquidbounce.features.module.Category
@@ -21,7 +22,7 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
     private val blocksOnly by boolean("BlocksOnly", true)
     private val directionCheck by boolean("DirectionalCheck", true)
 
-    private var timer = MSTimer()
+    private val msTimer = MSTimer()
     private var wasOverBlock = false
 
     val onUpdate = handler<UpdateEvent> {
@@ -32,7 +33,7 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
         val thePlayer = mc.thePlayer ?: return@handler
         val theWorld = mc.theWorld ?: return@handler
 
-        if (event.eventState != MotionEvent.EventState.PRE)
+        if (event.eventState != EventState.PRE)
             return@handler
 
         // Don't interfere if inventory is open
@@ -54,9 +55,9 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
                 wasOverBlock = true
             } else if (thePlayer.onGround) {
                 if (wasOverBlock) 
-                    timer.reset()
+                    msTimer.reset()
 
-                if (timer.hasTimePassed((delay * (Math.random() * 0.1 + 0.95)).toLong())) {
+                if (msTimer.hasTimePassed((delay * (Math.random() * 0.1 + 0.95)).toLong())) {
                     mc.gameSettings.keyBindSneak.pressed = false
                 }
 
