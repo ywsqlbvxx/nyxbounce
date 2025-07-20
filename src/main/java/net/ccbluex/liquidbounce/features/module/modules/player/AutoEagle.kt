@@ -32,7 +32,7 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
         val thePlayer = mc.thePlayer ?: return@handler
         val theWorld = mc.theWorld ?: return@handler
 
-        if (event.eventState != MotionEvent.EventState.PRE)
+        if (!event.isPre)
             return@handler
 
         // Don't interfere if inventory is open
@@ -57,17 +57,17 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
                     timer.reset()
 
                 if (timer.hasTimePassed((delay * (Math.random() * 0.1 + 0.95)).toLong())) {
-                    mc.gameSettings.keyBindSneak.pressed = GameSettings.isKeyDown(mc.gameSettings.keyBindSneak.keyCode)
+                    mc.gameSettings.keyBindSneak.pressed = false
                 }
 
                 wasOverBlock = false
             }
         } else {
-            mc.gameSettings.keyBindSneak.pressed = GameSettings.isKeyDown(mc.gameSettings.keyBindSneak.keyCode)
+            mc.gameSettings.keyBindSneak.pressed = false
         }
     }
 
     override fun onDisable() {
-        mc.gameSettings.keyBindSneak.pressed = GameSettings.isKeyDown(mc.gameSettings.keyBindSneak.keyCode)
+        mc.gameSettings.keyBindSneak.pressed = false
     }
 }
