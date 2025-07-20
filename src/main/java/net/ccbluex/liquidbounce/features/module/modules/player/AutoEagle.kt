@@ -31,42 +31,43 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
         }
     }
 
-    val onMotion = handler<MotionEvent> { event ->
-        val thePlayer = mc.thePlayer ?: return@handler
-        val theWorld = mc.theWorld ?: return@handler
+    init {
+        handler<MotionEvent> { event ->
+            val thePlayer = mc.thePlayer ?: return@handler
+            val theWorld = mc.theWorld ?: return@handler
 
-        if (event.eventState != EventState.PRE)
-            return@handler
+            if (event.eventState != EventState.PRE)
+                return@handler
 
-        // Don't interfere if inventory is open
-        if (mc.currentScreen != null)
-            return@handler
+            if (mc.currentScreen != null)
+                return@handler
 
-        val shouldWork = !blocksOnly || 
-            (thePlayer.heldItem?.item is ItemBlock && (!directionCheck || thePlayer.moveForward < 0))
+            val shouldWork = !blocksOnly || 
+                (thePlayer.heldItem?.item is ItemBlock && (!directionCheck || thePlayer.moveForward < 0))
 
-        if (shouldWork) {
-            val isOverAir = theWorld.getBlockState(BlockPos(
-                thePlayer.posX,
-                thePlayer.posY - 1.0,
-                thePlayer.posZ
-            )).block is BlockAir
+            if (shouldWork) {
+                val isOverAir = theWorld.getBlockState(BlockPos(
+                    thePlayer.posX,
+                    thePlayer.posY - 1.0,
+                    thePlayer.posZ
+                )).block is BlockAir
 
-            if (isOverAir && thePlayer.onGround) {
-                mc.gameSettings.keyBindSneak.pressed = true
-                wasOverBlock = true
-            } else if (thePlayer.onGround) {
-                if (wasOverBlock) 
-                    msTimer.reset()
+                if (isOverAir && thePlayer.onGround) {
+                    mc.gameSettings.keyBindSneak.pressed = true
+                    wasOverBlock = true
+                } else if (thePlayer.onGround) {
+                    if (wasOverBlock) 
+                        msTimer.reset()
 
-                if (msTimer.hasTimePassed((delay * (Math.random() * 0.1 + 0.95)).toLong())) {
-                    mc.gameSettings.keyBindSneak.pressed = false
+                    if (msTimer.hasTimePassed((delay * (Math.random() * 0.1 + 0.95)).toLong())) {
+                        mc.gameSettings.keyBindSneak.pressed = false
+                    }
+
+                    wasOverBlock = false
                 }
-
-                wasOverBlock = false
+            } else {
+                mc.gameSettings.keyBindSneak.pressed = false
             }
-        } else {
-            mc.gameSettings.keyBindSneak.pressed = false
         }
     }
 
