@@ -331,7 +331,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private var extraClick = ExtraClickInfo(TimeUtils.randomClickDelay(extraClickCPS.first, extraClickCPS.last), 0L, 0)
 
     // GodBridge
-    private var blocksPlacedUntilAction = 0
+    private var blocksPlacedUntilJump = 0
+    private var blocksToJump = 0
+    private var blocksPlacedUntilAction = 0 
     private var blocksToAction = 0
     private var isSneaking = false
     private var sneakTicks = 0
