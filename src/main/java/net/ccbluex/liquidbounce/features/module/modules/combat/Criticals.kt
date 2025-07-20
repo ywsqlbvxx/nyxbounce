@@ -69,8 +69,6 @@ object Criticals : Module("Criticals", Category.COMBAT) {
 
                 "grim" -> {
                     if (!thePlayer.onGround) {
-                        // If player is in air, go down a little bit
-                        // Small enough to bypass simulation checks
                         sendPackets(
                             C04PacketPlayerPosition(x, y - 0.000001, z, false)
                         )
