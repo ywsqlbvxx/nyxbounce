@@ -73,7 +73,7 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
         MineSecure, HawkEye, HAC, WatchCat,
 
         // Other
-        Jetpack, KeepAlive, Collide, Jump, Flag, Fireball, IntaveFlagFly
+        Jetpack, KeepAlive, Collide, Jump, Flag, Fireball, TNTFly, Test
     )
 
     /**

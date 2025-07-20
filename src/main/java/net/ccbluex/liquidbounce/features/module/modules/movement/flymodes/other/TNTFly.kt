@@ -6,7 +6,7 @@ import net.minecraft.network.play.client.C03PacketPlayer
 import net.minecraft.network.play.server.S27PacketExplosion
 import net.ccbluex.liquidbounce.event.PacketEvent
 
-object IntaveFlagFly : FlyMode("IntaveFlagFly") {
+object TNTFly : FlyMode("TNTFly") {
     private var boosting = false
     private var boostTicks = 0
 
@@ -26,7 +26,7 @@ object IntaveFlagFly : FlyMode("IntaveFlagFly") {
         val player = mc.thePlayer ?: return
 
         if (boosting) {
-            val boostValue = 2.2 + Math.random() * 0.25 // Có thể điều chỉnh để bay xa hơn/nhiều hơn
+            val boostValue = 2.2 + Math.random() * 0.25 
             val yawRad = Math.toRadians(player.rotationYaw.toDouble())
             player.motionX = -Math.sin(yawRad) * boostValue + ((Math.random() - 0.5) * 0.07)
             player.motionZ =  Math.cos(yawRad) * boostValue + ((Math.random() - 0.5) * 0.07)

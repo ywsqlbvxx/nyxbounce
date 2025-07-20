@@ -1,9 +1,6 @@
 package net.ccbluex.liquidbounce.features.module.modules.misc
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
@@ -18,16 +15,32 @@ import org.json.JSONObject
 
 class CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 	private var lastMapData: String? = null
+	private var fetchJob: Job? = null
 
-	init {
-		CoroutineScope(Dispatchers.Default).launch {
-			while (true) {
+
+	override fun onEnable() {
+		super.onEnable()
+		fetchJob = CoroutineScope(Dispatchers.Default).launch {
+			while (isActive) {
 				withContext(Dispatchers.Main) {
-					solveCaptchaIfNeeded()
+					if (isOn3fmc()) {
+						solveCaptchaIfNeeded()
+					}
 				}
-				kotlinx.coroutines.delay(1000)
+				delay(1000)
 			}
 		}
+	}
+
+	override fun onDisable() {
+		super.onDisable()
+		fetchJob?.cancel()
+		fetchJob = null
+	}
+
+	private fun isOn3fmc(): Boolean {
+		val server = MinecraftInstance.mc.currentServerData?.serverIP ?: return false
+		return server.contains("3fmc.com", ignoreCase = true)
 	}
 
 	private fun solveCaptchaIfNeeded() {
