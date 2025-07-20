@@ -140,8 +140,21 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val stabilizeSpeed by boolean("StabilizeSpeed", true) { isGodBridgeEnabled }
     private val autoAdjust by boolean("AutoAdjust", true) { isGodBridgeEnabled }
 
-    val jumpAutomatically by boolean("JumpAutomatically", true) { scaffoldMode == "GodBridge" }
-    private val blocksToJumpRange by intRange("BlocksToJumpRange", 4..4, 1..8) {  scaffoldMode == "GodBridge" && !jumpAutomatically }
+    // GodBridge bypass settings
+    private val bypassMode by choices(
+        "BypassMode", arrayOf("None", "Jump", "Sneak", "Random"), "None"
+    ) { scaffoldMode == "GodBridge" }
+    
+    // Jump bypass settings
+    val jumpAutomatically by boolean("JumpAutomatically", true) { scaffoldMode == "GodBridge" && bypassMode == "Jump" }
+    private val blocksToJumpRange by intRange("BlocksToJumpRange", 4..4, 1..8) { scaffoldMode == "GodBridge" && bypassMode == "Jump" }
+    
+    // Sneak bypass settings  
+    private val blocksToSneakRange by intRange("BlocksToSneakRange", 4..4, 1..8) { scaffoldMode == "GodBridge" && bypassMode == "Sneak" }
+    private val sneakDurationRange by intRange("SneakDuration", 3..5, 1..10) { scaffoldMode == "GodBridge" && bypassMode == "Sneak" }
+    
+    // Random bypass settings
+    private val randomBypassChance by float("RandomBypassChance", 0.5f, 0f..1f) { scaffoldMode == "GodBridge" && bypassMode == "Random" }
 
     // Telly mode sub-values
     private val startHorizontally by boolean("StartHorizontally", true) { scaffoldMode == "Telly" }
@@ -318,12 +331,29 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private var extraClick = ExtraClickInfo(TimeUtils.randomClickDelay(extraClickCPS.first, extraClickCPS.last), 0L, 0)
 
     // GodBridge
-    private var blocksPlacedUntilJump = 0
+    private var blocksPlacedUntilAction = 0
+    private var blocksToAction = 0
+    private var isSneaking = false
+    private var sneakTicks = 0
 
     private val isManualJumpOptionActive
-        get() = scaffoldMode == "GodBridge" && !jumpAutomatically
+        get() = scaffoldMode == "GodBridge" && bypassMode == "Jump" && !jumpAutomatically
 
-    private var blocksToJump = blocksToJumpRange.random()
+    private fun updateBypassAction() {
+        when (bypassMode) {
+            "Jump" -> blocksToAction = blocksToJumpRange.random()
+            "Sneak" -> {
+                blocksToAction = blocksToSneakRange.random()
+                sneakTicks = sneakDurationRange.random()
+            }
+            "Random" -> {
+                if (RandomUtils.nextFloat() <= randomBypassChance) {
+                    bypassMode = if (RandomUtils.nextBoolean()) "Jump" else "Sneak"
+                    updateBypassAction()
+                }
+            }
+        }
+    }
 
     private val isGodBridgeEnabled
         get() = scaffoldMode == "GodBridge" || scaffoldMode == "Normal" && options.rotationMode == "GodBridge"
