@@ -18,7 +18,12 @@ import net.minecraft.util.MathHelper
 import net.minecraft.util.Vec3
 import net.minecraft.client.settings.KeyBinding
 import net.minecraft.util.MovementInput
-import net.ccbluex.liquidbounce.utils.EntityUtils
+import net.ccbluex.liquidbounce.utils.extensions.getDistanceToEntityBox
+import net.ccbluex.liquidbounce.utils.extensions.isAnimal
+import net.ccbluex.liquidbounce.utils.extensions.isInvisible
+import net.ccbluex.liquidbounce.utils.extensions.isMob
+import net.ccbluex.liquidbounce.utils.extensions.isPlayer
+import net.minecraft.entity.player.EntityPlayer
 import kotlin.math.*
 
 /**
@@ -156,8 +161,20 @@ object CombatHelper : Module("CombatHelper", Category.COMBAT) {
         return world.loadedEntityList
             .asSequence()
             .filterIsInstance<EntityLivingBase>()
-            .filter { EntityUtils.isSelected(it, true) && thePlayer.getDistanceToEntityBox(it) <= publicSearchRange * 2 }
+            .filter { shouldTarget(it) && thePlayer.getDistanceToEntityBox(it) <= publicSearchRange * 2 }
             .minByOrNull { thePlayer.getDistanceToEntityBox(it) }
+    }
+
+    private fun shouldTarget(entity: EntityLivingBase): Boolean {
+        if (entity == mc.thePlayer) return false
+        
+        return when {
+            entity.isPlayer -> true
+            entity.isMob -> false
+            entity.isAnimal -> false
+            entity.isInvisible -> false
+            else -> false
+        }
     }
 
     private fun getRotationToEntity(entity: EntityLivingBase): FloatArray {
