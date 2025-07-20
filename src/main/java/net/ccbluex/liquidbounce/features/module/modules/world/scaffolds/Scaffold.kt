@@ -144,6 +144,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val bypassMode by choices(
         "BypassMode", arrayOf("None", "Jump", "Sneak", "Random"), "None"
     ) { scaffoldMode == "GodBridge" }
+    private var currentBypassMode = "None" 
     
     // Jump bypass settings
     val jumpAutomatically by boolean("JumpAutomatically", true) { scaffoldMode == "GodBridge" && bypassMode == "Jump" }
