@@ -772,7 +772,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         
         if (mode == "intave") {
             val shouldJump = Math.random() * 100 < intaveJumpChance && player.hurtTime > 5 && !intaveIsFallDamage
-            val canJump = player.onGround && mc.currentScreen !is InventoryScreen
+            val canJump = player.onGround && mc.currentScreen !is net.minecraft.client.gui.inventory.GuiInventory
             val shouldFinallyJump = shouldJump && canJump
 
             if (intaveRandomizeDelay) {
