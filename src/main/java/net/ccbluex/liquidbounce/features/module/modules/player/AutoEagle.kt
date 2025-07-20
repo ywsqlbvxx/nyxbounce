@@ -21,7 +21,7 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
     private val blocksOnly by boolean("BlocksOnly", true)
     private val directionCheck by boolean("DirectionalCheck", true)
 
-    private val timer = MSTimer()
+    private var timer = MSTimer()
     private var wasOverBlock = false
 
     val onUpdate = handler<UpdateEvent> {
@@ -32,7 +32,7 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
         val thePlayer = mc.thePlayer ?: return@handler
         val theWorld = mc.theWorld ?: return@handler
 
-        if (!event.isPre)
+        if (event.eventState != MotionEvent.EventState.PRE)
             return@handler
 
         // Don't interfere if inventory is open
