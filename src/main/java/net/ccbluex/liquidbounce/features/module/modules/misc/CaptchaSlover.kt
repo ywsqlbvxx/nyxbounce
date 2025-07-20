@@ -32,14 +32,16 @@ class CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 
 	private fun solveCaptchaIfNeeded() {
 		val player = MinecraftInstance.mc.thePlayer ?: return
-		val stack: ItemStack? = player.inventory.mainInventory.getOrNull(0) 
+		val stack: ItemStack? = player.inventory.mainInventory.getOrNull(0)
 		if (stack != null && stack.item is ItemMap) {
+			println("[CaptchaSlover] Debug: fetching map...")
 			val nbt: NBTTagCompound? = stack.tagCompound
 			val mapData: ByteArray? = nbt?.getByteArray("data")
 			if (mapData != null) {
 				val dataString = mapData.joinToString(",")
-				if (dataString == lastMapData) return 
+				if (dataString == lastMapData) return
 				lastMapData = dataString
+				println("[CaptchaSlover] Debug: sent to api ...")
 				CoroutineScope(Dispatchers.IO).launch {
 					try {
 						val json = JSONObject()
