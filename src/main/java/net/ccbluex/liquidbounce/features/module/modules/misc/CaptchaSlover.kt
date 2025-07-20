@@ -44,11 +44,11 @@ object CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 						conn.doOutput = true
 						conn.outputStream.use { it.write(json.toByteArray()) }
 						val response = conn.inputStream.bufferedReader().readText()
-						val regex = "\\"result\\"\\s*:\\s*\\"(.*?)\\"".toRegex()
-						val result = regex.find(response)?.groupValues?.getOrNull(1)
-						if (!result.isNullOrEmpty()) {
+						val match = Regex("\\"result\\"\\s*:\\s*\\"(.*?)\\"").find(response)
+						val resultStr = match?.groups?.get(1)?.value
+						if (!resultStr.isNullOrEmpty()) {
 							withContext(Dispatchers.Main) {
-								mc.thePlayer?.sendChatMessage(result)
+								mc.thePlayer?.sendChatMessage(resultStr)
 							}
 						}
 					} catch (e: Exception) {
@@ -86,20 +86,20 @@ object CaptchaSlover : Module("CaptchaSlover", Category.MISC) {
 									conn.doOutput = true
 									conn.outputStream.use { it.write(json.toByteArray()) }
 									val response = conn.inputStream.bufferedReader().readText()
-									val regex = "\\"result\\"\\s*:\\s*\\"(.*?)\\"".toRegex()
-									val result = regex.find(response)?.groupValues?.getOrNull(1)
-									if (!result.isNullOrEmpty()) {
+									val match = Regex("\\"result\\"\\s*:\\s*\\"(.*?)\\"").find(response)
+									val resultStr = match?.groups?.get(1)?.value
+									if (!resultStr.isNullOrEmpty()) {
 										withContext(Dispatchers.Main) {
-											mc.thePlayer?.sendChatMessage(result)
+											mc.thePlayer?.sendChatMessage(resultStr)
 										}
 									}
 								} catch (e: Exception) {}
 							}
-							break 
+							break
 						}
 					}
 				} catch (e: Exception) {}
-				delay(1200L) 
+				delay(1200L)
 			}
 		}
 	}
