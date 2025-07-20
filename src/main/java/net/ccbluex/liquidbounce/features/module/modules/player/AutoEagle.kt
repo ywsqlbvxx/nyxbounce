@@ -22,11 +22,13 @@ object AutoEagle : Module("AutoEagle", Category.PLAYER) {
     private val blocksOnly by boolean("BlocksOnly", true)
     private val directionCheck by boolean("DirectionalCheck", true)
 
-    private val msTimer = MSTimer()
+    private var msTimer = MSTimer()
     private var wasOverBlock = false
 
-    val onUpdate = handler<UpdateEvent> {
-        tag = delay.toString()
+    init {
+        handler<UpdateEvent> {
+            tag = delay.toString()
+        }
     }
 
     val onMotion = handler<MotionEvent> { event ->
