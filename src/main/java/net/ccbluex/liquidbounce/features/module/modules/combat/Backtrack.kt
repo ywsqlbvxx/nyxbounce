@@ -73,9 +73,9 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
     ) { mode == "Legacy" }
 
     // Modern
-    private val style by choices("Style", arrayOf("Pulse", "Smooth"), "Smooth") { mode == "Modern" }
-    private val distance by floatRange("Distance", 2f..3f, 0f..8f) { mode == "Modern" }
-    private val smart by boolean("Smart", true) { mode == "Modern" }
+    private val style: Value<String> by choices("Style", arrayOf("Pulse", "Smooth"), "Smooth") { mode == "Modern" }
+    private val distance: Value<ClosedFloatingPointRange<Float>> by floatRange("Distance", 2f..3f, 0f..8f) { mode == "Modern" }
+    private val smart: Value<Boolean> by boolean("Smart", true) { mode == "Modern" }
 
     // ESP
     private val espMode by choices(
@@ -268,9 +268,9 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
             if (shouldBacktrack() && targetMixin != null && !Blink.blinkingReceive() && targetMixin.truePos) {
                 val trueDist = mc.thePlayer.getDistance(targetMixin.trueX, targetMixin.trueY, targetMixin.trueZ)
                 val dist = mc.thePlayer.getDistance(target.posX, target.posY, target.posZ)
-                if (trueDist <= 6f && (!smart || trueDist >= dist) && (style == "Smooth" || !globalTimer.hasTimePassed(supposedDelay))) {
+                if (trueDist <= 6f && (!smart.get() || trueDist >= dist) && (style.get() == "Smooth" || !globalTimer.hasTimePassed(supposedDelay))) {
                     shouldRender = true
-                    if (mc.thePlayer.getDistanceToEntityBox(target) in distance) {
+                    if (mc.thePlayer.getDistanceToEntityBox(target) in distance.get()) {
                         handlePackets()
                     } else {
                         handlePacketsRange()
@@ -281,7 +281,7 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
             updateDynamicDelay()
             if (shouldBacktrack() && targetMixin != null && !Blink.blinkingReceive() && targetMixin.truePos) {
                 shouldRender = true
-                if (mc.thePlayer.getDistanceToEntityBox(target) < distance.last) {
+                if (mc.thePlayer.getDistanceToEntityBox(target) < distance.get().endInclusive) {
                     handlePackets()
                 } else {
                     handlePacketsRange()
