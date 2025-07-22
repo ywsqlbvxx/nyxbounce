@@ -118,7 +118,11 @@ object CombatHelper : Module("CombatHelper", Category.COMBAT) {
         val targetMotion = lastTargetPos?.let { Vec3(target.posX, target.posY, target.posZ).subtract(it) } ?: Vec3(0.0, 0.0, 0.0)
         lastTargetPos = Vec3(target.posX, target.posY, target.posZ)
 
-        val predictedTarget = Vec3(target.posX, target.posY, target.posZ).add(targetMotion.scale(predictionTicks.toDouble()))
+        val predictedTarget = Vec3(
+            target.posX + targetMotion.xCoord * predictionTicks,
+            target.posY + targetMotion.yCoord * predictionTicks,
+            target.posZ + targetMotion.zCoord * predictionTicks
+        )
         val playerPos = Vec3(thePlayer.posX, thePlayer.posY, thePlayer.posZ)
         val rel = playerPos.subtract(predictedTarget)
         val distanceToPredicted = rel.lengthVector()
