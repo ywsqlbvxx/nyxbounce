@@ -73,9 +73,9 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
     ) { mode == "Legacy" }
 
     // Modern
-    private val style: Value<String> by choices("Style", arrayOf("Pulse", "Smooth"), "Smooth") { mode == "Modern" }
-    private val distance: Value<ClosedFloatingPointRange<Float>> by floatRange("Distance", 2f..3f, 0f..8f) { mode == "Modern" }
-    private val smart: Value<Boolean> by boolean("Smart", true) { mode == "Modern" }
+    private val style = choices("Style", arrayOf("Pulse", "Smooth"), "Smooth") { mode == "Modern" }
+    private val distance = floatRange("Distance", 2f..3f, 0f..8f) { mode == "Modern" }
+    private val smart = boolean("Smart", true) { mode == "Modern" }
 
     // ESP
     private val espMode by choices(
@@ -194,7 +194,7 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                     // Ignore server related packets
                     is C00Handshake, is C00PacketServerQuery, is S02PacketChat, is S01PacketPong -> return@handler
 
-                    is S29PacketSoundEffect -> if (nonDelayedSoundSubstrings in packet.soundName) return@handler
+                    is S29PacketSoundEffect -> if (packet.soundName?.contains(nonDelayedSoundSubstrings) == true) return@handler
 
                     // Flush on own death
                     is S06PacketUpdateHealth -> if (packet.health <= 0) {
@@ -288,6 +288,11 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                 }
             } else clear()
         }
+    private fun String?.contains(substrings: Array<String>): Boolean {
+        if (this == null) return false
+        for (s in substrings) if (this.contains(s)) return true
+        return false
+    }
 
         ignoreWholeTick = false
     }
