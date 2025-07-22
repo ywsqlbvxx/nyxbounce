@@ -53,19 +53,10 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
         new.coerceAtMost(maxDelay.get())
     }
 
-    val mode by choices("Mode", arrayOf("Legacy", "Modern", "Dynamic"), "Modern").onChanged {
-        if (backtrackedPlayer.isNotEmpty() || !isPacketQueueEmpty) {
-            clearPackets()
-            backtrackedPlayer.clear()
-        }
-        if (mode == "Dynamic") {
-            dynamicDelay = minDelay.get()
-        }
+    val mode by choices("Mode", arrayOf("Legacy", "Modern"), "Modern").onChanged {
+        clearPackets()
+        backtrackedPlayer.clear()
     }
-
-    private var dynamicDelay: Int = 80
-    private val dynamicMinDelay: Int get() = minDelay.get()
-    private val dynamicMaxDelay: Int get() = maxDelay.get()
 
     // Legacy
     private val legacyPos by choices(
@@ -73,9 +64,9 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
     ) { mode == "Legacy" }
 
     // Modern
-    private val style = choices("Style", arrayOf("Pulse", "Smooth"), "Smooth") { mode == "Modern" }
-    private val distance = floatRange("Distance", 2f..3f, 0f..8f) { mode == "Modern" }
-    private val smart = boolean("Smart", true) { mode == "Modern" }
+    private val style by choices("Style", arrayOf("Pulse", "Smooth"), "Smooth") { mode == "Modern" }
+    private val distance by floatRange("Distance", 2f..3f, 0f..8f) { mode == "Modern" }
+    private val smart by boolean("Smart", true) { mode == "Modern" }
 
     // ESP
     private val espMode by choices(
@@ -104,26 +95,7 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
     private var modernDelay = randomDelay(minDelay.get(), maxDelay.get()) to false
 
     private val supposedDelay
-        get() = when (mode) {
-            "Modern" -> modernDelay.first
-            "Dynamic" -> dynamicDelay
-            else -> maxDelay.get()
-        }
-    /**
-     * Dynamically adjust delay based on target movement and server tickrate for smoother backtrack
-     */
-    private fun updateDynamicDelay() {
-        val target = this.target ?: return
-        val lastPos = target.prevPos
-        val currPos = target.currPos
-        val speed = (currPos - lastPos).lengthVector().coerceAtLeast(0.01)
-        val tickRate = mc.timer?.timerSpeed ?: 20f
-        val base = dynamicMinDelay
-        val max = dynamicMaxDelay
-        val speedFactor = (1.0 / speed).coerceIn(0.5, 2.0)
-        val tickFactor = (20f / tickRate).coerceIn(0.5f, 2.0f)
-        dynamicDelay = (base * speedFactor * tickFactor).toInt().coerceIn(base, max)
-    }
+        get() = if (mode == "Modern") modernDelay.first else maxDelay.get()
 
     // Legacy
     private val maximumCachedPositions by int("MaxCachedPositions", 10, 1..20) { mode == "Legacy" }
@@ -194,7 +166,7 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                     // Ignore server related packets
                     is C00Handshake, is C00PacketServerQuery, is S02PacketChat, is S01PacketPong -> return@handler
 
-                    is S29PacketSoundEffect -> if (packet.soundName?.contains(nonDelayedSoundSubstrings) == true) return@handler
+                    is S29PacketSoundEffect -> if (nonDelayedSoundSubstrings in packet.soundName) return@handler
 
                     // Flush on own death
                     is S06PacketUpdateHealth -> if (packet.health <= 0) {
@@ -254,10 +226,11 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
     val onGameLoop = handler<GameLoopEvent> {
         if (mode == "Legacy") {
             backtrackedPlayer.forEach { (key, backtrackData) ->
-                if (backtrackData.isNotEmpty()) {
-                    backtrackData.removeAll { it.time + supposedDelay < System.currentTimeMillis() }
-                    if (backtrackData.isEmpty()) removeBacktrackData(key)
-                }
+                // Remove old data
+                backtrackData.removeAll { it.time + supposedDelay < System.currentTimeMillis() }
+
+                // Remove player if there is no data left. This prevents memory leaks.
+                if (backtrackData.isEmpty()) removeBacktrackData(key)
             }
         }
 
@@ -265,34 +238,26 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
         val targetMixin = target as? IMixinEntity
 
         if (mode == "Modern") {
-            if (shouldBacktrack() && targetMixin != null && !Blink.blinkingReceive() && targetMixin.truePos) {
-                val trueDist = mc.thePlayer.getDistance(targetMixin.trueX, targetMixin.trueY, targetMixin.trueZ)
-                val dist = mc.thePlayer.getDistance(target.posX, target.posY, target.posZ)
-                if (trueDist <= 6f && (!smart.get() || trueDist >= dist) && (style.get() == "Smooth" || !globalTimer.hasTimePassed(supposedDelay))) {
-                    shouldRender = true
-                    if (mc.thePlayer.getDistanceToEntityBox(target) in distance.get()) {
-                        handlePackets()
-                    } else {
-                        handlePacketsRange()
-                    }
-                } else clear()
-            } else clear()
-        } else if (mode == "Dynamic") {
-            updateDynamicDelay()
-            if (shouldBacktrack() && targetMixin != null && !Blink.blinkingReceive() && targetMixin.truePos) {
-                shouldRender = true
-                if (mc.thePlayer.getDistanceToEntityBox(target) < distance.get().endInclusive) {
-                    handlePackets()
-                } else {
-                    handlePacketsRange()
+            if (shouldBacktrack() && targetMixin != null) {
+                if (!Blink.blinkingReceive() && targetMixin.truePos) {
+                    val trueDist = mc.thePlayer.getDistance(targetMixin.trueX, targetMixin.trueY, targetMixin.trueZ)
+                    val dist = mc.thePlayer.getDistance(target.posX, target.posY, target.posZ)
+
+                    if (trueDist <= 6f && (!smart || trueDist >= dist) && (style == "Smooth" || !globalTimer.hasTimePassed(
+                            supposedDelay
+                        ))
+                    ) {
+                        shouldRender = true
+
+                        if (mc.thePlayer.getDistanceToEntityBox(target) in distance) {
+                            handlePackets()
+                        } else {
+                            handlePacketsRange()
+                        }
+                    } else clear()
                 }
             } else clear()
         }
-    private fun String?.contains(substrings: Array<String>): Boolean {
-        if (this == null) return false
-        for (s in substrings) if (this.contains(s)) return true
-        return false
-    }
 
         ignoreWholeTick = false
     }
