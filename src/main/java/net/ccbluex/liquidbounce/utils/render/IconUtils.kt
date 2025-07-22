@@ -31,9 +31,9 @@ object IconUtils {
     val favicon by lazy {
         IconUtils::class.java.runCatching {
             arrayOf(
-                readImageToBuffer(getResourceAsStream("/assets/minecraft/RinBounce/icon_16x16.png")),
-                readImageToBuffer(getResourceAsStream("/assets/minecraft/RinBounce/icon_32x32.png")),
-                readImageToBuffer(getResourceAsStream("/assets/minecraft/RinBounce/icon_64x64.png"))
+                readImageToBuffer(getResourceAsStream("/assets/minecraft/liquidbounce/icon_16x16.png")),
+                readImageToBuffer(getResourceAsStream("/assets/minecraft/liquidbounce/icon_32x32.png")),
+                readImageToBuffer(getResourceAsStream("/assets/minecraft/liquidbounce/icon_64x64.png"))
             )
         }.onFailure {
             ClientUtils.LOGGER.warn("Failed to load icons", it)
