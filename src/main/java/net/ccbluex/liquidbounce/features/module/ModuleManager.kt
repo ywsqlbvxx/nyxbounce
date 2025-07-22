@@ -159,6 +159,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             Notifier,
             NoWeb,
             Nuker,
+            MemoryFix,
             PacketDebugger,
             Parkour,
             PerfectHorseJump,
