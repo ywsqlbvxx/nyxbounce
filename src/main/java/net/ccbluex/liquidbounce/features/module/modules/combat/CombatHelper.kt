@@ -15,6 +15,7 @@ import net.ccbluex.liquidbounce.config.*
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.item.ItemSword
 import net.minecraft.util.MathHelper
+import net.ccbluex.liquidbounce.utils.rotation.RotationUtils
 import net.minecraft.util.Vec3
 import net.minecraft.client.settings.KeyBinding
 import net.minecraft.util.MovementInput
@@ -53,7 +54,6 @@ object CombatHelper : Module("CombatHelper", Category.COMBAT) {
     val onGameTick = handler<GameTickEvent> {
         val thePlayer = mc.thePlayer ?: return@handler
 
-        // Get target from KillAura or find closest target
         target = if (!KillAura.handleEvents()) {
             getNearestTarget()
         } else {
@@ -176,15 +176,8 @@ object CombatHelper : Module("CombatHelper", Category.COMBAT) {
 
     private fun getRotationToEntity(entity: EntityLivingBase): FloatArray {
         val thePlayer = mc.thePlayer
-        val x = entity.posX - thePlayer.posX
-        val z = entity.posZ - thePlayer.posZ
-        val y = entity.posY + entity.eyeHeight - (thePlayer.posY + thePlayer.eyeHeight)
-        val dist = sqrt(x * x + z * z)
-        
-        val yaw = (atan2(z, x) * 180f / Math.PI).toFloat() - 90f
-        val pitch = -(atan2(y, dist) * 180f / Math.PI).toFloat()
-        
-        return floatArrayOf(yaw, pitch)
+        val rotations = RotationUtils.getRotations(entity)
+        return floatArrayOf(rotations[0], rotations[1])
     }
 
     private fun fixMovement(input: MovementInput, yaw: Float) {

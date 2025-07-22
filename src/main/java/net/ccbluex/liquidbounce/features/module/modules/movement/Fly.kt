@@ -73,8 +73,7 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
         MineSecure, HawkEye, HAC, WatchCat,
 
         // Other
-    Jetpack, KeepAlive, Collide, Jump, Flag, Fireball,
-    TNTFly, Test
+        Jetpack, KeepAlive, Collide, Jump, Flag, Fireball, IntaveFlagFly
     )
 
     /**
@@ -82,23 +81,28 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
      */
     private val deprecatedMode = arrayOf(
         Spartan, Spartan2, BugSpartan,
+
         MineSecure, HawkEye, HAC, WatchCat, NeruxVace, Minesucht,
+
         BlocksMC, BlocksMC2,
+
         Hypixel, BoostHypixel, FreeHypixel,
+
         NCP, OldNCP,
+
         AAC1910, AAC305, AAC316, AAC3312, AAC3312Glide, AAC3313,
-        CubeCraft,
-        TNTFly, Test
+
+        CubeCraft
     )
 
     private val showDeprecated by boolean("DeprecatedMode", true).onChanged { value ->
-        modeValue.changeValue(modesList.first { it !in deprecatedMode }.javaClass.simpleName)
-        modeValue.updateValues(modesList.filter { value || it !in deprecatedMode }.map { it.javaClass.simpleName }.toTypedArray())
+        modeValue.changeValue(modesList.first { it !in deprecatedMode }.modeName)
+        modeValue.updateValues(modesList.filter { value || it !in deprecatedMode }.map { it.modeName }.toTypedArray())
     }
 
     private var modesList = flyModes
 
-    val modeValue = choices("Mode", modesList.map { it.javaClass.simpleName }.toTypedArray(), "Vanilla")
+    val modeValue = choices("Mode", modesList.map { it.modeName }.toTypedArray(), "Vanilla")
     val mode by modeValue
 
     val vanillaSpeed by float("VanillaSpeed", 2f, 0f..10f) {
@@ -127,7 +131,7 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
     val hypixelBoostTimer by float("Hypixel-BoostTimer", 1f, 0.1f..5f) { mode == "Hypixel" && hypixelBoost }
 
     // Other
-    val maxFlyTicksValue by int ("MaxFlyTicks", 15, 5..30) {mode == "TNTFly"}
+    val maxFlyTicksValue by int ("MaxFlyTicks", 15, 5..30) {mode == "IntaveFlagFly"}
     val neruxVaceTicks by int("NeruxVace-Ticks", 6, 2..20) { mode == "NeruxVace" }
 
     // Verus
@@ -321,5 +325,5 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
         get() = mode
 
     private val modeModule
-        get() = flyModes.find { it.javaClass.simpleName == mode }!!
+        get() = flyModes.find { it.modeName == mode }!!
 }

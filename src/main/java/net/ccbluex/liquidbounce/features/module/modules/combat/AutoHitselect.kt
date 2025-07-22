@@ -17,6 +17,7 @@ import net.ccbluex.liquidbounce.config.*
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.util.MovementInput
 import net.minecraft.util.MathHelper
+import net.ccbluex.liquidbounce.utils.rotation.RotationUtils
 import kotlin.math.abs
 
 /**
@@ -45,12 +46,8 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
             return@handler
         }
 
-        val calcYaw = (MathHelper.atan2(
-            thePlayer.posZ - target.posZ,
-            thePlayer.posX - target.posX
-        ) * 180.0 / Math.PI - 90.0).toFloat()
-        
-        val diffX = abs(MathHelper.wrapAngleTo180_float(calcYaw - target.rotationYawHead))
+    val calcYaw = RotationUtils.getYawToEntity(target)
+    val diffX = abs(MathHelper.wrapAngleTo180_float(calcYaw - target.rotationYawHead))
 
         if (diffX > maxAngleValue) {
             resetState()

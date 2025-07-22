@@ -5,7 +5,6 @@
  */
 package net.ccbluex.liquidbounce.utils.render
 
-import net.ccbluex.liquidbounce.LiquidBounce.CLIENT_NAME
 import net.ccbluex.liquidbounce.utils.client.ClientUtils
 import net.ccbluex.liquidbounce.utils.io.flipSafely
 import net.minecraftforge.fml.relauncher.Side
@@ -31,11 +30,10 @@ object IconUtils {
 
     val favicon by lazy {
         IconUtils::class.java.runCatching {
-            val name = CLIENT_NAME.lowercase()
             arrayOf(
-                readImageToBuffer(getResourceAsStream("/assets/minecraft/$name/icon_16x16.png")),
-                readImageToBuffer(getResourceAsStream("/assets/minecraft/$name/icon_32x32.png")),
-                readImageToBuffer(getResourceAsStream("/assets/minecraft/$name/icon_64x64.png"))
+                readImageToBuffer(getResourceAsStream("/assets/minecraft/liquidbounce/icon_16x16.png")),
+                readImageToBuffer(getResourceAsStream("/assets/minecraft/liquidbounce/icon_32x32.png")),
+                readImageToBuffer(getResourceAsStream("/assets/minecraft/liquidbounce/icon_64x64.png"))
             )
         }.onFailure {
             ClientUtils.LOGGER.warn("Failed to load icons", it)
