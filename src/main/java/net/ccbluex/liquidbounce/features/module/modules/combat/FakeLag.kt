@@ -230,7 +230,11 @@ object  FakeLag : Module("FakeLag", Category.COMBAT, gameDetecting = false) {
                     dynLastDisableTime = now
                 } else if (!Blink.blinkingSend() && distance > dynStopRange && distance < dynStartRange) {
                     dynLastStartBlinkTime = now
-                    Blink.blinking = true
+                    try {
+                        Blink.startBlink()
+                    } catch (_: Throwable) {
+                        Blink.blinkingSend()
+                    }
                 } else if (Blink.blinkingSend() && distance > dynStartRange) {
                     blink()
                 } else if (distance > dynMaxTargetRange) {
