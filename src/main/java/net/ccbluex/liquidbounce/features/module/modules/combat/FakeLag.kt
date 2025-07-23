@@ -41,19 +41,32 @@ import kotlin.math.min
 
 object  FakeLag : Module("FakeLag", Category.COMBAT, gameDetecting = false) {
 
-    private val delay by int("Delay", 550, 0..1000)
-    private val recoilTime by int("RecoilTime", 750, 0..2000)
+    // Mode selection
+    private val mode by choices("Mode", arrayOf("Normal", "Dynamic"), "Normal")
 
-    private val allowedDistToEnemy by floatRange("MinAllowedDistToEnemy", 1.5f..3.5f, 0f..6f)
+    // Normal mode
+    private val delay by int("Delay", 550, 0..1000) { mode == "Normal" }
+    private val recoilTime by int("RecoilTime", 750, 0..2000) { mode == "Normal" }
+    private val allowedDistToEnemy by floatRange("MinAllowedDistToEnemy", 1.5f..3.5f, 0f..6f) { mode == "Normal" }
+    private val blinkOnAction by boolean("BlinkOnAction", true) { mode == "Normal" }
+    private val pauseOnNoMove by boolean("PauseOnNoMove", true) { mode == "Normal" }
+    private val pauseOnChest by boolean("PauseOnChest", false) { mode == "Normal" }
 
-    private val blinkOnAction by boolean("BlinkOnAction", true)
+    // Dynamic 
+    private val dynDelay by int("DynamicDelay", 200, 25..1000) { mode == "Dynamic" }
+    private val dynStopOnHurt by boolean("DynamicStopOnHurt", true) { mode == "Dynamic" }
+    private val dynStopOnHurtTime by int("DynamicStopOnHurtTime", 500, 0..1000) { mode == "Dynamic" }
+    private val dynStartRange by float("DynamicStartRange", 6.0f, 3.0f..10.0f) { mode == "Dynamic" }
+    private val dynStopRange by float("DynamicStopRange", 3.5f, 1.0f..6.0f) { mode == "Dynamic" }
+    private val dynMaxTargetRange by float("DynamicMaxTargetRange", 15.0f, 6.0f..20.0f) { mode == "Dynamic" }
+    private var dynTarget: EntityPlayer? = null
+    private var dynLastDisableTime = -1L
+    private var dynLastHurt = false
+    private var dynLastStartBlinkTime = -1L
 
-    private val pauseOnNoMove by boolean("PauseOnNoMove", true)
-    private val pauseOnChest by boolean("PauseOnChest", false)
-
+    // Shared
     private val line by boolean("Line", true).subjective()
     private val lineColor by color("LineColor", Color.GREEN) { line }.subjective()
-
     private val renderModel by boolean("RenderModel", false).subjective()
 
     private val packetQueue = Queues.newArrayDeque<QueueData>()
@@ -61,7 +74,6 @@ object  FakeLag : Module("FakeLag", Category.COMBAT, gameDetecting = false) {
     private val resetTimer = MSTimer()
     private var wasNearEnemy = false
     private var ignoreWholeTick = false
-
     private var renderData = ModelRenderData(Vec3_ZERO, Rotation.ZERO)
 
     override fun onDisable() {
@@ -74,100 +86,97 @@ object  FakeLag : Module("FakeLag", Category.COMBAT, gameDetecting = false) {
         val player = mc.thePlayer ?: return@handler
         val packet = event.packet
 
-        if (!handleEvents() || player.isDead || event.isCancelled || allowedDistToEnemy.endInclusive > 0.0 && wasNearEnemy || ignoreWholeTick) {
-            return@handler
-        }
-
-        if (pauseOnNoMove && !player.isMoving) {
-            blink()
-            return@handler
-        }
-
-        // Flush on damaged received
-        if (player.health < player.maxHealth) {
-            if (player.hurtTime != 0) {
+        if (mode == "Normal") {
+            if (!handleEvents() || player.isDead || event.isCancelled || allowedDistToEnemy.endInclusive > 0.0 && wasNearEnemy || ignoreWholeTick) {
+                return@handler
+            }
+            if (pauseOnNoMove && !player.isMoving) {
                 blink()
                 return@handler
             }
-        }
-
-        // Flush on scaffold/tower usage
-        if (Scaffold.handleEvents() && Scaffold.placeRotation != null) {
-            blink()
-            return@handler
-        }
-
-        // Flush on attack/interact
-        if (blinkOnAction && packet is C02PacketUseEntity) {
-            blink()
-            return@handler
-        }
-
-        if (pauseOnChest && mc.currentScreen is GuiContainer) {
-            blink()
-            return@handler
-        }
-
-        when (packet) {
-            is C00Handshake, is C00PacketServerQuery, is C01PacketPing, is C01PacketChatMessage, is S01PacketPong -> return@handler
-
-            // Flush on window clicked (Inventory)
-            is C0EPacketClickWindow, is C0DPacketCloseWindow -> {
-                blink()
-                return@handler
-            }
-
-            // Flush on doing action/getting action
-            is S08PacketPlayerPosLook, is C08PacketPlayerBlockPlacement, is C07PacketPlayerDigging, is C12PacketUpdateSign, is C19PacketResourcePackStatus -> {
-                blink()
-                return@handler
-            }
-
-            // Flush on knockback
-            is S12PacketEntityVelocity -> {
-                if (player.entityId == packet.entityID) {
+            if (player.health < player.maxHealth) {
+                if (player.hurtTime != 0) {
                     blink()
                     return@handler
                 }
             }
-
-            is S27PacketExplosion -> {
-                if (packet.field_149153_g != 0f || packet.field_149152_f != 0f || packet.field_149159_h != 0f) {
+            if (Scaffold.handleEvents() && Scaffold.placeRotation != null) {
+                blink()
+                return@handler
+            }
+            if (blinkOnAction && packet is C02PacketUseEntity) {
+                blink()
+                return@handler
+            }
+            if (pauseOnChest && mc.currentScreen is GuiContainer) {
+                blink()
+                return@handler
+            }
+            when (packet) {
+                is C00Handshake, is C00PacketServerQuery, is C01PacketPing, is C01PacketChatMessage, is S01PacketPong -> return@handler
+                is C0EPacketClickWindow, is C0DPacketCloseWindow -> {
                     blink()
                     return@handler
                 }
-            }
-        }
-
-        if (!resetTimer.hasTimePassed(recoilTime)) return@handler
-
-        if (mc.isSingleplayer || mc.currentServerData == null) {
-            blink()
-            return@handler
-        }
-
-        if (event.eventType == EventState.SEND) {
-            event.cancelEvent()
-
-            if (packet is C03PacketPlayer && packet.isMoving) {
-                synchronized(positions) {
-                    positions += PositionData(
-                        packet.pos,
-                        System.currentTimeMillis(),
-                        player.renderYawOffset,
-                        RotationUtils.serverRotation
-                    )
+                is S08PacketPlayerPosLook, is C08PacketPlayerBlockPlacement, is C07PacketPlayerDigging, is C12PacketUpdateSign, is C19PacketResourcePackStatus -> {
+                    blink()
+                    return@handler
+                }
+                is S12PacketEntityVelocity -> {
+                    if (player.entityId == packet.entityID) {
+                        blink()
+                        return@handler
+                    }
+                }
+                is S27PacketExplosion -> {
+                    if (packet.field_149153_g != 0f || packet.field_149152_f != 0f || packet.field_149159_h != 0f) {
+                        blink()
+                        return@handler
+                    }
                 }
             }
-
-            synchronized(packetQueue) {
-                packetQueue += QueueData(packet, System.currentTimeMillis())
+            if (!resetTimer.hasTimePassed(recoilTime)) return@handler
+            if (mc.isSingleplayer || mc.currentServerData == null) {
+                blink()
+                return@handler
+            }
+            if (event.eventType == EventState.SEND) {
+                event.cancelEvent()
+                if (packet is C03PacketPlayer && packet.isMoving) {
+                    synchronized(positions) {
+                        positions += PositionData(
+                            packet.pos,
+                            System.currentTimeMillis(),
+                            player.renderYawOffset,
+                            RotationUtils.serverRotation
+                        )
+                    }
+                }
+                synchronized(packetQueue) {
+                    packetQueue += QueueData(packet, System.currentTimeMillis())
+                }
+            }
+        } else if (mode == "Dynamic") {
+            if (event.eventType == EventState.SEND) {
+                event.cancelEvent()
+                if (packet is C03PacketPlayer && packet.isMoving) {
+                    synchronized(positions) {
+                        positions += PositionData(
+                            packet.pos,
+                            System.currentTimeMillis(),
+                            player.renderYawOffset,
+                            RotationUtils.serverRotation
+                        )
+                    }
+                }
+                synchronized(packetQueue) {
+                    packetQueue += QueueData(packet, System.currentTimeMillis())
+                }
             }
         }
     }
 
     val onWorld = handler<WorldEvent> { event ->
-        // Clear packets on disconnect only
         if (event.worldClient == null) blink(false)
     }
 
@@ -180,40 +189,81 @@ object  FakeLag : Module("FakeLag", Category.COMBAT, gameDetecting = false) {
         val player = mc.thePlayer ?: return@handler
         val world = mc.theWorld ?: return@handler
 
-        if (allowedDistToEnemy.endInclusive > 0) {
-            val playerPos = player.currPos
-            val serverPos = positions.firstOrNull()?.pos ?: playerPos
-
-            val playerBox = player.hitBox.offset(serverPos - playerPos)
-
-            wasNearEnemy = false
-
-            world.playerEntities.forEach { otherPlayer ->
-                if (otherPlayer == player) return@forEach
-
-                val entityMixin = otherPlayer as? IMixinEntity
-
-                if (entityMixin != null) {
-                    val eyes = getTruePositionEyes(otherPlayer)
-
-                    if (eyes.distanceTo(getNearestPointBB(eyes, playerBox)) in allowedDistToEnemy) {
-                        blink()
-                        wasNearEnemy = true
-                        return@handler
+        if (mode == "Normal") {
+            if (allowedDistToEnemy.endInclusive > 0) {
+                val playerPos = player.currPos
+                val serverPos = positions.firstOrNull()?.pos ?: playerPos
+                val playerBox = player.hitBox.offset(serverPos - playerPos)
+                wasNearEnemy = false
+                world.playerEntities.forEach { otherPlayer ->
+                    if (otherPlayer == player) return@forEach
+                    val entityMixin = otherPlayer as? IMixinEntity
+                    if (entityMixin != null) {
+                        val eyes = getTruePositionEyes(otherPlayer)
+                        if (eyes.distanceTo(getNearestPointBB(eyes, playerBox)) in allowedDistToEnemy) {
+                            blink()
+                            wasNearEnemy = true
+                            return@handler
+                        }
                     }
                 }
             }
+            if (Blink.blinkingSend() || player.isDead || player.isUsingItem) {
+                blink()
+                return@handler
+            }
+            if (!resetTimer.hasTimePassed(recoilTime)) return@handler
+            handlePackets()
+            ignoreWholeTick = false
+        } else if (mode == "Dynamic") {
+            if (dynTarget == null || dynTarget!!.isDead || player.getDistanceToEntity(dynTarget) > dynMaxTargetRange) {
+                dynTarget = world.playerEntities.filterIsInstance<EntityPlayer>()
+                    .filter { it != player && !it.isDead && player.getDistanceToEntity(it) <= dynMaxTargetRange }
+                    .minByOrNull { player.getDistanceToEntity(it) }
+            }
+            val target = dynTarget
+            val now = System.currentTimeMillis()
+            if (target != null) {
+                val distance = player.getDistanceToEntity(target)
+                if (Blink.blinkingSend() && distance < dynStopRange) {
+                    blink()
+                    dynLastDisableTime = now
+                } else if (!Blink.blinkingSend() && distance > dynStopRange && distance < dynStartRange) {
+                    dynLastStartBlinkTime = now
+                    Blink.enable()
+                } else if (Blink.blinkingSend() && distance > dynStartRange) {
+                    blink()
+                } else if (distance > dynMaxTargetRange) {
+                    dynTarget = null
+                    blink()
+                }
+                if (dynStopOnHurt && player.hurtTime > 0 && !dynLastHurt) {
+                    dynLastDisableTime = now
+                    blink()
+                }
+                if (now - dynLastDisableTime <= dynStopOnHurtTime) {
+                    blink()
+                }
+            } else {
+                blink()
+            }
+            dynLastHurt = player.hurtTime > 0
+            handlePacketsDynamic()
+            ignoreWholeTick = false
         }
-
-        if (Blink.blinkingSend() || player.isDead || player.isUsingItem) {
-            blink()
-            return@handler
+    }
+    private fun handlePacketsDynamic() {
+        synchronized(packetQueue) {
+            packetQueue.removeEach { (packet, timestamp) ->
+                if (timestamp <= System.currentTimeMillis() - dynDelay) {
+                    sendPacket(packet, false)
+                    true
+                } else false
+            }
         }
-
-        if (!resetTimer.hasTimePassed(recoilTime)) return@handler
-
-        handlePackets()
-        ignoreWholeTick = false
+        synchronized(positions) {
+            positions.removeEach { (_, timestamp) -> timestamp <= System.currentTimeMillis() - dynDelay }
+        }
     }
 
     val onRender3D = handler<Render3DEvent> { event ->
@@ -254,8 +304,6 @@ object  FakeLag : Module("FakeLag", Category.COMBAT, gameDetecting = false) {
             glPopMatrix()
         }
 
-        // A pretty basic model render process. Position and rotation interpolation is applied to look visually appealing to the user.
-        // This can be smarter by adding sneak checks, more timed hand swing/body movement, etc.
         if (mc.gameSettings.thirdPersonView == 0 || !renderModel) return@handler
 
         val manager = mc.renderManager
