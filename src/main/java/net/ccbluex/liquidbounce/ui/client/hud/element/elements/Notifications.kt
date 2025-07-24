@@ -5,7 +5,7 @@
  */
 package net.ccbluex.liquidbounce.ui.client.hud.element.elements
 
-
+import net.ccbluex.liquidbounce.LiquidBounce.CLIENT_NAME
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.ui.client.hud.HUD.addNotification
 import net.ccbluex.liquidbounce.ui.client.hud.HUD.notifications
@@ -33,7 +33,8 @@ import java.awt.Color
 class Notifications(
     x: Double = 0.0, y: Double = 30.0, scale: Float = 1F, side: Side = Side(Side.Horizontal.RIGHT, Side.Vertical.DOWN)
 ) : Element("Notifications", x, y, scale, side) {
-
+    
+    val name = CLIENT_NAME.lowercase
     val horizontalFade by choices("HorizontalFade", arrayOf("InOnly", "OutOnly", "Both", "None"), "OutOnly")
     val padding by int("Padding", 5, 1..20)
     val roundRadius by float("RoundRadius", 3f, 0f..10f)
@@ -87,10 +88,10 @@ class Notifications(
     }
 
     enum class SeverityType(val path: ResourceLocation) {
-        SUCCESS(ResourceLocation("rinbounce/notifications/success.png")), RED_SUCCESS(ResourceLocation("rinbounce/notifications/redsuccess.png")), INFO(
-            ResourceLocation("rinbounce/notifications/info.png")
+        SUCCESS(ResourceLocation("${name}/notifications/success.png")), RED_SUCCESS(ResourceLocation("${name}/notifications/redsuccess.png")), INFO(
+            ResourceLocation("${name}/notifications/info.png")
         ),
-        WARNING(ResourceLocation("rinbounce/notifications/warning.png")), ERROR(ResourceLocation("rinbounce/notifications/error.png"))
+        WARNING(ResourceLocation("${name}/notifications/warning.png")), ERROR(ResourceLocation("${name}/notifications/error.png"))
     }
 }
 

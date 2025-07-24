@@ -8,6 +8,7 @@ package net.ccbluex.liquidbounce.utils.render
 import co.uk.hexeption.utils.OutlineUtils
 import net.ccbluex.liquidbounce.config.ColorValue
 import net.ccbluex.liquidbounce.ui.font.Fonts
+import net.ccbluex.liquidbounce.LiquidBounce.CLIENT_NAME
 import net.ccbluex.liquidbounce.utils.block.block
 import net.ccbluex.liquidbounce.utils.block.center
 import net.ccbluex.liquidbounce.utils.block.toVec
@@ -37,6 +38,8 @@ import kotlin.math.*
 object RenderUtils : MinecraftInstance {
     // ARGB 0xff006fff
     const val CLIENT_COLOR = -16748545
+
+    val name = CLIENT_NAME.lowercase
 
     // ARGB 0x7f006fff
     const val CLIENT_COLOR_HALF_ALPHA = 2130735103
@@ -542,7 +545,7 @@ object RenderUtils : MinecraftInstance {
 
     fun drawCone(width: Float, height: Float, useTexture: Boolean = false) {
         if (useTexture) {
-            mc.textureManager.bindTexture(ResourceLocation("liquidbounce/textures/hat.png"))
+            mc.textureManager.bindTexture(ResourceLocation("${name}/textures/hat.png"))
             enableTexture2D()
             depthMask(true)
         }

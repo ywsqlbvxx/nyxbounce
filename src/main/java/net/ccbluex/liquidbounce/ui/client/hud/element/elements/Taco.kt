@@ -6,6 +6,7 @@
 
 package net.ccbluex.liquidbounce.ui.client.hud.element.elements
 
+import net.ccbluex.liquidbounce.LiquidBounce.CLIENT_NAME
 import net.ccbluex.liquidbounce.features.command.commands.TacoCommand.tacoToggle
 import net.ccbluex.liquidbounce.ui.client.hud.element.Border
 import net.ccbluex.liquidbounce.ui.client.hud.element.Element
@@ -21,6 +22,8 @@ import net.minecraft.util.ResourceLocation
 @ElementInfo(name = "Taco", priority = 1)
 class Taco(x: Double = 2.0, y: Double = 441.0) : Element("Taco", x = x, y = y) {
 
+    val name = CLIENT_NAME.lowercase
+
     private val frameSpeed by float("frameSpeed", 50f, 0f..200f)
     private val animationSpeed by float("animationSpeed", 0.15f, 0.01f..1.0f)
 
@@ -28,7 +31,7 @@ class Taco(x: Double = 2.0, y: Double = 441.0) : Element("Taco", x = x, y = y) {
     private var image = 0
     private var running = 0f
 
-    private val tacoTextures = Array(12) { i -> ResourceLocation("rinbounce/taco/${i + 1}.png") }
+    private val tacoTextures = Array(12) { i -> ResourceLocation("${name}/taco/${i + 1}.png") }
 
     override fun drawElement(): Border {
         val player = mc.thePlayer ?: return Border(0F, 0F, 0F, 0F)
