@@ -214,7 +214,7 @@ object FileFilters {
     val JAVASCRIPT = FileNameExtensionFilter("JavaScript Files", "js")
 
     @JvmField
-    val TEXT = FileNameExtensionFilter("Text Files", "txt")
+    val TEXT = FileNameExtensionFilter("Text Files", "txt") 
 
     @JvmField
     val IMAGE = FileNameExtensionFilter("Image Files (png)", "png")
