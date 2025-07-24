@@ -39,7 +39,7 @@ object RenderUtils : MinecraftInstance {
     // ARGB 0xff006fff
     const val CLIENT_COLOR = -16748545
 
-    val name = CLIENT_NAME.lowercase
+    val name = CLIENT_NAME.lowercase()
 
     // ARGB 0x7f006fff
     const val CLIENT_COLOR_HALF_ALPHA = 2130735103

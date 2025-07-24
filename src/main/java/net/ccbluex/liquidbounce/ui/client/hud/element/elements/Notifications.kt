@@ -34,7 +34,7 @@ class Notifications(
     x: Double = 0.0, y: Double = 30.0, scale: Float = 1F, side: Side = Side(Side.Horizontal.RIGHT, Side.Vertical.DOWN)
 ) : Element("Notifications", x, y, scale, side) {
     
-    val name = CLIENT_NAME.lowercase
+    val name = CLIENT_NAME.lowercase()
     val horizontalFade by choices("HorizontalFade", arrayOf("InOnly", "OutOnly", "Both", "None"), "OutOnly")
     val padding by int("Padding", 5, 1..20)
     val roundRadius by float("RoundRadius", 3f, 0f..10f)
