@@ -72,22 +72,20 @@ class Image : Element("Image") {
     override fun createElement(): Boolean {
         Thread {
             val selectedFile = MiscUtils.openFileChooser(
-                fileFilters = arrayOf(FileFilters.ALL_IMAGES), 
+                fileFilters = arrayOf(FileFilters.ALL_IMAGES),
                 acceptAll = false,
                 title = "Select Image for HUD"
             )
-
-
-            SwingUtilities.invokeLater {
-                selectedFile?.let { file -> 
+            mc.addScheduledTask { 
+                selectedFile?.let { file ->
                     if (!file.exists()) {
                         MiscUtils.showMessageDialog("Error", "The file does not exist.")
-                        return@invokeLater
+                        return@addScheduledTask
                     }
 
                     if (file.isDirectory) {
                         MiscUtils.showMessageDialog("Error", "The file is a directory.")
-                        return@invokeLater
+                        return@addScheduledTask
                     }
 
                     try {
@@ -96,10 +94,11 @@ class Image : Element("Image") {
                         MiscUtils.showMessageDialog("Error", "Exception occurred while opening the image: ${e.message}")
                     }
                 }
+               
             }
         }.start() 
 
-        return true
+        return true 
     }
 
     private fun setImage(b64image: String): Image {
