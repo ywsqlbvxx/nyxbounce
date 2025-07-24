@@ -186,7 +186,7 @@ object FileFilters {
      */
     @JvmField
     val ALL_IMAGES = ImageIO.getReaderFormatNames().mapTo(sortedSetOf(), String::lowercase).let {
-        FileNameExtensionFilter("Image Files (${it.joinToString()}", *it.toTypedArray()))
+        FileNameExtensionFilter("Image Files (${it.joinToString()}", *it.toTypedArray())
     }
 
     @JvmField
