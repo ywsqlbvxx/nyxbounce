@@ -34,7 +34,7 @@ class Notifications(
     x: Double = 0.0, y: Double = 30.0, scale: Float = 1F, side: Side = Side(Side.Horizontal.RIGHT, Side.Vertical.DOWN)
 ) : Element("Notifications", x, y, scale, side) {
     
-    override val name = CLIENT_NAME.lowercase()
+    val notificationsource = CLIENT_NAME.lowercase()
     val horizontalFade by choices("HorizontalFade", arrayOf("InOnly", "OutOnly", "Both", "None"), "OutOnly")
     val padding by int("Padding", 5, 1..20)
     val roundRadius by float("RoundRadius", 3f, 0f..10f)
@@ -88,10 +88,10 @@ class Notifications(
     }
 
     enum class SeverityType(val path: ResourceLocation) {
-        SUCCESS(ResourceLocation("${name}/notifications/success.png")), RED_SUCCESS(ResourceLocation("${name}/notifications/redsuccess.png")), INFO(
-            ResourceLocation("${name}/notifications/info.png")
+        SUCCESS(ResourceLocation("${notificationsource}/notifications/success.png")), RED_SUCCESS(ResourceLocation("${notificationsource}/notifications/redsuccess.png")), INFO(
+            ResourceLocation("${notificationsource}/notifications/info.png")
         ),
-        WARNING(ResourceLocation("${name}/notifications/warning.png")), ERROR(ResourceLocation("${name}/notifications/error.png"))
+        WARNING(ResourceLocation("${notificationsource}/notifications/warning.png")), ERROR(ResourceLocation("${notificationsource}/notifications/error.png"))
     }
 }
 
