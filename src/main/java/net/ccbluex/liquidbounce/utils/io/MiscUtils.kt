@@ -134,27 +134,26 @@ object MiscUtils : MinecraftInstance {
     private inline fun fileChooserAction(
         fileFilers: Array<out FileFilter>,
         isAcceptAllFileFilterUsed: Boolean,
-        action: JFileChooser.(JFrame) -> Int
+        crossinline action: JFileChooser.(JComponent?) -> Int
     ): File? {
         if (mc.isFullScreen) mc.toggleFullscreen()
 
-        val fileChooser = JFileChooser()
-        fileChooser.currentDirectory = FileManager.dir
-        fileChooser.fileSelectionMode = JFileChooser.FILES_ONLY
-        fileChooser.isAcceptAllFileFilterUsed = isAcceptAllFileFilterUsed || fileFilers.isEmpty()
-        fileFilers.forEach(fileChooser::addChoosableFileFilter)
+        var resultFile: File? = null
 
-        val frame = JFrame()
-        frame.isVisible = true
-        frame.toFront()
-        frame.isVisible = false
+        SwingUtilities.invokeAndWait {
+            val fileChooser = JFileChooser()
+            fileChooser.currentDirectory = FileManager.dir
+            fileChooser.fileSelectionMode = JFileChooser.FILES_ONLY
+            fileChooser.isAcceptAllFileFilterUsed = isAcceptAllFileFilterUsed || fileFilers.isEmpty()
+            fileFilers.forEach(fileChooser::addChoosableFileFilter)
 
-        val actionResult = fileChooser.action(frame)
-        frame.dispose()
+            val actionResult = fileChooser.action(null) 
 
-        return if (actionResult == JFileChooser.APPROVE_OPTION)
-            fileChooser.selectedFile.takeIf { f -> fileFilers.any { it.accept(f) } }
-        else null
+            if (actionResult == JFileChooser.APPROVE_OPTION) {
+                resultFile = fileChooser.selectedFile.takeIf { f -> fileFilers.any { it.accept(f) } }
+            }
+        }
+        return resultFile
     }
 
     @JvmStatic
