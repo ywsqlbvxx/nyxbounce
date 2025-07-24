@@ -22,6 +22,9 @@ import javax.swing.*
 import javax.swing.filechooser.FileFilter
 import javax.swing.filechooser.FileNameExtensionFilter
 
+import java.awt.FileDialog
+import java.awt.Frame
+
 object MiscUtils : MinecraftInstance {
 
     @JvmStatic
@@ -65,8 +68,15 @@ object MiscUtils : MinecraftInstance {
     }
 
     @JvmStatic
-    fun showMessageDialog(title: String, message: Any, messageType: Int = JOptionPane.ERROR_MESSAGE) =
-        JOptionPane.showMessageDialog(null, message, title, messageType)
+    fun showMessageDialog(title: String, message: Any, messageType: Int = JOptionPane.ERROR_MESSAGE) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            JOptionPane.showMessageDialog(null, message, title, messageType)
+        } else {
+            SwingUtilities.invokeLater {
+                JOptionPane.showMessageDialog(null, message, title, messageType)
+            }
+        }
+    }
 
     @JvmStatic
     fun Throwable.showErrorPopup(
@@ -130,44 +140,73 @@ object MiscUtils : MinecraftInstance {
             e.showErrorPopup()
         }
 
+    private fun combineToFileDialogFilter(fileFilters: Array<out FileFilter>): String? {
+        val extensions = mutableSetOf<String>()
+        for (filter in fileFilters) {
+            if (filter is FileNameExtensionFilter) {
+                extensions.addAll(filter.extensions)
+            }
+        }
+        return if (extensions.isEmpty()) null else extensions.joinToString(";") { "*.$it" }
+    }
+
     @JvmStatic
-    private inline fun fileChooserAction(
-        fileFilers: Array<out FileFilter>,
-        isAcceptAllFileFilterUsed: Boolean,
-        crossinline action: JFileChooser.(JComponent?) -> Int
+    private fun fileChooserAction(
+        fileFilters: Array<out FileFilter>,
+        acceptAll: Boolean,
+        mode: Int,
+        title: String
     ): File? {
         if (mc.isFullScreen) mc.toggleFullscreen()
 
         var resultFile: File? = null
 
-        SwingUtilities.invokeAndWait {
-            val fileChooser = JFileChooser()
-            fileChooser.currentDirectory = FileManager.dir
-            fileChooser.fileSelectionMode = JFileChooser.FILES_ONLY
-            fileChooser.isAcceptAllFileFilterUsed = isAcceptAllFileFilterUsed || fileFilers.isEmpty()
-            fileFilers.forEach(fileChooser::addChoosableFileFilter)
+        try {
+            SwingUtilities.invokeAndWait {
+                val parentFrame = Frame()
+                parentFrame.isUndecorated = true
+                parentFrame.isVisible = true
+                parentFrame.toFront()
+                parentFrame.isVisible = false
 
-            val actionResult = fileChooser.action(null) 
+                val dialog = FileDialog(parentFrame, title, mode)
+                dialog.directory = FileManager.dir.absolutePath
 
-            if (actionResult == JFileChooser.APPROVE_OPTION) {
-                resultFile = fileChooser.selectedFile.takeIf { f -> fileFilers.any { it.accept(f) } }
+                dialog.file = combineToFileDialogFilter(fileFilters)
+
+                try {
+                    dialog.isVisible = true
+
+                    val fileName = dialog.file
+                    val fileDir = dialog.directory
+
+                    if (fileName != null && fileDir != null) {
+                        resultFile = File(fileDir, fileName)
+                    }
+                } finally {
+                    parentFrame.dispose()
+                }
             }
+        } catch (e: Exception) {
+            e.showErrorPopup("File Chooser Error (AWT FileDialog):")
+            resultFile = null
         }
         return resultFile
     }
 
     @JvmStatic
     fun openFileChooser(
-        vararg fileFilers: FileFilter,
+        vararg fileFilters: FileFilter,
         acceptAll: Boolean = true,
-    ): File? = fileChooserAction(fileFilers, acceptAll, action = JFileChooser::showOpenDialog)
+        title: String = "Open File"
+    ): File? = fileChooserAction(fileFilters, acceptAll, FileDialog.LOAD, title)
 
     @JvmStatic
     fun saveFileChooser(
-        vararg fileFilers: FileFilter,
+        vararg fileFilters: FileFilter,
         acceptAll: Boolean = true,
-    ): File? = fileChooserAction(fileFilers, acceptAll, action = JFileChooser::showSaveDialog)
-
+        title: String = "Save File"
+    ): File? = fileChooserAction(fileFilters, acceptAll, FileDialog.SAVE, title)
 }
 
 object FileFilters {
@@ -180,12 +219,9 @@ object FileFilters {
     @JvmField
     val IMAGE = FileNameExtensionFilter("Image Files (png)", "png")
 
-    /**
-     * Based on runtime ImageIO
-     */
     @JvmField
     val ALL_IMAGES = ImageIO.getReaderFormatNames().mapTo(sortedSetOf(), String::lowercase).let {
-        FileNameExtensionFilter("Image Files (${it.joinToString()}", *it.toTypedArray())
+        FileNameExtensionFilter("Image Files (${it.joinToString()})", *it.toTypedArray())
     }
 
     @JvmField

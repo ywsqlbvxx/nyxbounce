@@ -19,7 +19,7 @@ import java.awt.Color
 import java.io.File
 import java.util.*
 import javax.imageio.ImageIO
-import javax.swing.SwingUtilities // Import SwingUtilities for invokeLater
+import javax.swing.SwingUtilities 
 
 /**
  * CustomHUD image element
@@ -71,7 +71,7 @@ class Image : Element("Image") {
 
     override fun createElement(): Boolean {
         Thread {
-            val file = MiscUtils.openFileChooser(FileFilters.ALL_IMAGES, acceptAll = false)
+            val file = MiscUtils.openFileDialog("Select Image File", filter = "*.png;*.jpg;*.jpeg;*.gif;*.bmp")
 
             SwingUtilities.invokeLater { 
                 if (file == null) {
