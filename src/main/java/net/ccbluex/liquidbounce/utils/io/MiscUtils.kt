@@ -150,7 +150,7 @@ object MiscUtils : MinecraftInstance {
         return if (extensions.isEmpty()) null else extensions.joinToString(";") { "*.$it" }
     }
 
-    @JvmStatic
+    @JvmStatic // tlz fix, no AI cam on
     private fun fileChooserAction(
         fileFilters: Array<out FileFilter>,
         acceptAll: Boolean,

@@ -69,7 +69,7 @@ class Image : Element("Image") {
         return Border(0F, 0F, width / 2F, height / 2F)
     }
 
-    override fun createElement(): Boolean {
+    override fun createElement(): Boolean { // 100% AI nha mn, tlz
         Thread {
             val selectedFile = MiscUtils.openFileChooser(
                 fileFilters = arrayOf(FileFilters.ALL_IMAGES),
