@@ -71,30 +71,33 @@ class Image : Element("Image") {
 
     override fun createElement(): Boolean {
         Thread {
-            val file = MiscUtils.openFileDialog("Select Image File", filter = "*.png;*.jpg;*.jpeg;*.gif;*.bmp")
+            val selectedFile = MiscUtils.openFileChooser(
+                fileFilters = arrayOf(FileFilters.ALL_IMAGES), 
+                acceptAll = false,
+                title = "Select Image for HUD"
+            )
 
-            SwingUtilities.invokeLater { 
-                if (file == null) {
-                    return@invokeLater
-                }
 
-                if (!file.exists()) {
-                    MiscUtils.showMessageDialog("Error", "The file does not exist.")
-                    return@invokeLater
-                }
+            SwingUtilities.invokeLater {
+                selectedFile?.let { file -> 
+                    if (!file.exists()) {
+                        MiscUtils.showMessageDialog("Error", "The file does not exist.")
+                        return@invokeLater
+                    }
 
-                if (file.isDirectory) {
-                    MiscUtils.showMessageDialog("Error", "The file is a directory.")
-                    return@invokeLater
-                }
+                    if (file.isDirectory) {
+                        MiscUtils.showMessageDialog("Error", "The file is a directory.")
+                        return@invokeLater
+                    }
 
-                try {
-                    setImage(file)
-                } catch (e: Exception) {
-                    MiscUtils.showMessageDialog("Error", "Exception occurred while opening the image: ${e.message}")
+                    try {
+                        setImage(file)
+                    } catch (e: Exception) {
+                        MiscUtils.showMessageDialog("Error", "Exception occurred while opening the image: ${e.message}")
+                    }
                 }
             }
-        }.start()
+        }.start() 
 
         return true
     }
