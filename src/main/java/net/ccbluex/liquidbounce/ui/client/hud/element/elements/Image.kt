@@ -19,6 +19,7 @@ import java.awt.Color
 import java.io.File
 import java.util.*
 import javax.imageio.ImageIO
+import javax.swing.SwingUtilities // Import SwingUtilities for invokeLater
 
 /**
  * CustomHUD image element
@@ -35,24 +36,19 @@ class Image : Element("Image") {
     private val shadowColor by color("ShadowColor", Color.BLACK.withAlpha(128)) { shadow }
 
     companion object {
-
         /**
          * Create default element
          */
         fun default(): Image {
             val image = Image()
-
             image.x = 1.0
             image.y = 1.0
-
             return image
         }
-
     }
 
     private val image = text("Image", "").onChanged { value ->
         if (value.isBlank()) return@onChanged
-
         setImage(value)
     }
 
@@ -74,25 +70,33 @@ class Image : Element("Image") {
     }
 
     override fun createElement(): Boolean {
-        val file = MiscUtils.openFileChooser(FileFilters.ALL_IMAGES, acceptAll = false) ?: return false
+        Thread {
+            val file = MiscUtils.openFileChooser(FileFilters.ALL_IMAGES, acceptAll = false)
 
-        if (!file.exists()) {
-            MiscUtils.showMessageDialog("Error", "The file does not exist.")
-            return false
-        }
+            SwingUtilities.invokeLater { 
+                if (file == null) {
+                    return@invokeLater
+                }
 
-        if (file.isDirectory) {
-            MiscUtils.showMessageDialog("Error", "The file is a directory.")
-            return false
-        }
+                if (!file.exists()) {
+                    MiscUtils.showMessageDialog("Error", "The file does not exist.")
+                    return@invokeLater
+                }
 
-        return try {
-            setImage(file)
-            true
-        } catch (e: Exception) {
-            MiscUtils.showMessageDialog("Error", "Exception occurred while opening the image: ${e.message}")
-            false
-        }
+                if (file.isDirectory) {
+                    MiscUtils.showMessageDialog("Error", "The file is a directory.")
+                    return@invokeLater
+                }
+
+                try {
+                    setImage(file)
+                } catch (e: Exception) {
+                    MiscUtils.showMessageDialog("Error", "Exception occurred while opening the image: ${e.message}")
+                }
+            }
+        }.start()
+
+        return true
     }
 
     private fun setImage(b64image: String): Image {
@@ -112,5 +116,4 @@ class Image : Element("Image") {
         setImage(Base64.getEncoder().encodeToString(image.readBytes()))
         return this
     }
-
 }
