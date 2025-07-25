@@ -63,29 +63,32 @@ public abstract class MixinGuiNewChat {
         String messageId = rawMessage;
 
         if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) {
-            if (!drawnChatLines.isEmpty()) {
-                ChatLine lastLine = drawnChatLines.get(0);
-                String lastMessage = lastLine.getChatComponent().getUnformattedText().trim();
+            ChatLine targetLine = null;
+            int lastIndex = -1;
 
+            for (int i = 0; i < drawnChatLines.size(); i++) {
+                ChatLine line = drawnChatLines.get(i);
+                String lastMessage = line.getChatComponent().getUnformattedText().trim();
                 if (lastMessage.equals(rawMessage)) {
-                    int count = messageCounts.getOrDefault(messageId, 1) + 1;
-                    messageCounts.put(messageId, count);
-
-                    String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + count + "]";
-                    ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
-
-                    drawnChatLines.set(0, new ChatLine(lastLine.getUpdatedCounter(), stackedComponent, lastLine.getChatLineID()));
-
-                    ci.cancel();
-                    return;
+                    lastIndex = i;
+                    targetLine = line;
                 }
             }
 
-            messageCounts.put(messageId, 1);
-            if (messageCounts.size() > 100) {
-                String firstKey = messageCounts.keySet().iterator().next();
-                messageCounts.remove(firstKey);
+            if (targetLine != null) {
+                int count = messageCounts.getOrDefault(messageId, 1) + 1;
+                messageCounts.put(messageId, count);
+
+                String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + count + "]";
+                ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
+
+                drawnChatLines.set(lastIndex, new ChatLine(targetLine.getUpdatedCounter(), stackedComponent, targetLine.getChatLineID()));
+
+                ci.cancel();
+                return;
             }
+
+            messageCounts.put(messageId, 1);
         }
     }
 
