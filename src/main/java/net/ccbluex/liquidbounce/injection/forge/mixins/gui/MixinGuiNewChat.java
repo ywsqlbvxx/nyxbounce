@@ -57,7 +57,6 @@ public abstract class MixinGuiNewChat {
         if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) {
             GuiNewChat gui = mc.ingameGUI.getChatGUI();
 
-            try {
                 List<ChatLine> chatLines = gui.getChatLines();
                 if (!chatLines.isEmpty()) {
                     ChatLine lastLine = chatLines.get(0);
