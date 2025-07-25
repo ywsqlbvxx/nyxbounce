@@ -22,7 +22,7 @@ import kotlin.random.Random
 
 object FastUse : Module("FastUse", Category.PLAYER) {
 
-    private val mode by choices("Mode", arrayOf("Instant", "NCP", "AAC", "Custom", "3fmc", "Grim"), "Grim")
+    private val mode by choices("Mode", arrayOf("Instant", "NCP", "AAC", "Custom", "3FMC", "Grim"), "Grim")
 
     private val delay by int("CustomDelay", 0, 0..300) { mode == "Custom" }
     private val customSpeed by int("CustomSpeed", 2, 1..35) { mode == "Custom" }
