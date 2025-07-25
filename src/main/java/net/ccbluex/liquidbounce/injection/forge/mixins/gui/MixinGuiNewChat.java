@@ -39,7 +39,8 @@ public abstract class MixinGuiNewChat {
     
     @Shadow private int f; 
 
-    @Shadow protected abstract void f1(IChatComponent p1, int p2, int p3, boolean p4);
+    // dume doc lon docs 1.13+ :troll:
+    @Shadow protected abstract void printChatMessageWithOptionalDeletion(IChatComponent chatComponent, int chatLineId, int p_146237_3_, boolean p_146237_4_);
 
 
     @Redirect(method = {"getChatComponent", "drawChat"}, at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/FontRenderer;FONT_HEIGHT:I"))
@@ -83,7 +84,7 @@ public abstract class MixinGuiNewChat {
 
             int nci = ++this.f; 
             
-            this.f1(cpt, nci, nci, true); 
+            this.printChatMessageWithOptionalDeletion(cpt, nci, nci, true); 
             
             m.put(mk, new int[]{c, nci});
         }
