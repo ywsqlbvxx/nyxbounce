@@ -79,6 +79,17 @@ public abstract class MixinGuiNewChat {
             m.put(mk, new int[]{c, nci});
         }
     }
+
+    @Redirect(method = "setChatLine", at = @At(value = "INVOKE", target = "Ljava/util/List;size()I", ordinal = 0))
+    private int hookNoLengthLimit(List<ChatLine> list) {
+        final ChatControl chatControl = ChatControl.INSTANCE;
+
+        if (chatControl.handleEvents() && chatControl.getNoLengthLimit()) {
+             return -1; 
+         } 
+  
+         return list.size(); 
+     } 
   
     @Inject(method = "clearChatMessages", at = @At("HEAD"), cancellable = true) 
     private void hookChatClear(CallbackInfo ci) { 
@@ -87,5 +98,5 @@ public abstract class MixinGuiNewChat {
          if (chatControl.handleEvents() && chatControl.getNoChatClear()) { 
              ci.cancel(); 
          } 
-    }
+     }
 }
