@@ -39,7 +39,6 @@ public abstract class MixinGuiNewChat {
     
     @Shadow private int f; 
 
-    // dume doc lon docs 1.13+ :troll:
     @Shadow protected abstract void printChatMessageWithOptionalDeletion(IChatComponent chatComponent, int chatLineId, int p_146237_3_, boolean p_146237_4_);
 
 
