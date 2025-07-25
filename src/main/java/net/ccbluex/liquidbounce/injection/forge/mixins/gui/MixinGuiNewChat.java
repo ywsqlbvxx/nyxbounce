@@ -34,7 +34,7 @@ public abstract class MixinGuiNewChat {
     
     @Shadow private int f; 
 
-    @Shadow private abstracta void setChatLine(IChatComponent p_146237_1_, int p_146237_2_, int p_146237_3_, boolean p_146237_4_);
+    @Shadow private abstract void setChatLine(IChatComponent p_146237_1_, int p_146237_2_, int p_146237_3_, boolean p_146237_4_);
 
     @Redirect(method = {"getChatComponent", "drawChat"}, at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/FontRenderer;FONT_HEIGHT:I"))
     private int iFC(FontRenderer i) {
