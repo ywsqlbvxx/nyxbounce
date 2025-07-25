@@ -56,36 +56,33 @@ public abstract class MixinGuiNewChat {
 
         if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) {
             GuiNewChat gui = mc.ingameGUI.getChatGUI();
+            List<ChatLine> chatLines = gui.getChatLines();
 
-            try {
-                List<ChatLine> chatLines = gui.getChatLines();
-                if (!chatLines.isEmpty()) {
-                    ChatLine lastLine = chatLines.get(0);
-                    String lastMessage = lastLine.getChatComponent().getFormattedText();
-                    String lastMessageId = String.valueOf(lastMessage.hashCode());
+            if (!chatLines.isEmpty()) {
+                ChatLine lastLine = chatLines.get(0);
+                String lastMessage = lastLine.getChatComponent().getFormattedText();
+                String lastMessageId = String.valueOf(lastMessage.hashCode());
 
-                    if (lastMessageId.equals(messageId)) {
-                        int count = messageCounts.getOrDefault(messageId, 1) + 1;
-                        messageCounts.put(messageId, count);
+                if (lastMessageId.equals(messageId)) {
+                    int count = messageCounts.getOrDefault(messageId, 1) + 1;
+                    messageCounts.put(messageId, count);
 
-                        String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + count + "]";
-                        ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
+                    String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + count + "]";
+                    ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
 
-                        gui.setChatLine(stackedComponent, lastLine.getChatLineID(), lastLine.getUpdatedCounter(), false);
+                    gui.setChatLine(stackedComponent, lastLine.getChatLineID(), lastLine.getUpdatedCounter(), false);
 
-                        ci.cancel();
-                        return;
-                    }
+                    ci.cancel();
+                    return;
                 }
+            }
 
-                messageCounts.put(messageId, 1);
-                if (messageCounts.size() > 100) {
-                    String firstKey = messageCounts.keySet().iterator().next();
-                    messageCounts.remove(firstKey);
-                }
-        
-            }  
-         }
+            messageCounts.put(messageId, 1);
+            if (messageCounts.size() > 100) {
+                String firstKey = messageCounts.keySet().iterator().next();
+                messageCounts.remove(firstKey);
+            }
+        }
     }
 
     @Redirect(method = "setChatLine", at = @At(value = "INVOKE", target = "Ljava/util/List;size()I", ordinal = 0))
