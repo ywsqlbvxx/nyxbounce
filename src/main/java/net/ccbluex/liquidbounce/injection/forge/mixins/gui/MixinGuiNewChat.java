@@ -20,7 +20,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo; 
   
- import java.util.HashMap; 
+ import java.util.LinkedHashMap;
+ import java.util.Map;
  import java.util.List; 
  import java.util.Map; 
   
@@ -28,7 +29,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(GuiNewChat.class)
 public abstract class MixinGuiNewChat {
-    private final Map<String, Integer> messageCounts = new HashMap<>();
+    private final Map<String, int[]> m = new LinkedHashMap<String, int[]>() {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, int[]> e) {
+            return size() > 100;
+        }
+    };
     
     @Redirect(method = {"getChatComponent", "drawChat"}, at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/FontRenderer;FONT_HEIGHT:I"))
     private int injectFontChat(FontRenderer instance) {
@@ -44,47 +50,42 @@ public abstract class MixinGuiNewChat {
     private int injectFontChatC(FontRenderer instance, String text) {
         return HUD.INSTANCE.shouldModifyChatFont() ? Fonts.fontSemibold40.getStringWidth(text) : instance.getStringWidth(text);
     }
-    @Inject(method = "printChatMessage", at = @At("HEAD"), cancellable = true) 
-     public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) { 
-         String rawMessage = chatComponent.getFormattedText(); //.getUnformattedText().trim(); 
-         String messageId = String.valueOf(rawMessage.hashCode()); 
+    @Inject(method = "printChatMessage", at = @At("HEAD"), cancellable = true)
+    public void onP(IChatComponent cc, CallbackInfo ci) {
+        String rm = cc.getFormattedText(); 
+        String mk = rm;
+
+        if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) {
+            int[] d = m.getOrDefault(mk, new int[]{0, -1});
+            int c = d[0] + 1;
+            int lpci = d[1];
+
+            IChatComponent cpt;
+            
+            if (c > 1) {
+                if (lpci != -1) {
+                    mc.ingameGUI.getChatGUI().deleteChatLine(lpci);
+                }
+                String ms = rm + " " + EnumChatFormatting.GRAY + "[" + c + "x]";
+                cpt = new ChatComponentText(ms);
+            } else {
+                cpt = cc;
+            }
+
+            ci.cancel();
+
+            int nci = mc.ingameGUI.getChatGUI().printChatMessage(cpt);
+            
+            m.put(mk, new int[]{c, nci});
+        }
+    }
   
-         if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) { 
-             int count = messageCounts.getOrDefault(messageId, 0) + 1; 
-             messageCounts.put(messageId, count); 
-  
-             if (count > 1) { 
-                 String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[" + count + "x]"; 
-                 ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage); 
-  
-                 ci.cancel(); 
-                 mc.ingameGUI.getChatGUI().printChatMessage(stackedComponent); 
-             } 
-  
-             if (messageCounts.size() > 100) { 
-                 String firstKey = messageCounts.keySet().iterator().next(); 
-                 messageCounts.remove(firstKey); 
-             } 
-         } 
-     } 
-  
-     @Redirect(method = "setChatLine", at = @At(value = "INVOKE", target = "Ljava/util/List;size()I", ordinal = 0)) 
-     private int hookNoLengthLimit(List<ChatLine> list) { 
-         final ChatControl chatControl = ChatControl.INSTANCE; 
-  
-         if (chatControl.handleEvents() && chatControl.getNoLengthLimit()) { 
-             return -1; 
-         } 
-  
-         return list.size(); 
-     } 
-  
-     @Inject(method = "clearChatMessages", at = @At("HEAD"), cancellable = true) 
-     private void hookChatClear(CallbackInfo ci) { 
+    @Inject(method = "clearChatMessages", at = @At("HEAD"), cancellable = true) 
+    private void hookChatClear(CallbackInfo ci) { 
          final ChatControl chatControl = ChatControl.INSTANCE; 
   
          if (chatControl.handleEvents() && chatControl.getNoChatClear()) { 
              ci.cancel(); 
          } 
-     }
+    }
 }

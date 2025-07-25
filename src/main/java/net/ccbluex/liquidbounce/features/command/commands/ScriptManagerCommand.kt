@@ -40,7 +40,11 @@ object ScriptManagerCommand : Command("scriptmanager", "scripts") {
         when (args[1].lowercase()) {
             "import" -> {
                 try {
-                    val file = MiscUtils.openFileChooser(FileFilters.JAVASCRIPT, FileFilters.ARCHIVE) ?: return
+                    val file = MiscUtils.openFileChooser(
+                    fileFilters = arrayOf(FileFilters.JAVASCRIPT),
+                    acceptAll = false,
+                    title = "Select script for RinBounce"
+                    )
 
                     when (file.extension.lowercase()) {
                         "js" -> {
