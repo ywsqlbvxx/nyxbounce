@@ -76,10 +76,14 @@ public abstract class MixinGuiNewChat {
             }
 
             if (targetLine != null) {
-                int count = messageCounts.getOrDefault(messageId, 1) + 1;
-                messageCounts.put(messageId, count);
+                int currentCount = messageCounts.getOrDefault(messageId, 1);
+                int newCount = currentCount + 1;
+                if (newCount > 100) {
+                    newCount = 1; 
+                }
+                messageCounts.put(messageId, newCount);
 
-                String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + count + "]";
+                String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + newCount + "]";
                 ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
 
                 drawnChatLines.set(lastIndex, new ChatLine(targetLine.getUpdatedCounter(), stackedComponent, targetLine.getChatLineID()));
