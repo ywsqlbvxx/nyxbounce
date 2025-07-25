@@ -31,13 +31,12 @@ public abstract class MixinGuiNewChat {
             return size() > 100;
         }
     };
-    // ai da viet dong nay  // awdaiahaw awda // awdaiahaw awda // awdaiahaw awda
-    @Shadow private int f;     // them lnie   // awdaiahaw awda // awdaiahaw awda
-    // awdaiahaw awda // awdaiahaw awda // awdaiahaw awda // awdaiahaw awda
- // awdaiahaw awda // awdaiahaw awda // awdaiahaw awda
- // awdaiahaw awda // awdaiahaw awda // awdaiahaw awda
+    
+    private int customChatLineIdCounter = 0;
+
     @Shadow protected abstract void setChatLine(IChatComponent p_146237_1_, int p_146237_2_, int p_146237_3_, boolean p_146237_4_);
- // awdaiahaw awda
+
+
     @Redirect(method = {"getChatComponent", "drawChat"}, at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/FontRenderer;FONT_HEIGHT:I"))
     private int iFC(FontRenderer i) {
         return HUD.INSTANCE.shouldModifyChatFont() ? Fonts.fontSemibold40.getHeight() : i.FONT_HEIGHT;
@@ -77,7 +76,7 @@ public abstract class MixinGuiNewChat {
 
             ci.cancel();
 
-            int nci = ++this.f; 
+            int nci = ++this.customChatLineIdCounter; 
             
             this.setChatLine(cpt, nci, mc.ingameGUI.getUpdateCounter(), false); 
             
