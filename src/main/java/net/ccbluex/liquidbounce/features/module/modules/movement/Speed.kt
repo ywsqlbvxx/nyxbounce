@@ -78,8 +78,7 @@ object Speed : Module("Speed", Category.MOVEMENT) {
 
         // Intave
         IntaveHop14,
-        IntaveTest,
-        IntaveTest2,
+        IntaveHop,
 
         // Server specific
         TeleportCubeCraft,
