@@ -9,7 +9,7 @@ import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.event.handler
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
-import net.ccbluex.liquidbounce.ui.utils.timing.MSTimer
+import net.ccbluex.liquidbounce.utils.timing.MSTimer
 import net.minecraft.init.Items
 import net.minecraft.item.ItemAppleGold
 import net.minecraft.potion.Potion
