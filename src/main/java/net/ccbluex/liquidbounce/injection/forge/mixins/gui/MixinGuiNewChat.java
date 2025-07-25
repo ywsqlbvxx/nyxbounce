@@ -51,20 +51,23 @@ public abstract class MixinGuiNewChat {
 
     @Inject(method = "printChatMessage", at = @At("HEAD"), cancellable = true)
     public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) {
-        if (chatComponent == null) {
+        if (chatComponent == null || drawnChatLines == null) {
             return;
         }
 
-        String rawMessage = chatComponent.getFormattedText();
-        String messageId = String.valueOf(rawMessage.hashCode());
+        String rawMessage = chatComponent.getUnformattedText().trim();
+        if (rawMessage.isEmpty()) {
+            return;
+        }
+
+        String messageId = rawMessage;
 
         if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) {
             if (!drawnChatLines.isEmpty()) {
                 ChatLine lastLine = drawnChatLines.get(0);
-                String lastMessage = lastLine.getChatComponent().getFormattedText();
-                String lastMessageId = String.valueOf(lastMessage.hashCode());
+                String lastMessage = lastLine.getChatComponent().getUnformattedText().trim();
 
-                if (lastMessageId.equals(messageId)) {
+                if (lastMessage.equals(rawMessage)) {
                     int count = messageCounts.getOrDefault(messageId, 1) + 1;
                     messageCounts.put(messageId, count);
 
