@@ -1,8 +1,3 @@
-/*
- * RinBounce Hacked Client
- * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/rattermc/rinbounce69
- */
 package net.ccbluex.liquidbounce.injection.forge.mixins.gui;
 
 import net.ccbluex.liquidbounce.features.module.modules.misc.ChatControl;
@@ -39,8 +34,7 @@ public abstract class MixinGuiNewChat {
     
     @Shadow private int f; 
 
-    @Shadow protected abstract void printChatMessageWithOptionalDeletion(IChatComponent chatComponent, int chatLineId, int p_146237_3_, boolean p_146237_4_);
-
+    @Shadow private void setChatLine(IChatComponent p_146237_1_, int p_146237_2_, int p_146237_3_, boolean p_146237_4_);
 
     @Redirect(method = {"getChatComponent", "drawChat"}, at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/FontRenderer;FONT_HEIGHT:I"))
     private int iFC(FontRenderer i) {
@@ -83,7 +77,7 @@ public abstract class MixinGuiNewChat {
 
             int nci = ++this.f; 
             
-            this.printChatMessageWithOptionalDeletion(cpt, nci, nci, true); 
+            this.setChatLine(cpt, nci, mc.ingameGUI.getUpdateCounter(), false); 
             
             m.put(mk, new int[]{c, nci});
         }
