@@ -15,6 +15,7 @@ import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.IChatComponent;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -28,6 +29,9 @@ import static net.ccbluex.liquidbounce.utils.client.MinecraftInstance.mc;
 
 @Mixin(GuiNewChat.class)
 public abstract class MixinGuiNewChat {
+    @Shadow
+    private List<ChatLine> drawnChatLines;
+
     private final Map<String, Integer> messageCounts = new HashMap<>();
 
     @Redirect(method = {"getChatComponent", "drawChat"}, at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/FontRenderer;FONT_HEIGHT:I"))
@@ -55,11 +59,8 @@ public abstract class MixinGuiNewChat {
         String messageId = String.valueOf(rawMessage.hashCode());
 
         if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) {
-            GuiNewChat gui = mc.ingameGUI.getChatGUI();
-            List<ChatLine> chatLines = gui.getChatLines();
-
-            if (!chatLines.isEmpty()) {
-                ChatLine lastLine = chatLines.get(0);
+            if (!drawnChatLines.isEmpty()) {
+                ChatLine lastLine = drawnChatLines.get(0);
                 String lastMessage = lastLine.getChatComponent().getFormattedText();
                 String lastMessageId = String.valueOf(lastMessage.hashCode());
 
@@ -70,7 +71,7 @@ public abstract class MixinGuiNewChat {
                     String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + count + "]";
                     ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
 
-                    gui.setChatLine(stackedComponent, lastLine.getChatLineID(), lastLine.getUpdatedCounter(), false);
+                    drawnChatLines.set(0, new ChatLine(lastLine.getUpdatedCounter(), stackedComponent, lastLine.getChatLineID()));
 
                     ci.cancel();
                     return;
