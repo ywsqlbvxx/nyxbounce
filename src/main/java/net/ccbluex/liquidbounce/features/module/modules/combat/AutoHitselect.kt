@@ -25,20 +25,16 @@ import kotlin.math.abs
  * Automatically performs hit selection to initiate combos
  */
 object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
-    private val maxWaitTime by int("MaxWaitTime", 500, 100..1000)
+    private val MODES = arrayOf("Pause", "Active")
+    private val PREFERENCES = arrayOf("Move speed", "KB reduction", "Critical hits")
+    private val mode by choices("Mode", MODES, "Pause")
+    private val preference by choices("Preference", PREFERENCES, "Move speed")
+    private val delay by int("Delay", 420, 300..500)
+    private val chance by int("Chance", 80, 0..100)
     private val rangeValue by float("Range", 8f, 1f..20f)
-    private val maxAngleValue by float("MaxAngle", 120f, 30f..180f)
-    private val clickDelay by int("ClickDelay", 100, 50..500)
 
-    private var blockClicking = false
-    private var wTap = false
-    private var shouldClick = false
-    private var startedCombo = false
-    private var waitTimerReset = false
-
-    private var lastResetTime = 0L
-    private var lastClickTime = 0L
-    private var waitStartTime = 0L
+    private var attackTime = -1L
+    private var currentShouldAttack = false
 
     val onGameTick = handler<GameTickEvent> {
         val thePlayer = mc.thePlayer ?: return@handler
@@ -47,90 +43,41 @@ object AutoHitselect : Module("AutoHitselect", Category.COMBAT) {
             return@handler
         }
 
-        val rotation = RotationUtils.toRotation(
-            Vec3(target.posX, target.posY + target.eyeHeight, target.posZ),
-            false,
-            thePlayer
-        )
-        val calcYaw = rotation.yaw
-        
-        val diffX = abs(MathHelper.wrapAngleTo180_float(calcYaw - target.rotationYawHead))
-
-        if (diffX > maxAngleValue) {
-            resetState()
-            return@handler
-        }
-
-        val playerHurt = thePlayer.hurtTime > 0
-        val targetHurt = target.hurtTime > 0
-
-        if (!playerHurt && !targetHurt) {
-            if (System.currentTimeMillis() - lastResetTime > 250) {
-                startedCombo = false
-                lastClickTime = System.currentTimeMillis()
-                shouldClick = false
-            }
+        currentShouldAttack = false
+        if (Math.random() * 100 > chance) {
+            currentShouldAttack = true
         } else {
-            lastResetTime = System.currentTimeMillis()
-        }
-
-                    if (mc.thePlayer.getDistanceToEntityBox(target) < 3) {
-            if (!waitTimerReset) {
-                waitStartTime = System.currentTimeMillis()
-                waitTimerReset = true
+            when (preference) {
+                "KB reduction" -> currentShouldAttack = !thePlayer.onGround && thePlayer.motionY < 0
+                "Critical hits" -> currentShouldAttack = thePlayer.hurtTime > 0 && !thePlayer.onGround && thePlayer.isMoving
             }
-        } else {
-            waitTimerReset = false
+            if (!currentShouldAttack)
+                currentShouldAttack = System.currentTimeMillis() - attackTime >= delay
         }
-
-        if (!playerHurt && !targetHurt && System.currentTimeMillis() - waitStartTime > maxWaitTime) {
-            lastClickTime = System.currentTimeMillis() + 999999
-            shouldClick = true
-            startedCombo = true
-        }
-
-        if (!startedCombo) {
-            if (playerHurt && !targetHurt) {
-                if (System.currentTimeMillis() - lastClickTime > clickDelay) {
-                    shouldClick = true
-                    startedCombo = true
-                    wTap = true
-                } else {
-                    blockClicking = true
-                    return@handler
-                }
-            } else {
-                blockClicking = true
-                return@handler
-            }
-        }
-
-        blockClicking = !shouldClick && (!playerHurt || !targetHurt)
     }
 
     val onMoveInput = handler<MovementInputEvent> { event ->
-        if (wTap) {
-            event.originalInput.moveForward = 0f
-            wTap = false
-        }
     }
 
     private fun resetState() {
-        blockClicking = false
-        startedCombo = false
-        shouldClick = false
+        currentShouldAttack = false
     }
 
     private fun getNearestEntityInRange(): EntityLivingBase? {
         val thePlayer = mc.thePlayer ?: return null
         val entities = mc.theWorld.loadedEntityList ?: return null
-
         return entities.asSequence()
             .filterIsInstance<EntityLivingBase>()
             .filter { isSelected(it, true) && mc.thePlayer.getDistanceToEntityBox(it) <= rangeValue }
             .minByOrNull { mc.thePlayer.getDistanceToEntityBox(it) }
     }
 
+    fun canAttack(): Boolean = canSwing()
+    fun canSwing(): Boolean {
+        if (!this.state || mode == "Active") return true
+        return currentShouldAttack
+    }
+
     override val tag
-        get() = "$maxWaitTime ms"
+        get() = mode
 }
