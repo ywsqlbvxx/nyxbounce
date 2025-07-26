@@ -50,7 +50,7 @@ public abstract class MixinGuiNewChat {
     }
 
     @Inject(method = "printChatMessage", at = @At("HEAD"), cancellable = true)
-    public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) {
+public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) {
     if (chatComponent == null || drawnChatLines == null) {
         return;
     }
@@ -84,17 +84,22 @@ public abstract class MixinGuiNewChat {
         }
         messageCounts.put(messageId, newCount);
 
-        if (newCount > 1) {
+        if (newCount >= 1) {
             String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + newCount + "]";
             ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
             if (targetLine != null) {
                 drawnChatLines.set(lastIndex, new ChatLine(targetLine.getUpdatedCounter(), stackedComponent, targetLine.getChatLineID()));
+            } else if (newCount == 1) {
+                return;
             } else {
-                mc.ingameGUI.getChatGUI().printChatMessage(stackedComponent);
+                drawnChatLines.set(lastIndex >= 0 ? lastIndex : drawnChatLines.size() - 1,
+                    new ChatLine(drawnChatLines.get(lastIndex >= 0 ? lastIndex : drawnChatLines.size() - 1).getUpdatedCounter(),
+                                 stackedComponent,
+                                 drawnChatLines.get(lastIndex >= 0 ? lastIndex : drawnChatLines.size() - 1).getChatLineID()));
             }
-            ci.cancel();
+            ci.cancel(); 
             return;
-        }
+            }
         }
     }
 
