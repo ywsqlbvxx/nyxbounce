@@ -552,7 +552,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     }
                 }
 
-            "grimac" -> { 
+            "grimtest" -> { 
                  var entity = mc.objectMouseOver?.entityHit 
   
                  if (entity == null) { 
