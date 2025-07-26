@@ -11,14 +11,14 @@ import net.ccbluex.liquidbounce.ui.font.Fonts;
 import net.minecraft.client.gui.ChatLine;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiNewChat;
-import net.minecraft.util.ChatComponentText; 
- import net.minecraft.util.EnumChatFormatting; 
- import net.minecraft.util.IChatComponent;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.IChatComponent;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
-<<<<<<< HEAD
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.HashMap;
@@ -34,20 +34,6 @@ public abstract class MixinGuiNewChat {
 
     private final Map<String, Integer> messageCounts = new HashMap<>();
 
-=======
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo; 
-  
- import java.util.HashMap; 
- import java.util.List; 
- import java.util.Map; 
-  
- import static net.ccbluex.liquidbounce.utils.client.MinecraftInstance.mc;
-
-@Mixin(GuiNewChat.class)
-public abstract class MixinGuiNewChat {
-    private final Map<String, Integer> messageCounts = new HashMap<>();
-    
->>>>>>> 0a4469117096fbe903eee0579a989c94b587a3f0
     @Redirect(method = {"getChatComponent", "drawChat"}, at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/FontRenderer;FONT_HEIGHT:I"))
     private int injectFontChat(FontRenderer instance) {
         return HUD.INSTANCE.shouldModifyChatFont() ? Fonts.fontSemibold40.getHeight() : instance.FONT_HEIGHT;
@@ -61,7 +47,6 @@ public abstract class MixinGuiNewChat {
     @Redirect(method = "getChatComponent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/FontRenderer;getStringWidth(Ljava/lang/String;)I"))
     private int injectFontChatC(FontRenderer instance, String text) {
         return HUD.INSTANCE.shouldModifyChatFont() ? Fonts.fontSemibold40.getStringWidth(text) : instance.getStringWidth(text);
-<<<<<<< HEAD
     }
 
     @Inject(method = "printChatMessage", at = @At("HEAD"), cancellable = true)
@@ -84,6 +69,7 @@ public abstract class MixinGuiNewChat {
             for (int i = 0; i < drawnChatLines.size(); i++) {
                 ChatLine line = drawnChatLines.get(i);
                 String lastMessage = line.getChatComponent().getUnformattedText().trim();
+                lastMessage = lastMessage.replaceAll(" \\[x\\d+\\]$", "");
                 if (lastMessage.equals(rawMessage)) {
                     lastIndex = i;
                     targetLine = line;
@@ -103,11 +89,17 @@ public abstract class MixinGuiNewChat {
 
                 drawnChatLines.set(lastIndex, new ChatLine(targetLine.getUpdatedCounter(), stackedComponent, targetLine.getChatLineID()));
 
-                ci.cancel();
+                ci.cancel(); 
                 return;
             }
 
             messageCounts.put(messageId, 1);
+        }
+
+        // khong clear = no tung
+        if (messageCounts.size() > 100) {
+            String firstKey = messageCounts.keySet().iterator().next();
+            messageCounts.remove(firstKey);
         }
     }
 
@@ -129,50 +121,5 @@ public abstract class MixinGuiNewChat {
         if (chatControl.handleEvents() && chatControl.getNoChatClear()) {
             ci.cancel();
         }
-=======
->>>>>>> 0a4469117096fbe903eee0579a989c94b587a3f0
     }
-    @Inject(method = "printChatMessage", at = @At("HEAD"), cancellable = true) 
-     public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) { 
-         String rawMessage = chatComponent.getFormattedText(); //.getUnformattedText().trim(); 
-         String messageId = String.valueOf(rawMessage.hashCode()); 
-  
-         if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) { 
-             int count = messageCounts.getOrDefault(messageId, 0) + 1; 
-             messageCounts.put(messageId, count); 
-  
-             if (count > 1) { 
-                 String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[" + count + "x]"; 
-                 ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage); 
-  
-                 ci.cancel(); 
-                 mc.ingameGUI.getChatGUI().printChatMessage(stackedComponent); 
-             } 
-  
-             if (messageCounts.size() > 100) { 
-                 String firstKey = messageCounts.keySet().iterator().next(); 
-                 messageCounts.remove(firstKey); 
-             } 
-         } 
-     } 
-  
-     @Redirect(method = "setChatLine", at = @At(value = "INVOKE", target = "Ljava/util/List;size()I", ordinal = 0)) 
-     private int hookNoLengthLimit(List<ChatLine> list) { 
-         final ChatControl chatControl = ChatControl.INSTANCE; 
-  
-         if (chatControl.handleEvents() && chatControl.getNoLengthLimit()) { 
-             return -1; 
-         } 
-  
-         return list.size(); 
-     } 
-  
-     @Inject(method = "clearChatMessages", at = @At("HEAD"), cancellable = true) 
-     private void hookChatClear(CallbackInfo ci) { 
-         final ChatControl chatControl = ChatControl.INSTANCE; 
-  
-         if (chatControl.handleEvents() && chatControl.getNoChatClear()) { 
-             ci.cancel(); 
-         } 
-     }
 }
