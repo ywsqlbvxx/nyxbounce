@@ -50,7 +50,7 @@ public abstract class MixinGuiNewChat {
     }
 
     @Inject(method = "printChatMessage", at = @At("HEAD"), cancellable = true)
-public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) {
+    public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) {
     if (chatComponent == null || drawnChatLines == null) {
         return;
     }
@@ -92,12 +92,13 @@ public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) {
             } else if (newCount == 1) {
                 return;
             } else {
-                drawnChatLines.set(lastIndex >= 0 ? lastIndex : drawnChatLines.size() - 1,
-                    new ChatLine(drawnChatLines.get(lastIndex >= 0 ? lastIndex : drawnChatLines.size() - 1).getUpdatedCounter(),
-                                 stackedComponent,
-                                 drawnChatLines.get(lastIndex >= 0 ? lastIndex : drawnChatLines.size() - 1).getChatLineID()));
+                if (lastIndex >= 0) {
+                    drawnChatLines.set(lastIndex, new ChatLine(drawnChatLines.get(lastIndex).getUpdatedCounter(), stackedComponent, drawnChatLines.get(lastIndex).getChatLineID()));
+                } else {
+                    drawnChatLines.set(drawnChatLines.size() - 1, new ChatLine(drawnChatLines.get(drawnChatLines.size() - 1).getUpdatedCounter(), stackedComponent, drawnChatLines.get(drawnChatLines.size() - 1).getChatLineID()));
+                }
             }
-            ci.cancel(); 
+            ci.cancel();
             return;
             }
         }
