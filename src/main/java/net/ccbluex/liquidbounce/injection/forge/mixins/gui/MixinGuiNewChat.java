@@ -66,38 +66,35 @@ public abstract class MixinGuiNewChat {
         ChatLine targetLine = null;
         int lastIndex = -1;
 
-        for (int i = 0; i < drawnChatLines.size(); i++) {
+        for (int i = drawnChatLines.size() - 1; i >= 0; i--) {
             ChatLine line = drawnChatLines.get(i);
             String lastMessage = line.getChatComponent().getUnformattedText().trim();
-
             String baseMessage = lastMessage.replaceAll(" \\[x\\d+\\]$", "").trim();
             if (baseMessage.equals(rawMessage)) {
                 lastIndex = i;
                 targetLine = line;
-                break; d
+                break;
             }
         }
 
-        int currentCount = messageCounts.getOrDefault(messageId, 0); 
+        int currentCount = messageCounts.getOrDefault(messageId, 0);
         int newCount = currentCount + 1;
         if (newCount > 100) {
-            newCount = 1; 
+            newCount = 1;
         }
         messageCounts.put(messageId, newCount);
 
-        if (targetLine != null) {
+        if (targetLine != null || newCount > 1) {
             String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + newCount + "]";
             ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
-            drawnChatLines.set(lastIndex, new ChatLine(targetLine.getUpdatedCounter(), stackedComponent, targetLine.getChatLineID()));
-        } else if (newCount == 1) {
-            return;
-        } else {
-            String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + newCount + "]";
-            ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
-            mc.ingameGUI.getChatGUI().printChatMessage(stackedComponent); 
+            if (targetLine != null) {
+                drawnLines.set(lastIndex, new ChatLine(targetLine.getUpdatedCounter(), stackedComponent, targetLine.getChatLineID()));
+            } else {
+                mc.ingameGUI.getChatGUI().printChatMessage(stackedComponent);
+            }
         }
 
-        ci.cancel(); 
+        ci.cancel();
         return;
         }
     }
