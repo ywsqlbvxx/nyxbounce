@@ -51,55 +51,54 @@ public abstract class MixinGuiNewChat {
 
     @Inject(method = "printChatMessage", at = @At("HEAD"), cancellable = true)
     public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) {
-        if (chatComponent == null || drawnChatLines == null) {
-            return;
-        }
+    if (chatComponent == null || drawnChatLines == null) {
+        return;
+    }
 
-        String rawMessage = chatComponent.getUnformattedText().trim();
-        if (rawMessage.isEmpty()) {
-            return;
-        }
+    String rawMessage = chatComponent.getUnformattedText().trim();
+    if (rawMessage.isEmpty()) {
+        return;
+    }
 
-        String messageId = rawMessage;
+    String messageId = rawMessage;
 
-        if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) {
-            ChatLine targetLine = null;
-            int lastIndex = -1;
+    if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) {
+        ChatLine targetLine = null;
+        int lastIndex = -1;
 
-            for (int i = 0; i < drawnChatLines.size(); i++) {
-                ChatLine line = drawnChatLines.get(i);
-                String lastMessage = line.getChatComponent().getUnformattedText().trim();
-                lastMessage = lastMessage.replaceAll(" \\[x\\d+\\]$", "");
-                if (lastMessage.equals(rawMessage)) {
-                    lastIndex = i;
-                    targetLine = line;
-                }
+        for (int i = 0; i < drawnChatLines.size(); i++) {
+            ChatLine line = drawnChatLines.get(i);
+            String lastMessage = line.getChatComponent().getUnformattedText().trim();
+
+            String baseMessage = lastMessage.replaceAll(" \\[x\\d+\\]$", "").trim();
+            if (baseMessage.equals(rawMessage)) {
+                lastIndex = i;
+                targetLine = line;
+                break; d
             }
-
-            if (targetLine != null) {
-                int currentCount = messageCounts.getOrDefault(messageId, 1);
-                int newCount = currentCount + 1;
-                if (newCount > 100) {
-                    newCount = 1; 
-                }
-                messageCounts.put(messageId, newCount);
-
-                String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + newCount + "]";
-                ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
-
-                drawnChatLines.set(lastIndex, new ChatLine(targetLine.getUpdatedCounter(), stackedComponent, targetLine.getChatLineID()));
-
-                ci.cancel(); 
-                return;
-            }
-
-            messageCounts.put(messageId, 1);
         }
 
-        // khong clear = no tung
-        if (messageCounts.size() > 100) {
-            String firstKey = messageCounts.keySet().iterator().next();
-            messageCounts.remove(firstKey);
+        int currentCount = messageCounts.getOrDefault(messageId, 0); 
+        int newCount = currentCount + 1;
+        if (newCount > 100) {
+            newCount = 1; 
+        }
+        messageCounts.put(messageId, newCount);
+
+        if (targetLine != null) {
+            String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + newCount + "]";
+            ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
+            drawnChatLines.set(lastIndex, new ChatLine(targetLine.getUpdatedCounter(), stackedComponent, targetLine.getChatLineID()));
+        } else if (newCount == 1) {
+            return;
+        } else {
+            String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + newCount + "]";
+            ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
+            mc.ingameGUI.getChatGUI().printChatMessage(stackedComponent); 
+        }
+
+        ci.cancel(); 
+        return;
         }
     }
 
