@@ -50,7 +50,7 @@ public abstract class MixinGuiNewChat {
     }
 
     @Inject(method = "printChatMessage", at = @At("HEAD"), cancellable = true)
-    public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) {
+public void onPrintChatMessage(IChatComponent chatComponent, CallbackInfo ci) {
     if (chatComponent == null || drawnChatLines == null) {
         return;
     }
@@ -65,7 +65,6 @@ public abstract class MixinGuiNewChat {
     if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) {
         ChatLine targetLine = null;
         int lastIndex = -1;
-
         for (int i = drawnChatLines.size() - 1; i >= 0; i--) {
             ChatLine line = drawnChatLines.get(i);
             String lastMessage = line.getChatComponent().getUnformattedText().trim();
@@ -76,26 +75,28 @@ public abstract class MixinGuiNewChat {
                 break;
             }
         }
-
         int currentCount = messageCounts.getOrDefault(messageId, 0);
         int newCount = currentCount + 1;
         if (newCount > 100) {
             newCount = 1; 
         }
         messageCounts.put(messageId, newCount);
-
         if (newCount >= 1) {
             String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + newCount + "]";
             ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
             if (targetLine != null || newCount > 1) {
-                int updateIndex = (targetLine != null) ? lastIndex : (drawnChatLines.size() - 1);
-                ChatLine baseLine = (targetLine != null) ? targetLine : drawnChatLines.get(updateIndex);
-                drawnChatLines.set(updateIndex, new ChatLine(baseLine.getUpdatedCounter(), stackedComponent, baseLine.getChatLineID()));
+                int updateIndex = (targetLine != null) ? lastIndex : (drawnChatLines.isEmpty() ? 0 : drawnChatLines.size() - 1);
+                ChatLine baseLine = (targetLine != null) ? targetLine : (drawnChatLines.isEmpty() ? null : drawnChatLines.get(updateIndex));
+                if (baseLine != null) {
+                    drawnChatLines.set(updateIndex, new ChatLine(baseLine.getUpdatedCounter(), stackedComponent, baseLine.getChatLineID()));
+                } else {
+                    return;
+                }
             }
             ci.cancel(); 
             return;
-            }
         }
+    }
     }
 
     @Redirect(method = "setChatLine", at = @At(value = "INVOKE", target = "Ljava/util/List;size()I", ordinal = 0))
