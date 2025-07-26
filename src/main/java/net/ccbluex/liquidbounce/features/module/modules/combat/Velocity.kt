@@ -11,6 +11,7 @@ import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.features.module.modules.exploit.Disabler
 import net.ccbluex.liquidbounce.features.module.modules.movement.Speed
+import net.ccbluex.liquidbounce.utils.*
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils.isLookingOnEntities
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils.isSelected
 import net.ccbluex.liquidbounce.utils.client.*
@@ -23,8 +24,10 @@ import net.ccbluex.liquidbounce.utils.movement.MovementUtils.speed
 import net.ccbluex.liquidbounce.utils.rotation.RaycastUtils.runWithModifiedRaycastResult
 import net.ccbluex.liquidbounce.utils.rotation.RotationUtils.currentRotation
 import net.ccbluex.liquidbounce.utils.timing.MSTimer
+import net.ccbluex.liquidbounce.value.*
 import net.minecraft.block.BlockAir
 import net.minecraft.entity.Entity
+import net.minecraft.item.ItemFood
 import net.minecraft.network.Packet
 import net.minecraft.network.play.client.*
 import net.minecraft.network.play.client.C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK
@@ -137,11 +140,11 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val bafmcDisableInAir by boolean("DisableInAir", true) { mode == "3FMC" }
 
     // GrimTest options
-    private val grimReduceFactor by float("GrimFactor", 0.6f, 0f..1f) { mode == "GrimTest" }
-    private val grimMinHurtTime by int("GrimMinHurtTime", 5, 0..10) { mode == "GrimTest" }
-    private val grimMaxHurtTime by int("GrimMaxHurtTime", 10, 0..20) { mode == "GrimTest" }
-    private val grimOnlyGround by boolean("OnlyGround", false) { mode == "GrimTest" }
-    private val grimDebug by boolean("DebugMessage", false) { mode == "GrimTest" }
+    private val clicksPerTick by int("ClicksPerTick", 1, 1..10) { mode == "GrimTest" } 
+     private val reduceTimes by int("ReduceTimes", 5, 1..9) { mode == "GrimTest" } 
+     private val onlyMove by boolean("OnlyMove", false) { mode == "GrimTest" } 
+     private val notWhileEating by boolean("NotWhileEating",false) { mode == "GrimTest" } 
+     private val debug by boolean("Debug", false) { mode == "GrimTest" }
 
     // TODO: Could this be useful in other modes? (Jump?)
     // Limits
@@ -161,7 +164,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val hurtTimeToClick by int("HurtTimeToClick", 10, 0..10) { mode == "Click" }
     private val whenFacingEnemyOnly by boolean("WhenFacingEnemyOnly", true) { mode == "Click" }
     private val ignoreBlocking by boolean("IgnoreBlocking", false) { mode == "Click" }
-    private val clickRange by float("ClickRange", 3f, 1f..6f) { mode == "Click" }
+    private val clickRange by float("ClickRange", 3f, 1f..6f) { mode == "Click" || mode == "GrimTest" }
     private val swingMode by choices("SwingMode", arrayOf("Off", "Normal", "Packet"), "Normal") { mode == "Click" }
 
     /**
@@ -184,6 +187,9 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
     // Grim
     private var timerTicks = 0
+    
+    // GrimTest
+    private var unReduceTimes = 0
 
     // Vulcan
     private var transaction = false
@@ -546,35 +552,52 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     }
                 }
 
-                "grimtest" -> {
-                    if (grimDebug) {
-                        ClientUtils.displayChatMessage("[GrimTest] Velocity packet received")
-                    }
-                    
-                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
-                        if (grimOnlyGround && !thePlayer.onGround) {
-                            if (grimDebug) {
-                                ClientUtils.displayChatMessage("[GrimTest] Ignored - Player not on ground")
-                            }
-                            return@handler
-                        }
-
-                        if (thePlayer.hurtTime in grimMinHurtTime..grimMaxHurtTime) {
-                            if (grimDebug) {
-                                ClientUtils.displayChatMessage("[GrimTest] Reducing velocity: X=${packet.motionX}, Y=${packet.motionY}, Z=${packet.motionZ}")
-                            }
-
-                            packet.motionX = (packet.motionX * grimReduceFactor).toInt()
-                            packet.motionY = (packet.motionY * grimReduceFactor).toInt()
-                            packet.motionZ = (packet.motionZ * grimReduceFactor).toInt()
-                        }
-                    } else if (packet is S27PacketExplosion) {
-                        if (grimDebug) {
-                            ClientUtils.displayChatMessage("[GrimTest] Cancelling explosion knockback")
-                        }
-                        event.cancelEvent()
-                    }
-                }
+            "grimac" -> { 
+                 var entity = mc.objectMouseOver?.entityHit 
+  
+                 if (entity == null) { 
+                         var result: Entity? = null 
+  
+                         runWithModifiedRaycastResult( 
+                             currentRotation ?: thePlayer.rotation, 
+                             clickRange.toDouble(), 
+                             0.0 
+                         ) { 
+                             result = it.entityHit?.takeIf { isSelected(it, true) } 
+                         } 
+  
+                         entity = result 
+                 } 
+  
+                 if (unReduceTimes > 0 && mc.thePlayer.hurtTime > 0 
+                     && !(onlyMove && !MovementUtils.hasMotion) 
+                     && !(notWhileEating && mc.thePlayer.isUsingItem && mc.thePlayer.heldItem != null && mc.thePlayer.heldItem.item is ItemFood) 
+                     && entity != null 
+                 ) { 
+  
+                     if (!mc.thePlayer.serverSprintState) { 
+                         sendPacket(C0BPacketEntityAction(mc.thePlayer, C0BPacketEntityAction.Action.START_SPRINTING)) 
+                         mc.thePlayer.isSprinting = true 
+                         mc.thePlayer.serverSprintState = true 
+                     } 
+  
+                     repeat(clicksPerTick) { 
+                         EventManager.callEvent(AttackEvent(entity)) 
+                         sendPacket(C0APacketAnimation()) 
+                         sendPacket(C02PacketUseEntity(entity, C02PacketUseEntity.Action.ATTACK)) 
+                         if (mc.playerController.currentGameType != WorldSettings.GameType.SPECTATOR) { 
+                             mc.thePlayer.attackTargetEntityWithCurrentItem(entity) 
+                         } 
+                     } 
+  
+                     if (debug) ClientUtils.displayChatMessage(String.format("%d Reduced %.3f %.3f", reduceTimes - unReduceTimes,  mc.thePlayer.motionX, mc.thePlayer.motionZ)) 
+  
+                     unReduceTimes-- 
+                 } else { 
+                     unReduceTimes = 0 
+                 } 
+             } 
+ 
                 
                 "intave" -> {
                     if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
@@ -709,6 +732,11 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             delayMode = false
         }
     }
+
+    @EventTarget 
+     fun onPostVelocity(event: PostVelocityEvent){ 
+         unReduceTimes = reduceTimes 
+     } 
 
     /**
      * Reset on world change
