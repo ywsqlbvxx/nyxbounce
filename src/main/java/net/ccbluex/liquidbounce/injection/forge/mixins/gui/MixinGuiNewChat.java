@@ -87,18 +87,12 @@ public abstract class MixinGuiNewChat {
         if (newCount >= 1) {
             String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + newCount + "]";
             ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
-            if (targetLine != null) {
-                drawnChatLines.set(lastIndex, new ChatLine(targetLine.getUpdatedCounter(), stackedComponent, targetLine.getChatLineID()));
-            } else if (newCount == 1) {
-                return;
-            } else {
-                if (lastIndex >= 0) {
-                    drawnChatLines.set(lastIndex, new ChatLine(drawnChatLines.get(lastIndex).getUpdatedCounter(), stackedComponent, drawnChatLines.get(lastIndex).getChatLineID()));
-                } else {
-                    drawnChatLines.set(drawnChatLines.size() - 1, new ChatLine(drawnChatLines.get(drawnChatLines.size() - 1).getUpdatedCounter(), stackedComponent, drawnChatLines.get(drawnChatLines.size() - 1).getChatLineID()));
-                }
+            if (targetLine != null || newCount > 1) {
+                int updateIndex = (targetLine != null) ? lastIndex : (drawnChatLines.size() - 1);
+                ChatLine baseLine = (targetLine != null) ? targetLine : drawnChatLines.get(updateIndex);
+                drawnChatLines.set(updateIndex, new ChatLine(baseLine.getUpdatedCounter(), stackedComponent, baseLine.getChatLineID()));
             }
-            ci.cancel();
+            ci.cancel(); 
             return;
             }
         }
