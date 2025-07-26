@@ -86,7 +86,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val adaptiveSpeed by boolean("AdaptiveSpeed", true) { scaffoldMode == "GodBridge" }
     private val smartPitch by boolean("SmartPitch", true) { scaffoldMode == "GodBridge" }
     
-    // HMCBlinkFly
+    // HMCBlinkFly by BeoPhiMan & DeletedUser, added to scaffold by thamturin
     private val hmcBlinkFlyEnabled by boolean("HMCBlinkFly", false)
     private val hmcBlinkVisibleLimit by int("HMCBlinkVisibleBlocks", 4, 0..10) { hmcBlinkFlyEnabled }
     private var hmcBlinkPlacedCount = 0

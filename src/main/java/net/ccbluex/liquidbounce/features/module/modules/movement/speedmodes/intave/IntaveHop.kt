@@ -9,7 +9,7 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.random.Random
 
-object IntaveHop : SpeedMode("IntaveHop") {
+object IntaveHop : SpeedMode("IntaveHop") { // skidded by duyundz
     override fun onUpdate() {
         val thePlayer = mc.thePlayer ?: return
 
