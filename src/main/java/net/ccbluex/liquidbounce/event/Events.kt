@@ -220,7 +220,6 @@ class ClickWindowEvent(val windowId: Int, val slotId: Int, val mouseButtonClicke
  * Called when LiquidBounce finishes starting up
  */
 object StartupEvent : Event()
-object PostVelocityEvent : Event()
 
 internal val ALL_EVENT_CLASSES = arrayOf(
     PlayerTickEvent::class.java,
