@@ -101,9 +101,9 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
             }
 
             final Sprint sprint = Sprint.INSTANCE;
-            final RinStrafe strafeFix = INSTANCE.getModule(RinStrafe.class);
-            if(RotationUtils.targetRotation != null && strafeFix.getDoFix()) {
-                fixedYaw = RotationUtils.targetRotation.getYaw();
+            final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
+            if (rotationUtils.getTargetRotation() != null && strafeFix.getDoFix()) {
+                fixedYaw = rotationUtils.getTargetRotation().getYaw();
             }
             if (sprint.handleEvents() && sprint.getMode().equals("Vanilla") && sprint.getAllDirections() && sprint.getJumpDirections()) {
                 fixedYaw += MathExtensionsKt.toDegreesF(MovementUtils.INSTANCE.getDirection()) - this.rotationYaw;

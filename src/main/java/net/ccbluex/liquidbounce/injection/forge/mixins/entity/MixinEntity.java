@@ -37,7 +37,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.Random;
 import java.util.UUID;
 
-import static net.ccbluex.liquidbounce.utils.client.MinecraftInstance.mc;
+import static net.ccbluex.liquidbounce.utils.MinecraftInstance.mc;
 
 @Mixin(Entity.class)
 @SideOnly(Side.CLIENT)
@@ -237,7 +237,7 @@ public abstract class MixinEntity implements IMixinEntity {
 
     @Inject(method = "getCollisionBorderSize", at = @At("HEAD"), cancellable = true)
     private void getCollisionBorderSize(final CallbackInfoReturnable<Float> callbackInfoReturnable) {
-        final HitBox hitBox = HitBox.INSTANCE;
+        final HitBox hitBox = LiquidBounce.moduleManager.getModule(HitBox.class);
 
         if (hitBox.handleEvents())
             callbackInfoReturnable.setReturnValue(0.1F + hitBox.determineSize((Entity) (Object) this));
@@ -254,10 +254,10 @@ public abstract class MixinEntity implements IMixinEntity {
         if ((Object) this != mc.thePlayer) return;
 
         final StrafeEvent strafeEvent = new StrafeEvent(strafe, forward, friction);
-        final RinStrafe strafeFix = INSTANCE.getModule(RinStrafe.class);
+        final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
         EventManager.INSTANCE.call(strafeEvent);
         if (strafeFix.getDoFix()) { 
-            strafeFix.runStrafeFixLoop(strafeFix.getSilentFix(), strafeEvent);
+            strafeFix.applyForceStrafe(strafeFix.getSilent(), strafeEvent);
         }
 
         if (strafeEvent.isCancelled()) callbackInfo.cancel();
