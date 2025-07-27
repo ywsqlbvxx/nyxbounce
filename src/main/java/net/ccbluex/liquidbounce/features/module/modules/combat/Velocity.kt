@@ -52,7 +52,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         "Mode", arrayOf(
             "Simple", "AAC", "AACPush", "AACZero", "AACv4",
             "Reverse", "SmoothReverse", "JumpReset", "Glitch", "Legit",
-            "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce", 
+            "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce",
             "Delay", "Hypixel", "HypixelAir",
             "Click", "BlocksMC", "3FMC", "GrimReduce", "Intave",
             "GrimTest", "GrimTest-TLZ"
@@ -92,7 +92,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
     // Chance
     private val chance by int("Chance", 100, 0..100) { mode == "JumpReset" || mode == "Legit" }
-    
+
     // JumpReset
     private val jumpCooldownMode by choices("JumpCooldownMode", arrayOf("Ticks", "ReceivedHits"), "Ticks")
     { mode == "JumpReset" }
@@ -132,12 +132,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private val grimTLZReduceFactor by float("GrimTLZReduceFactor", 0.2f, 0f..1f) { mode == "GrimTest-TLZ" }
     private val grimTLZOnlyGround by boolean("OnlyGround", true) { mode == "GrimTest-TLZ" }
     private val grimTLZChance by int("GrimTLZChance", 100, 0..100) { mode == "GrimTest-TLZ" }
+    private val grimTLZStrafeSpeed by float("StrafeSpeed", 0.2f, 0f..1f) { mode == "GrimTest-TLZ" }
     private val grimTLZDebug by boolean("GrimTLZDebug", false) { mode == "GrimTest-TLZ" }
-
 
     private val pauseOnExplosion by boolean("PauseOnExplosion", true)
     private val ticksToPause by int("TicksToPause", 20, 1..50) { pauseOnExplosion }
-    
+
     private val bafmcHorizontal by float("3fmcHorizontal", 0F, 0F..1F) { mode == "3FMC" }
     private val bafmcVertical by float("3fmcVertical", 0F, 0F..1F) { mode == "3FMC" }
     private val bafmcChance by int("3fmcChance", 100, 0..100) { mode == "3FMC" }
@@ -202,7 +202,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
     // GrimTest-TLZ
     private var lastVelocity = Triple(0.0, 0.0, 0.0)
-    private var lastTransactionId: Short = 0
+    private var delayedTransaction: Pair<Short, Long>? = null
 
     override val tag
         get() = if (mode == "Simple" || mode == "Legit") {
@@ -218,8 +218,8 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         timerTicks = 0
         reset()
     }
-    
-    override fun onEnable() {            
+
+    override fun onEnable() {
         if (mode == "3FMC") {
             ClientUtils.displayChatMessage("[Velocity] 3FMC 00 velo by fdp ( thanks bpm!")
         }
@@ -237,13 +237,13 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     thePlayer.motionX *= reduceGrimFactor
                     thePlayer.motionY *= reduceGrimFactor
                     thePlayer.motionZ *= reduceGrimFactor
-                    
+
                     if (reduceGrimOnlyGround && !thePlayer.onGround) {
                         hasReceivedVelocity = false
                     }
                 }
             }
-            
+
             "glitch" -> {
                 thePlayer.noClip = hasReceivedVelocity
 
@@ -356,7 +356,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     val verticalMod = vertical / 100f
 
                     thePlayer.motionX *= horizontalMod
-                    thePlayer.motionZ *= horizontalMod 
+                    thePlayer.motionZ *= horizontalMod
                     thePlayer.motionY *= verticalMod
                 }
             }
@@ -368,7 +368,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     if (thePlayer.hurtTime <= grimReduceTicks) {
                         if (!grimReduceAirOnly || !thePlayer.onGround) {
                             thePlayer.motionX *= grimReduceHorizontal
-                            thePlayer.motionY *= grimReduceVertical 
+                            thePlayer.motionY *= grimReduceVertical
                             thePlayer.motionZ *= grimReduceHorizontal
                         }
                     }
@@ -379,7 +379,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
             "grimtest-tlz" -> {
                 if (hasReceivedVelocity && nextInt(endExclusive = 100) < grimTLZChance) {
-                    if (grimTLZOnlyGround && !thePlayer.onGround) {
+                    if (grimTLZOnlyGround && !isOnGround(0.001)) {
+                        hasReceivedVelocity = false
+                        return@handler
+                    }
+
+                    if (thePlayer.hurtTime < 9) {
                         hasReceivedVelocity = false
                         return@handler
                     }
@@ -389,19 +394,16 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     thePlayer.motionY = 0.41999998688697815 
                     thePlayer.motionZ = lastVelocity.third * (1.0 - reduce)
 
-                    val expectedX = thePlayer.posX + lastVelocity.first
-                    val expectedY = thePlayer.posY + 0.41999998688697815
-                    val expectedZ = thePlayer.posZ + lastVelocity.third
-                    sendPacket(C03PacketPlayer.C04PacketPlayerPosition(
-                        expectedX + Random.nextDouble(-0.0005, 0.0005), 
-                        expectedY + Random.nextDouble(-0.0005, 0.0005),
-                        expectedZ + Random.nextDouble(-0.0005, 0.0005),
-                        false 
-                    ))
+                    val kbAngle = atan2(lastVelocity.third, lastVelocity.first) * 180 / PI
+                    val newYaw = kbAngle.toFloat()
+                    thePlayer.rotationYaw = newYaw
+
+                    val yawRad = Math.toRadians(newYaw.toDouble())
+                    thePlayer.motionX += -sin(yawRad) * grimTLZStrafeSpeed
+                    thePlayer.motionZ += cos(yawRad) * grimTLZStrafeSpeed
 
                     if (grimTLZDebug) {
-                        ClientUtils.displayChatMessage("[GrimTest-TLZ] Applied reduced velocity: X=${thePlayer.motionX}, Y=${thePlayer.motionY}, Z=${thePlayer.motionZ}")
-                        ClientUtils.displayChatMessage("[GrimTest-TLZ] Sent fake jump position: X=$expectedX, Y=$expectedY, Z=$expectedZ")
+                        ClientUtils.displayChatMessage("Applied reduced velocity: X=${thePlayer.motionX}, Y=${thePlayer.motionY}, Z=${thePlayer.motionZ}")
                     }
 
                     hasReceivedVelocity = false
@@ -521,7 +523,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
         if ((packet is S12PacketEntityVelocity && thePlayer.entityId == packet.entityID && packet.motionY > 0 && (packet.motionX != 0 || packet.motionZ != 0))
             || (packet is S27PacketExplosion && (thePlayer.motionY + packet.field_149153_g) > 0.0
-                    && ((thePlayer.motionX + packet.field_149152_f) != 0.0 || (thePlayer.motionZ + packet.field_149159_h) != 0.0))
+                && ((thePlayer.motionX + packet.field_149152_f) != 0.0 || (thePlayer.motionZ + packet.field_149159_h) != 0.0))
         ) {
             velocityTimer.reset()
 
@@ -549,12 +551,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     hasReceivedVelocity = true
                     event.cancelEvent()
                 }
-                
+
                 "3fmc" -> {
                     if (bafmcDisableInAir && !isOnGround(0.5))
                         return@handler
                     if (packet is S12PacketEntityVelocity && packet.entityID == mc.thePlayer.entityId) {
-                        if (kotlin.random.Random.nextInt(100) < bafmcChance) {
+                        if (nextInt(endExclusive = 100) < bafmcChance) {
                             if (bafmcHorizontal == 0f && bafmcVertical == 0f) {
                                 event.cancelEvent()
                                 return@handler
@@ -577,7 +579,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     if (grimDebug) {
                         ClientUtils.displayChatMessage("[GrimTest] Velocity packet received")
                     }
-                    
+
                     if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
                         if (grimOnlyGround && !thePlayer.onGround) {
                             if (grimDebug) {
@@ -605,10 +607,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
                 "grimtest-tlz" -> {
                     if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
-                        if (grimTLZOnlyGround && !thePlayer.onGround) {
-                            if (grimTLZDebug) {
-                                ClientUtils.displayChatMessage("[GrimTest-TLZ] Ignored - Player not on ground")
-                            }
+                        if (grimTLZOnlyGround && !isOnGround(0.001)) {
                             return@handler
                         }
 
@@ -618,20 +617,24 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                             packet.motionZ / 8000.0
                         )
 
-                        if (grimTLZDebug) {
-                            ClientUtils.displayChatMessage("[GrimTest-TLZ] Velocity packet received: X=${lastVelocity.first}, Y=${lastVelocity.second}, Z=${lastVelocity.third}")
-                        }
+                        val reduce = grimTLZReduceFactor
+                        val expectedX = thePlayer.posX + lastVelocity.first
+                        val expectedY = thePlayer.posY + 0.41999998688697815
+                        val expectedZ = thePlayer.posZ + lastVelocity.third
+                        sendPacket(C03PacketPlayer.C04PacketPlayerPosition(
+                            expectedX + Random.nextDouble(-0.0005, 0.0005),
+                            expectedY + Random.nextDouble(-0.0005, 0.0005),
+                            expectedZ + Random.nextDouble(-0.0005, 0.0005),
+                            false
+                        ))
 
                         event.cancelEvent()
                         hasReceivedVelocity = true
                     } else if (packet is S27PacketExplosion) {
-                        if (grimTLZDebug) {
-                            ClientUtils.displayChatMessage("[GrimTest-TLZ] Cancelling explosion knockback")
-                        }
                         event.cancelEvent()
                     }
                 }
-                
+
                 "intave" -> {
                     if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
                         val velocityX = packet.motionX / 8000.0
@@ -645,7 +648,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                             packet.motionZ = (packet.motionZ * intaveHReduce).toInt()
                         }
                     } else if (packet is S27PacketExplosion) {
-                        event.cancelEvent() 
+                        event.cancelEvent()
                     }
                 }
 
@@ -735,11 +738,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         }
 
         if (mode == "GrimTest-TLZ" && packet is S32PacketConfirmTransaction) {
-            if (grimTLZDebug) {
-                ClientUtils.displayChatMessage("[GrimTest-TLZ] Transaction packet received: ID=${packet.actionNumber}")
-            }
-            sendPacket(C0FPacketConfirmTransaction(0, packet.actionNumber, true))
-            lastTransactionId = packet.actionNumber
+            delayedTransaction = Pair(packet.actionNumber, System.currentTimeMillis())
         }
     }
 
@@ -769,6 +768,22 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     val onGameLoop = handler<GameLoopEvent> {
         if (mode == "Delay")
             sendPacketsByOrder(false)
+
+        if (mode == "GrimTest-TLZ") {
+            delayedTransaction?.let { (actionNumber, timestamp) ->
+                if (System.currentTimeMillis() - timestamp >= 50) {
+                    sendPacket(C0FPacketConfirmTransaction(0, actionNumber, true))
+                    sendPacket(C03PacketPlayer.C06PacketPlayerPosLook(
+                        thePlayer.posX + Random.nextDouble(-0.01, 0.01),
+                        thePlayer.posY + 0.01,
+                        thePlayer.posZ + Random.nextDouble(-0.01, 0.01),
+                        thePlayer.rotationYaw, thePlayer.rotationPitch,
+                        true
+                    ))
+                    delayedTransaction = null
+                }
+            }
+        }
     }
 
     private fun sendPacketsByOrder(velocity: Boolean) {
@@ -816,7 +831,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             hasReceivedVelocity = false
             return@handler
         }
-        
+
         if (mode == "intave") {
             val shouldJump = Math.random() * 100 < intaveJumpChance && player.hurtTime > 5 && !intaveIsFallDamage
             val canJump = player.onGround && mc.currentScreen !is net.minecraft.client.gui.inventory.GuiInventory
@@ -895,8 +910,8 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
                         motionX *= ratioXZ
                         motionZ *= ratioXZ
-                      }
-                  }
+                    }
+                }
 
                 mc.thePlayer.motionX = motionX * horizontal
                 mc.thePlayer.motionZ = motionZ * horizontal
