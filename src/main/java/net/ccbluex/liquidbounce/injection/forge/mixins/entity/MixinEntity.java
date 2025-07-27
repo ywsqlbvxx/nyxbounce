@@ -237,7 +237,7 @@ public abstract class MixinEntity implements IMixinEntity {
 
     @Inject(method = "getCollisionBorderSize", at = @At("HEAD"), cancellable = true)
     private void getCollisionBorderSize(final CallbackInfoReturnable<Float> callbackInfoReturnable) {
-        final HitBox hitBox = HitBox.INSTANCE
+        final HitBox hitBox = HitBox.INSTANCE;
 
         if (hitBox.handleEvents())
             callbackInfoReturnable.setReturnValue(0.1F + hitBox.determineSize((Entity) (Object) this));
