@@ -6,6 +6,7 @@
 package net.ccbluex.liquidbounce.features.command.commands
 
 import net.ccbluex.liquidbounce.event.Listenable
+import net.ccbluex.liquidbounce.LiquidBounce.CLIENT_NAME
 import net.ccbluex.liquidbounce.event.Render2DEvent
 import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.event.handler
@@ -21,19 +22,20 @@ object TacoCommand : Command("taco"), Listenable {
     var tacoToggle = false
     private var image = 0
     private var running = 0f
+    val name = CLIENT_NAME.lowercase()
     private val tacoTextures = arrayOf(
-        ResourceLocation("liquidbounce/taco/1.png"),
-        ResourceLocation("liquidbounce/taco/2.png"),
-        ResourceLocation("liquidbounce/taco/3.png"),
-        ResourceLocation("liquidbounce/taco/4.png"),
-        ResourceLocation("liquidbounce/taco/5.png"),
-        ResourceLocation("liquidbounce/taco/6.png"),
-        ResourceLocation("liquidbounce/taco/7.png"),
-        ResourceLocation("liquidbounce/taco/8.png"),
-        ResourceLocation("liquidbounce/taco/9.png"),
-        ResourceLocation("liquidbounce/taco/10.png"),
-        ResourceLocation("liquidbounce/taco/11.png"),
-        ResourceLocation("liquidbounce/taco/12.png")
+        ResourceLocation("${name}/taco/1.png"),
+        ResourceLocation("${name}/taco/2.png"),
+        ResourceLocation("${name}/taco/3.png"),
+        ResourceLocation("${name}/taco/4.png"),
+        ResourceLocation("${name}/taco/5.png"),
+        ResourceLocation("${name}/taco/6.png"),
+        ResourceLocation("${name}/taco/7.png"),
+        ResourceLocation("${name}/taco/8.png"),
+        ResourceLocation("${name}/taco/9.png"),
+        ResourceLocation("${name}/taco/10.png"),
+        ResourceLocation("${name}/taco/11.png"),
+        ResourceLocation("${name}/taco/12.png")
     )
 
     /**

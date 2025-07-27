@@ -50,6 +50,7 @@
     "network.MixinNetworkManager",
     "network.MixinNetworkPlayerInfo",
     "packets.MixinC00Handshake",
+    "packets.MixinC01PacketChatMessage",
     "render.MixinEffectRenderer",
     "render.MixinEntityRenderer",
     "render.MixinFontRenderer",

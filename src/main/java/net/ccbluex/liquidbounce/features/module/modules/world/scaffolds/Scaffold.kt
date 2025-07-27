@@ -1,7 +1,8 @@
+
 /*
- * RinBounce Hacked Client
+ * LiquidBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
- * https://github.com/rattermc/rinbounce69
+ * https://github.com/CCBlueX/LiquidBounce/
  */
 package net.ccbluex.liquidbounce.features.module.modules.world.scaffolds
 
@@ -35,21 +36,14 @@ import net.ccbluex.liquidbounce.utils.timing.*
 import net.minecraft.block.BlockBush
 import net.minecraft.client.settings.GameSettings
 import net.minecraft.init.Blocks.air
-import net.minecraft.util.BlockPos
-import net.minecraft.init.Blocks
-import kotlin.math.roundToInt
 import net.minecraft.item.ItemBlock
 import net.minecraft.item.ItemStack
 import net.minecraft.network.play.client.C0APacketAnimation
 import net.minecraft.network.play.client.C0BPacketEntityAction
-import net.minecraft.network.play.client.C03PacketPlayer
-import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
 import net.minecraft.util.*
-import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.world.WorldSettings
 import net.minecraftforge.event.ForgeEventFactory
 import org.lwjgl.input.Keyboard
-import org.lwjgl.opengl.GL11
 import java.awt.Color
 import kotlin.math.*
 
@@ -76,20 +70,8 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // -->
 
     val scaffoldMode by choices(
-        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge", "Breezily"), "Normal"
+        "ScaffoldMode", arrayOf("Normal", "Rewinside", "Expand", "Telly", "GodBridge"), "Normal"
     )
-
-    // GodBridge specific settings
-    private val godBridgeMode by choices("GodBridgeMode", arrayOf("Advanced", "Safe", "Fast"), "Advanced") { scaffoldMode == "GodBridge" }
-    private val safetyCheck by boolean("SafetyCheck", true) { scaffoldMode == "GodBridge" }
-    private val autoCenter by boolean("AutoCenter", true) { scaffoldMode == "GodBridge" }
-    private val adaptiveSpeed by boolean("AdaptiveSpeed", true) { scaffoldMode == "GodBridge" }
-    private val smartPitch by boolean("SmartPitch", true) { scaffoldMode == "GodBridge" }
-    
-    // HMCBlinkFly
-    private val hmcBlinkFlyEnabled by boolean("HMCBlinkFly", false)
-    private val hmcBlinkVisibleLimit by int("HMCBlinkVisibleBlocks", 4, 0..10) { hmcBlinkFlyEnabled }
-    private var hmcBlinkPlacedCount = 0
 
     // Expand
     private val omniDirectionalExpand by boolean("OmniDirectionalExpand", false) { scaffoldMode == "Expand" }
@@ -117,14 +99,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Settings
     private val autoF5 by boolean("AutoF5", false).subjective()
-    private var breezilyState = false
 
     // Basic stuff
     val sprint by boolean("Sprint", false)
     private val swing by boolean("Swing", true).subjective()
     private val down by boolean("Down", true) { !sameY && scaffoldMode !in arrayOf("GodBridge", "Telly") }
-    private val autoJump by boolean("AutoJump", false)
-    private val jumpYWhenUserInput by boolean("JumpYWhenUserInput", false) { sameY }
 
     private val ticksUntilRotation by intRange("TicksUntilRotation", 3..3, 1..8) {
         scaffoldMode == "Telly"
@@ -133,12 +112,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     // GodBridge mode sub-values
     private val waitForRots by boolean("WaitForRotations", false) { isGodBridgeEnabled }
     private val useOptimizedPitch by boolean("UseOptimizedPitch", false) { isGodBridgeEnabled }
-    private val dynamicPitch by boolean("DynamicPitch", false) { isGodBridgeEnabled }
     private val customGodPitch by float(
         "GodBridgePitch", 73.5f, 0f..90f
     ) { isGodBridgeEnabled && !useOptimizedPitch }
-    private val stabilizeSpeed by boolean("StabilizeSpeed", true) { isGodBridgeEnabled }
-    private val autoAdjust by boolean("AutoAdjust", true) { isGodBridgeEnabled }
 
     val jumpAutomatically by boolean("JumpAutomatically", true) { scaffoldMode == "GodBridge" }
     private val blocksToJumpRange by intRange("BlocksToJumpRange", 4..4, 1..8) {  scaffoldMode == "GodBridge" && !jumpAutomatically }
@@ -161,16 +137,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Eagle
     private val eagleValue =
-        choices("Eagle", arrayOf("Normal", "Silent", "Legit", "Off"), "Normal") { scaffoldMode != "GodBridge" }
+        choices("Eagle", arrayOf("Normal", "Silent", "Off"), "Normal") { scaffoldMode != "GodBridge" }
     val eagle by eagleValue
-    private val eagleMode by choices("EagleMode", arrayOf("Both", "OnGround", "InAir", "Smart"), "Smart")
+    private val eagleMode by choices("EagleMode", arrayOf("Both", "OnGround", "InAir"), "Both")
     { eagle != "Off" && scaffoldMode != "GodBridge" }
-    private val eagleSneakTiming by floatRange("EagleSneakTiming", 0.1f..0.3f, 0.1f..1.0f) 
-    { eagle == "Legit" && scaffoldMode != "GodBridge" }
-    private val eagleSmartPrediction by int("EagleSmartPrediction", 2, 1..5)
-    { eagleMode == "Smart" && eagle != "Off" && scaffoldMode != "GodBridge" }
-    private val eagleRandomization by boolean("EagleRandomization", true) 
-    { eagle == "Legit" && scaffoldMode != "GodBridge" }
     private val adjustedSneakSpeed by boolean("AdjustedSneakSpeed", true)
     { eagle == "Silent" && scaffoldMode != "GodBridge" }
     private val eagleSpeed by float("EagleSpeed", 0.3f, 0.3f..1.0f) { eagle != "Off" && scaffoldMode != "GodBridge" }
@@ -184,10 +154,10 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     { useMaxSneakTime && eagleMode != "OnGround" }
 
     // Rotation Options
-    private val rotationMode =
+    private val modeList =
         choices("Rotations", arrayOf("Off", "Normal", "Stabilized", "ReverseYaw", "GodBridge"), "Normal")
 
-    private val options = RotationSettingsWithRotationModes(this, rotationMode).apply {
+    private val options = RotationSettingsWithRotationModes(this, modeList).apply {
         strictValue.excludeWithState()
         resetTicksValue.setSupport { it && scaffoldMode != "Telly" }
     }
@@ -253,56 +223,13 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Eagle
     private var placedBlocksWithoutEagle = 0
-    private var lastEagleTime = 0L
-    private var eagleSneakStartTime = 0L
-    private var eagleRandomDelay = 0f
 
     var eagleSneaking = false
+
     private var requestedStopSneak = false
-    private var predictedEdgeDanger = false
 
     private val isEagleEnabled
         get() = eagle != "Off" && !shouldGoDown && scaffoldMode != "GodBridge"
-
-    private fun checkSmartEdge(): Boolean {
-        val player = mc.thePlayer ?: return false
-        val world = mc.theWorld ?: return false
-
-        val yaw = player.rotationYaw
-        val x = -sin(yaw.toRadians()).toDouble()
-        val z = cos(yaw.toRadians()).toDouble()
-
-        for (i in 1..eagleSmartPrediction) {
-            val pos = BlockPos(
-                player.posX + x * i,
-                player.posY - 1,
-                player.posZ + z * i
-            )
-            if (world.isAirBlock(pos)) return true
-        }
-        return false
-    }
-
-    private fun shouldLegitSneak(): Boolean {
-        val currentTime = System.currentTimeMillis()
-        
-        if (eagleSneaking) {
-            val sneakDuration = currentTime - eagleSneakStartTime
-            if (sneakDuration >= (eagleSneakTiming.random() * 1000)) {
-                eagleRandomDelay = eagleSneakTiming.random()
-                return false
-            }
-            return true
-        }
-        
-        if (currentTime - lastEagleTime <= (eagleRandomDelay * 1000)) {
-            return false
-        }
-        
-        eagleSneakStartTime = currentTime
-        lastEagleTime = currentTime
-        return true
-    }
 
     // Downwards
     val shouldGoDown
@@ -328,54 +255,15 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val isGodBridgeEnabled
         get() = scaffoldMode == "GodBridge" || scaffoldMode == "Normal" && options.rotationMode == "GodBridge"
 
-    private fun checkVoidDanger(): Boolean {
-        val player = mc.thePlayer ?: return false
-        val world = mc.theWorld ?: return false
-        
-        // Check blocks below in the movement direction
-        val yaw = player.rotationYaw
-        val x = -sin(yaw.toRadians()).toDouble()
-        val z = cos(yaw.toRadians()).toDouble()
-        
-        var dangerBlocks = 0
-        for (i in 1..5) { 
-            val checkPos = BlockPos(
-                player.posX + x * i,
-                player.posY - 1,
-                player.posZ + z * i
-            )
-            if (world.isAirBlock(checkPos)) dangerBlocks++
-            if (dangerBlocks > 2) return true
-        }
-        return false
-    }
-    
-    private fun checkRotationSafety(rotation: Rotation): Boolean {
-        val player = mc.thePlayer ?: return false
-        val world = mc.theWorld ?: return false
-        
-        val eyePos = player.getPositionEyes(1f)
-        val lookVec = getVectorForRotation(rotation)
-        val reachVec = eyePos.addVector(
-            lookVec.xCoord * 4.5,
-            lookVec.yCoord * 4.5,
-            lookVec.zCoord * 4.5
-        )
-        
-        val raytrace = world.rayTraceBlocks(eyePos, reachVec, false, true, false)
-        return raytrace != null && raytrace.typeOfHit == MovingObjectType.BLOCK // MovingObjectType.BLOCK represents hitting a block
-    }
-
-
-
     private var godBridgeTargetRotation: Rotation? = null
+
     private val isLookingDiagonally: Boolean
         get() {
             val player = mc.thePlayer ?: return false
 
             val directionDegree = MovementUtils.direction.toDegreesF()
 
-            // Round the direction rotation to the nearest multiple of 45 degrees
+            // Round the direction rotation to the nearest multiple of 45 degrees so that way we check if the player faces diagonally
             val yaw = round(abs(MathHelper.wrapAngleTo180_float(directionDegree)) / 45f) * 45f
 
             val isYawDiagonal = yaw % 90 != 0f
@@ -384,54 +272,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
             return isYawDiagonal && (isMovingDiagonal || isStrafing)
         }
-
-    /**
-     * Checks if the player is in a safe position for god bridging
-     */
-    private fun isPlayerSafeForGodBridge(): Boolean {
-        val player = mc.thePlayer ?: return false
-        
-        if (blocksAmount() < 2) return false
-        
-        if (!player.onGround) return false
-        
-        val pos = player.position
-        val world = mc.theWorld ?: return false
-        
-        val blockBelow = world.getBlockState(pos.down())
-        if (blockBelow.block == air) return false
-        
-        return true
-    }
-
-    /**
-     * Calculate optimal side for god bridging based on position and movement
-     */
-    private fun calculateGodBridgeSide(movingYaw: Float): Float {
-        val player = mc.thePlayer ?: return 0f
-        
-        if (!player.onGround) return if (isOnRightSide) 45f else -45f
-        
-        val posX = -sin(movingYaw.toRadians()).toDouble()
-        val posZ = cos(movingYaw.toRadians()).toDouble()
-        
-        val shouldSwitchSide = run {
-            val nextPos = BlockPos(
-                player.posX + posX * 0.6,
-                player.posY - 1.0,
-                player.posZ + posZ * 0.6
-            )
-            
-            val currentBlock = mc.theWorld.getBlockState(player.position.down()).block == air
-            val nextBlock = mc.theWorld.getBlockState(nextPos).block == air
-            
-            currentBlock && nextBlock
-        }
-        
-        if (shouldSwitchSide) isOnRightSide = !isOnRightSide
-        
-        return if (isOnRightSide) 45f else -45f
-    }
 
     // Telly
     private var ticksUntilJump = 0
@@ -446,7 +286,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Enabling module
     override fun onEnable() {
-        hmcBlinkPlacedCount = 0
         val player = mc.thePlayer ?: return
 
         launchY = player.posY.roundToInt()
@@ -471,11 +310,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         if (autoJump && player.onGround && player.isMoving) {
             player.jump()
         }
-        
-        if (sprint && player.isMoving && !player.isSprinting) {
-            player.isSprinting = true
-        }
-        
+
         if (slow) {
             if (!slowGround || slowGround && player.onGround) {
                 player.motionX *= slowSpeed
@@ -521,32 +356,14 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 val eagleCondition = when (eagleMode) {
                     "OnGround" -> player.onGround
                     "InAir" -> !player.onGround
-                    "Smart" -> {
-                        val shouldCheck = player.onGround || (!player.onGround && player.motionY < 0)
-                        if (shouldCheck) {
-                            predictedEdgeDanger = checkSmartEdge()
-                        }
-                        predictedEdgeDanger
-                    }
                     else -> true
                 }
 
                 // For better sneak support we could move this to MovementInputEvent
                 val pressedOnKeyboard = Keyboard.isKeyDown(options.keyBindSneak.keyCode)
-                
-                val isLegitMode = eagle == "Legit"
 
-                var shouldEagle = if (isLegitMode) {
-                    if (eagleCondition && (blockPos.isReplaceable || dif < edgeDistance)) {
-                        shouldLegitSneak()
-                    } else false
-                } else {
+                var shouldEagle =
                     eagleCondition && (blockPos.isReplaceable || dif < edgeDistance) || pressedOnKeyboard
-                }
-
-                if (eagleRandomization && isLegitMode && shouldEagle) {
-                    shouldEagle = shouldEagle && Math.random() > 0.1 // 10% chance to skip sneaking for more natural feel
-                }
 
                 val shouldSchedule = !requestedStopSneak
 
@@ -611,7 +428,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             }
         }
     }
-    
+
     val onHMCBlinkPacket = handler<PacketEvent> { event ->
         if (!hmcBlinkFlyEnabled) return@handler
 
@@ -706,37 +523,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     val onRotationUpdate = handler<RotationUpdateEvent> {
         val player = mc.thePlayer ?: return@handler
-    // breezily
-        if (scaffoldMode == "Breezily") {
-             val camYaw = player.rotationYaw
-             val camPitch = player.rotationPitch
-            val oldPlayerRot = Rotation(camYaw, camPitch)
-            val rpitch = if (((camYaw / 45).roundToInt()) % 2 == 0) 79.6f else 76.3f
-            val playerRot = Rotation(camYaw + 180f, rpitch)
-            val settings = RotationSettingsWithRotationModes(this@Scaffold, rotationMode).apply {
-                horizontalAngleChangeValue.set(60f..60f)
-                verticalAngleChangeValue.set(60f..60f)
-            }
-            val lockRotation = RotationUtils.limitAngleChange(oldPlayerRot, playerRot, settings)
-            setTargetRotation(lockRotation, settings, 1)
-            
-            val breezilySettings = RotationSettingsWithRotationModes(this@Scaffold, rotationMode).apply {
-                horizontalAngleChangeValue.set(60f..60f)
-                verticalAngleChangeValue.set(60f..60f)
-            }
 
-            val blockBelow = mc.theWorld.getBlockState(BlockPos(player.posX, player.posY - 1.0, player.posZ)).block
-            if (blockBelow == net.minecraft.init.Blocks.air && ((camYaw / 45).roundToInt()) % 2 == 0) {
-                breezilyState = !breezilyState
-                mc.gameSettings.keyBindRight.pressed = breezilyState
-                mc.gameSettings.keyBindLeft.pressed = !breezilyState
-            } else {
-                mc.gameSettings.keyBindRight.pressed = false
-                mc.gameSettings.keyBindLeft.pressed = false
-            }
-            return@handler
-        }
-        
         if (player.ticksExisted == 1) {
             launchY = player.posY.roundToInt()
         }
@@ -753,6 +540,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (!Tower.isTowering && isGodBridgeEnabled && options.rotationsActive) {
             generateGodBridgeRotations(ticks)
+
             return@handler
         }
 
@@ -888,9 +676,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 BlockPos(player.posX, player.posY - 0.6, player.posZ).down()
             }
         } else if (shouldKeepLaunchPosition && launchY <= player.posY) {
-            val baseY = launchY - 1.0
-            val finalY = if (jumpYWhenUserInput && mc.gameSettings.keyBindJump.isKeyDown) baseY + 1 else baseY
-            BlockPos(player.posX, finalY, player.posZ)
+            BlockPos(player.posX, launchY - 1.0, player.posZ)
         } else if (player.posY == player.posY.roundToInt() + 0.5) {
             BlockPos(player)
         } else {
@@ -1028,6 +814,27 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         }
     }
 
+    private fun isServerPacket(packet: Any): Boolean {
+        return packet.javaClass.simpleName.startsWith("S")
+    }
+    
+    private fun isEntityMovementPacket(packet: Any): Boolean {
+        return when (packet) {
+            is net.minecraft.network.play.server.S14PacketEntity,
+            is net.minecraft.network.play.server.S18PacketEntityTeleport,
+            is net.minecraft.network.play.server.S19PacketEntityHeadLook,
+            is net.minecraft.network.play.server.S0BPacketAnimation,
+            is net.minecraft.network.play.server.S0CPacketSpawnPlayer,
+            is net.minecraft.network.play.server.S1CPacketEntityMetadata -> true
+            else -> {
+                val name = packet.javaClass.simpleName
+                name == "S15PacketEntityRelMove" ||
+                        name == "S17PacketEntityLookMove" ||
+                        name == "S16PacketEntityLook"
+            }
+        }
+    }
+
     // Disabling module
     override fun onDisable() {
         net.ccbluex.liquidbounce.utils.client.BlinkUtils.unblink()
@@ -1062,9 +869,6 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         SilentHotbar.resetSlot(this)
 
         options.instant = false
-        
-        mc.gameSettings.keyBindRight.pressed = false
-        mc.gameSettings.keyBindLeft.pressed = false
     }
 
     // Entity movement event
@@ -1204,10 +1008,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         if (options.rotationsActive && !isGodBridgeEnabled) {
             val rotationDifference = rotationDifference(placeRotation.rotation, currRotation)
-            val rotationDifference2 = rotationDifference(
-                Rotation(placeRotation.rotation.yaw / 90F, placeRotation.rotation.pitch / 90F),
-                Rotation(currRotation.yaw / 90F, currRotation.pitch / 90F)
-            )
+            val rotationDifference2 = rotationDifference(placeRotation.rotation / 90F, currRotation / 90F)
 
             val simPlayer = SimulatedPlayer.fromClientPlayer(player.movementInput)
             simPlayer.tick()
@@ -1484,126 +1285,51 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private var isOnRightSide = false
 
     /**
-     * God-bridge rotation generation method from Nextgen
-     *
-     * Credits to @Ell1ott
+     * Generates rotations for God Bridge technique
+     * Based on movement direction and position relative to blocks - @credit from LB-NextGen
      */
     private fun generateGodBridgeRotations(ticks: Int) {
         val player = mc.thePlayer ?: return
 
-        val direction = if (options.applyServerSide) {
-            MovementUtils.direction.toDegreesF() + 180f
-        } else MathHelper.wrapAngleTo180_float(player.rotationYaw)
+        val rotation = if (!player.isMoving) {
+            placeRotation?.rotation?.let {
+                val axisMovement = floor(it.yaw / 90) * 90
 
-        val movingYaw = round(direction / 45) * 45
-
-        val steps45 = arrayListOf(-135f, -45f, 45f, 135f)
-
-        val isMovingStraight = if (options.applyServerSide) {
-            movingYaw % 90 == 0f
-        } else movingYaw in steps45 && player.movementInput.isSideways
-
-        if (!player.isNearEdge(2.5f)) return
-
-        if (!player.isMoving) {
-            placeRotation?.run {
-                val axisMovement = floor(this.rotation.yaw / 90) * 90
-                val yaw = axisMovement + 45f
-                val pitch = calculateOptimalPitch()
-
-                setRotation(Rotation(yaw, pitch), ticks)
-                return
+                Rotation(axisMovement + 45, if (useOptimizedPitch) 75.0f else customGodPitch)
             }
-
-            if (!options.keepRotation) return
-        }
-
-        val rotation = if (isMovingStraight) {
-            if (player.onGround) {
-                isOnRightSide = floor(player.posX + cos(movingYaw.toRadians()) * 0.5) != floor(player.posX) || floor(
-                    player.posZ + sin(movingYaw.toRadians()) * 0.5
-                ) != floor(player.posZ)
-
-                val posInDirection = 
-                    BlockPos(player.positionVector.offset(EnumFacing.fromAngle(movingYaw.toDouble()), if(autoAdjust) 0.7 else 0.6))
-
-                val isLeaningOffBlock = player.position.down().block == air
-                val nextBlockIsAir = posInDirection.down().block == air
-
-                if (isLeaningOffBlock && nextBlockIsAir) {
-                    isOnRightSide = !isOnRightSide
-                }
-            }
-
-            val side = if (options.applyServerSide) {
-                if (isOnRightSide) 45f else -45f
-            } else 0f
-
-            val pitch = calculateOptimalPitch()
-            
-            Rotation(movingYaw + side, pitch)
         } else {
-            val pitch = if (dynamicPitch) 75.6f + (if(player.fallDistance > 0) player.fallDistance * 0.5f else 0f) else 75.6f
-            Rotation(movingYaw, pitch)
-        }.fixedSensitivity()
+            val movingYaw = player.direction.toDegreesF()
+            val isMovingStraight = movingYaw % 90 == 0f
 
-        if (stabilizeSpeed && player.onGround) {
-            val currentSpeed = sqrt(player.motionX * player.motionX + player.motionZ * player.motionZ)
-            if (currentSpeed > 0.12) {
-                player.motionX *= 0.9
-                player.motionZ *= 0.9
+            if (isMovingStraight) {
+                if (player.onGround) {
+                    isOnRightSide = floor(player.posX + cos(movingYaw.toRadians()) * 0.5) != floor(player.posX) ||
+                        floor(player.posZ + sin(movingYaw.toRadians()) * 0.5) != floor(player.posZ)
+
+                    val posInDirection = BlockPos(
+                        player.posX + cos(movingYaw.toRadians()) * 0.6,
+                        player.posY,
+                        player.posZ + sin(movingYaw.toRadians()) * 0.6
+                    )
+
+                    val isLeaningOffBlock = !BlockUtils.isBlockSolid(BlockPos(player).down())
+                    val nextBlockIsAir = !BlockUtils.isBlockSolid(posInDirection.down())
+
+                    if (isLeaningOffBlock && nextBlockIsAir) {
+                        isOnRightSide = !isOnRightSide
+                    }
+                }
+
+                val finalYaw = movingYaw + if (isOnRightSide) 45 else -45
+                Rotation(finalYaw, if (useOptimizedPitch) 75.7f else customGodPitch)
+            } else {
+                Rotation(movingYaw, if (useOptimizedPitch) 75.6f else customGodPitch)
             }
         }
 
-        godBridgeTargetRotation = rotation
-        setRotation(rotation, ticks)
-    }
-    
-    private fun isServerPacket(packet: Any): Boolean {
-        return packet.javaClass.simpleName.startsWith("S")
-    }
-    private fun isEntityMovementPacket(packet: Any): Boolean {
-        return when (packet) {
-            is net.minecraft.network.play.server.S14PacketEntity,
-            is net.minecraft.network.play.server.S18PacketEntityTeleport,
-            is net.minecraft.network.play.server.S19PacketEntityHeadLook,
-            is net.minecraft.network.play.server.S0BPacketAnimation,
-            is net.minecraft.network.play.server.S0CPacketSpawnPlayer,
-            is net.minecraft.network.play.server.S1CPacketEntityMetadata -> true
-            else -> {
-                val name = packet.javaClass.simpleName
-                name == "S15PacketEntityRelMove" ||
-                        name == "S17PacketEntityLookMove" ||
-                        name == "S16PacketEntityLook"
-            }
-        }
-    }
-
-    private fun calculateOptimalPitch(): Float {
-        val player = mc.thePlayer ?: return if (useOptimizedPitch) 73.5f else customGodPitch
-
-        return when {
-            useOptimizedPitch -> {
-                // Calculate optimal pitch based on player's state
-                val basePitch = 73.5f
-                when {
-                    player.fallDistance > 0 -> basePitch + (player.fallDistance * 0.6f).coerceAtMost(8f) 
-                    player.motionY < -0.1 -> basePitch + 2f
-                    player.isSprinting -> basePitch - 0.5f
-                    else -> basePitch
-                }
-            }
-            dynamicPitch -> {
-                // Dynamic pitch adjustment based on player's motion
-                val targetPitch = customGodPitch + when {
-                    player.fallDistance > 0 -> player.fallDistance * 0.8f
-                    player.motionY < -0.1 -> 2f
-                    player.isSprinting -> -0.5f
-                    else -> 0f
-                }
-                targetPitch.coerceIn(65f, 85f)
-            }
-            else -> customGodPitch
+        if (rotation != null) {
+            godBridgeTargetRotation = rotation
+            setRotation(rotation, ticks)
         }
     }
 

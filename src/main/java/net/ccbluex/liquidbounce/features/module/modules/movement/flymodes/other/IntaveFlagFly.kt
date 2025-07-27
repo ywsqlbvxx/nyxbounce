@@ -6,7 +6,7 @@ import net.minecraft.network.play.client.C03PacketPlayer
 import net.minecraft.network.play.server.S27PacketExplosion
 import net.ccbluex.liquidbounce.event.PacketEvent
 
-object IntaveFlagFly : FlyMode("IntaveFlagFly") {
+object IntaveFlagFly : FlyMode("IntaveFlagFly") { // skidded by duyundz
     private var boosting = false
     private var boostTicks = 0
 

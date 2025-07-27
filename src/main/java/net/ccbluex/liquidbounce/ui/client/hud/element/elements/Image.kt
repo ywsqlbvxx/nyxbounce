@@ -8,8 +8,8 @@ package net.ccbluex.liquidbounce.ui.client.hud.element.elements
 import net.ccbluex.liquidbounce.ui.client.hud.element.Border
 import net.ccbluex.liquidbounce.ui.client.hud.element.Element
 import net.ccbluex.liquidbounce.ui.client.hud.element.ElementInfo
-import net.ccbluex.liquidbounce.utils.io.FileFilters
 import net.ccbluex.liquidbounce.utils.io.MiscUtils
+import net.ccbluex.liquidbounce.utils.io.FileFilters
 import net.ccbluex.liquidbounce.utils.kotlin.RandomUtils.randomNumber
 import net.ccbluex.liquidbounce.utils.render.ColorUtils.withAlpha
 import net.ccbluex.liquidbounce.utils.render.RenderUtils.drawImage
@@ -19,6 +19,7 @@ import java.awt.Color
 import java.io.File
 import java.util.*
 import javax.imageio.ImageIO
+import javax.swing.SwingUtilities 
 
 /**
  * CustomHUD image element
@@ -35,24 +36,19 @@ class Image : Element("Image") {
     private val shadowColor by color("ShadowColor", Color.BLACK.withAlpha(128)) { shadow }
 
     companion object {
-
         /**
          * Create default element
          */
         fun default(): Image {
             val image = Image()
-
             image.x = 1.0
             image.y = 1.0
-
             return image
         }
-
     }
 
     private val image = text("Image", "").onChanged { value ->
         if (value.isBlank()) return@onChanged
-
         setImage(value)
     }
 
@@ -73,26 +69,36 @@ class Image : Element("Image") {
         return Border(0F, 0F, width / 2F, height / 2F)
     }
 
-    override fun createElement(): Boolean {
-        val file = MiscUtils.openFileChooser(FileFilters.ALL_IMAGES, acceptAll = false) ?: return false
+    override fun createElement(): Boolean { // 100% AI nha mn, tlz
+        Thread {
+            val selectedFile = MiscUtils.openFileChooser(
+                fileFilters = arrayOf(FileFilters.ALL_IMAGES),
+                acceptAll = false,
+                title = "Select Image for HUD"
+            )
+            mc.addScheduledTask { 
+                selectedFile?.let { file ->
+                    if (!file.exists()) {
+                        MiscUtils.showMessageDialog("Error", "The file does not exist.")
+                        return@addScheduledTask
+                    }
 
-        if (!file.exists()) {
-            MiscUtils.showMessageDialog("Error", "The file does not exist.")
-            return false
-        }
+                    if (file.isDirectory) {
+                        MiscUtils.showMessageDialog("Error", "The file is a directory.")
+                        return@addScheduledTask
+                    }
 
-        if (file.isDirectory) {
-            MiscUtils.showMessageDialog("Error", "The file is a directory.")
-            return false
-        }
+                    try {
+                        setImage(file)
+                    } catch (e: Exception) {
+                        MiscUtils.showMessageDialog("Error", "Exception occurred while opening the image: ${e.message}")
+                    }
+                }
+               
+            }
+        }.start() 
 
-        return try {
-            setImage(file)
-            true
-        } catch (e: Exception) {
-            MiscUtils.showMessageDialog("Error", "Exception occurred while opening the image: ${e.message}")
-            false
-        }
+        return true 
     }
 
     private fun setImage(b64image: String): Image {
@@ -112,5 +118,4 @@ class Image : Element("Image") {
         setImage(Base64.getEncoder().encodeToString(image.readBytes()))
         return this
     }
-
 }
