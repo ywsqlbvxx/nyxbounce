@@ -7,12 +7,12 @@ package net.ccbluex.liquidbounce.features.module.modules.combat
 
 import net.ccbluex.liquidbounce.LiquidBounce
 import net.ccbluex.liquidbounce.features.module.*
-import net.ccbluex.liquidbounce.event.Event
+import net.ccbluex.liquidbounce.event.*
 import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils
 import net.ccbluex.liquidbounce.utils.attack.CombatCheck
 import net.ccbluex.liquidbounce.utils.timing.MSTimer
-import net.ccbluex.liquidbounce.config.Values
+import net.ccbluex.liquidbounce.config.*
 import net.minecraft.client.entity.EntityOtherPlayerMP
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.network.play.client.C02PacketUseEntity
@@ -73,7 +73,6 @@ object RinReach : Module("RinReach", Category.COMBAT) {
         shown = true
     }
 
-    @EventTarget
     fun onAttack(event: AttackEvent) {
         val target = event.targetEntity as? EntityLivingBase ?: return
         CombatCheck.setTarget(target)
@@ -85,7 +84,7 @@ object RinReach : Module("RinReach", Category.COMBAT) {
                     createFakePlayer(target)
                 } else if (event.targetEntity == fakePlayer) {
                     currentTarget?.let { attackEntity(it) }
-                    event.cancel()
+                    event.cancelEvent()
                 } else {
                     removeFakePlayer()
                     currentTarget = target
@@ -95,7 +94,6 @@ object RinReach : Module("RinReach", Category.COMBAT) {
         }
     }
 
-    @EventTarget
     fun onUpdate(event: UpdateEvent) {
         CombatCheck.updateCombatState()
         if (MinecraftInstance.mc.thePlayer == null || currentTarget == null || !CombatCheck.inCombat) {
