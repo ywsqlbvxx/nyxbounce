@@ -145,7 +145,7 @@ public abstract class MixinEntityPlayerSP extends MixinAbstractClientPlayer {
         final Sneak sneak = Sneak.INSTANCE;
         final Derp derp = Derp.INSTANCE;
 
-        final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
+        final RinStrafe strafeFix = RinStrafe.INSTANCE;
 
         strafeFix.updateOverwrite();
 
@@ -302,7 +302,7 @@ public abstract class MixinEntityPlayerSP extends MixinAbstractClientPlayer {
     public void onLivingUpdate() {
         EventManager.INSTANCE.call(UpdateEvent.INSTANCE);
 
-        final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
+        final RinStrafe strafeFix = RinStrafe.INSTANCE;
 
         if (sprintingTicksLeft > 0) {
             --sprintingTicksLeft;

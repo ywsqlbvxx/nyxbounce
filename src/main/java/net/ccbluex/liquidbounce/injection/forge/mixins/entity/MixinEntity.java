@@ -237,7 +237,7 @@ public abstract class MixinEntity implements IMixinEntity {
 
     @Inject(method = "getCollisionBorderSize", at = @At("HEAD"), cancellable = true)
     private void getCollisionBorderSize(final CallbackInfoReturnable<Float> callbackInfoReturnable) {
-        final HitBox hitBox = LiquidBounce.moduleManager.getModule(HitBox.class);
+        final HitBox hitBox = HitBox.INSTANCE
 
         if (hitBox.handleEvents())
             callbackInfoReturnable.setReturnValue(0.1F + hitBox.determineSize((Entity) (Object) this));
@@ -254,7 +254,7 @@ public abstract class MixinEntity implements IMixinEntity {
         if ((Object) this != mc.thePlayer) return;
 
         final StrafeEvent strafeEvent = new StrafeEvent(strafe, forward, friction);
-        final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
+        final RinStrafe strafeFix = RinStrafe.INSTANCE;
         EventManager.INSTANCE.call(strafeEvent);
 
         if (strafeFix.getDoFix()) {

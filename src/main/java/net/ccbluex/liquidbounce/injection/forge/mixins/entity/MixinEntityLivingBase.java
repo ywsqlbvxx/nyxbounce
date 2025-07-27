@@ -96,7 +96,7 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
             final RotationUtils rotationUtils = RotationUtils.INSTANCE;
             final Rotation currentRotation = rotationUtils.getCurrentRotation();
             final RotationSettings rotationData = rotationUtils.getActiveSettings();
-            final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
+            final RinStrafe strafeFix = RinStrafe.INSTANCE;
 
             if (currentRotation != null && rotationData != null && rotationData.getStrafe()) {
                 fixedYaw = currentRotation.getYaw();
