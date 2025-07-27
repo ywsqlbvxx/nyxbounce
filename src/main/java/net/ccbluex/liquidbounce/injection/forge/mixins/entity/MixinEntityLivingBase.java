@@ -5,7 +5,6 @@
  */
 package net.ccbluex.liquidbounce.injection.forge.mixins.entity;
 
-import net.ccbluex.liquidbounce.LiquidBounce;
 import net.ccbluex.liquidbounce.event.EventManager;
 import net.ccbluex.liquidbounce.event.EventState;
 import net.ccbluex.liquidbounce.event.JumpEvent;
@@ -102,7 +101,7 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
             }
 
             final Sprint sprint = Sprint.INSTANCE;
-            final RinStrafe strafeFix = LiquidBounce.INSTANCE.getModule(RinStrafe.class);
+            final RinStrafe strafeFix = INSTANCE.getModule(RinStrafe.class);
             if(RotationUtils.targetRotation != null && strafeFix.getDoFix()) {
                 fixedYaw = RotationUtils.targetRotation.getYaw();
             }
