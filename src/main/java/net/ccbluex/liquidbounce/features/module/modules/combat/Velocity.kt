@@ -406,7 +406,8 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                         ClientUtils.displayChatMessage("[GrimTest-TLZ] Sent fake position: X=$expectedX, Y=$expectedY, Z=$expectedZ")
                     }
 
-                    sendPacket(C0FPacketConfirmTransaction(transactionId++, true))
+                    sendPacket(C0FPacketConfirmTransaction(0, transactionId.toShort(), true))
+                    transactionId = if (transactionId >= Short.MAX_VALUE) 0 else transactionId + 1
 
                     hasReceivedVelocity = false
                 }
@@ -647,7 +648,8 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                             event.cancelEvent()
                             hasReceivedVelocity = true
 
-                            sendPacket(C0FPacketConfirmTransaction(transactionId++, true))
+                            sendPacket(C0FPacketConfirmTransaction(0, transactionId.toShort(), true))
+                            transactionId = if (transactionId >= Short.MAX_VALUE) 0 else transactionId + 1
                         }
                     } else if (packet is S27PacketExplosion) {
                         if (grimTLZDebug) {
