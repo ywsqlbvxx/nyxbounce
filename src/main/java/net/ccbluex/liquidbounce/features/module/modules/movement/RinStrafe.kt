@@ -9,7 +9,7 @@ import net.ccbluex.liquidbounce.event.*
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.config.*
-import net.ccbluex.liquidbounce.utils.*
+import net.ccbluex.liquidbounce.utils.rotation.RotationUtils
 import net.minecraft.util.MathHelper
 
 object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
@@ -20,7 +20,6 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
     private var doFix = false
     private var isOverwrited = false
 
-    @EventTarget
     fun onUpdate(event: UpdateEvent) {
         if (!isOverwrited) {
             silentFix = silentFixValue.get()
@@ -44,7 +43,6 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
         silentFix = silentFixValue.get()
     }
 
-    @EventTarget
     fun onStrafe(event: StrafeEvent) {
         if (!doFix || event.isCancelled) {
             return
