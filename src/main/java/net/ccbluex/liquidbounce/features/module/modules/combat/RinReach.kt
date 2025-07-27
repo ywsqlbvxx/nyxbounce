@@ -73,7 +73,8 @@ object RinReach : Module("RinReach", Category.COMBAT) {
         shown = true
     }
 
-    val onAttack = handler<AttackEvent> { event ->
+
+val onAttack = handler<AttackEvent> { event ->
         val target = event.targetEntity as? EntityLivingBase ?: return@handler
         CombatCheck.setTarget(target)
 
@@ -84,7 +85,7 @@ object RinReach : Module("RinReach", Category.COMBAT) {
                     createFakePlayer(target)
                 } else if (event.targetEntity == fakePlayer) {
                     currentTarget?.let { attackEntity(it) }
-                    cancelEvent()
+                    event.cancelEvent()
                 } else {
                     removeFakePlayer()
                     currentTarget = target
