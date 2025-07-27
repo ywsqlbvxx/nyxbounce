@@ -18,8 +18,7 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
 
     var silentFix = false
     var doFix = false
-    var isOverwrited = false
-
+    var isOverwritten = false
 
     override fun onEnable() {
     }
@@ -29,21 +28,24 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
     }
 
     fun onUpdate(event: UpdateEvent) {
-        if (!isOverwrited) {
+        if (!isOverwritten) {
             silentFix = silentFixValue.get()
             doFix = state
         }
     }
+
     fun applyForceStrafe(isSilent: Boolean, runStrafeFix: Boolean) {
         silentFix = isSilent
         doFix = runStrafeFix
-        isOverwrited = true
+        isOverwritten = true
     }
+
     fun updateOverwrite() {
-        isOverwrited = false
+        isOverwritten = false
         doFix = state
-        silentFix = silentFixVaule.get()
+        silentFix = silentFixValue.get()
     }
+
     fun runStrafeFixLoop(isSilent: Boolean, event: StrafeEvent) {
         if (!doFix || event.isCancelled) {
             return
@@ -91,7 +93,6 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
             val yawSin = MathHelper.sin((calcYaw * Math.PI / 180F).toFloat())
             val yawCos = MathHelper.cos((calcYaw * Math.PI / 180F).toFloat())
 
-            
             player.motionX += strafe * yawCos - forward * yawSin
             player.motionZ += forward * yawCos + strafe * yawSin
         }
@@ -99,13 +100,7 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
         event.cancelEvent()
     }
 
-    fun updateOverwrite() {
-        isOverwrited = false
-        doFix = state
-        silentFix = silentFixValue.get()
-    }
-
     fun onStrafe(event: StrafeEvent) {
-        applyForceStrafe(silentFix, event)
+        runStrafeFixLoop(silentFix, event)
     }
 }
