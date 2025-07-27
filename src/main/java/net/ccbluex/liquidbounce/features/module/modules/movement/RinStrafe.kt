@@ -20,13 +20,6 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
     var doFix = false
     var isOverwrited = false
 
-    fun getSilentFix(): Boolean {
-        return silentFix
-    }
-
-    fun getDoFix(): Boolean {
-        return doFix
-    }
 
     override fun onEnable() {
     }
@@ -41,8 +34,17 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
             doFix = state
         }
     }
-
-    fun applyForceStrafe(isSilent: Boolean, event: StrafeEvent) {
+    fun applyForceStrafe(isSilent: Boolean, runStrafeFix: Boolean) {
+        silentFix = isSilent
+        doFix = runStrafeFix
+        isOverwrited = true
+    }
+    fun updateOverwrite() {
+        isOverwrited = false
+        doFix = state
+        silentFix = silentFixVaule.get()
+    }
+    fun runStrafeFixLoop(isSilent: Boolean, event: StrafeEvent) {
         if (!doFix || event.isCancelled) {
             return
         }
