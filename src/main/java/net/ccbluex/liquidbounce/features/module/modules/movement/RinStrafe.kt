@@ -20,10 +20,18 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
     var doFix = false
     var isOverwrited = false
 
+    fun getSilentFix(): Boolean {
+        return silentFix
+    }
+
+    fun getDoFix(): Boolean {
+        return doFix
+    }
+
     fun onUpdate(event: UpdateEvent) {
         if (!isOverwrited) {
             silentFix = silentFixValue.get()
-            doFix = true
+            doFix = state
         }
     }
 
@@ -31,36 +39,28 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
         doFix = false
     }
 
-    fun applyForceStrafe(isSilent: Boolean, runStrafeFix: Boolean) {
-        silentFix = isSilent
-        doFix = runStrafeFix
-        isOverwrited = true
-    }
-
-    fun updateOverwrite() {
-        isOverwrited = false
-        doFix = state
-        silentFix = silentFixValue.get()
-    }
-
-    fun onStrafe(event: StrafeEvent) {
-        if (!doFix || event.isCancelled) {
+    fun applyForceStrafe(isSilent: Boolean, strafeEvent: StrafeEvent) {
+        if (!doFix || strafeEvent.isCancelled) {
             return
         }
-        val (yaw) = RotationUtils.targetRotation ?: return
-        var strafe = event.strafe
-        var forward = event.forward
-        var friction = event.friction
+        silentFix = isSilent
+        val player = mc.thePlayer ?: return
+        val targetRotation = RotationUtils.targetRotation ?: return
+
+        val yaw = targetRotation.yaw
+        var strafe = strafeEvent.strafe
+        var forward = strafeEvent.forward
+        var friction = strafeEvent.friction
         var factor = strafe * strafe + forward * forward
 
-        var angleDiff = ((MathHelper.wrapAngleTo180_float(mc.thePlayer.rotationYaw - yaw - 22.5f - 135.0f) + 180.0).toDouble() / 45.0).toInt()
-        var calcYaw = if (silentFix) yaw + 45.0f * angleDiff else yaw
+        var angleDiff = ((MathHelper.wrapAngleTo180_float(player.rotationYaw - yaw - 22.5f - 135.0f) + 180.0).toDouble() / 45.0).toInt()
+        var calcYaw = if (isSilent) yaw + 45.0f * angleDiff else yaw
 
         var calcMoveDir = Math.max(Math.abs(strafe), Math.abs(forward)).toFloat()
         calcMoveDir = calcMoveDir * calcMoveDir
         var calcMultiplier = MathHelper.sqrt_float(calcMoveDir / Math.min(1.0f, calcMoveDir * 2.0f))
 
-        if (silentFix) {
+        if (isSilent) {
             when (angleDiff) {
                 1, 3, 5, 7, 9 -> {
                     if ((Math.abs(forward) > 0.005 || Math.abs(strafe) > 0.005) && !(Math.abs(forward) > 0.005 && Math.abs(strafe) > 0.005)) {
@@ -71,6 +71,7 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
                 }
             }
         }
+
         if (factor >= 1.0E-4F) {
             factor = MathHelper.sqrt_float(factor)
 
@@ -85,9 +86,25 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
             val yawSin = MathHelper.sin((calcYaw * Math.PI / 180F).toFloat())
             val yawCos = MathHelper.cos((calcYaw * Math.PI / 180F).toFloat())
 
-            mc.thePlayer.motionX += strafe * yawCos - forward * yawSin
-            mc.thePlayer.motionZ += forward * yawCos + strafe * yawSin
+            if (!isSilent) {
+                player.motionX += strafe * yawCos - forward * yawSin
+                player.motionZ += forward * yawCos + strafe * yawSin
+            }
+
+            strafeEvent.strafe = strafe
+            strafeEvent.forward = forward
         }
-        event.cancelEvent()
+
+        strafeEvent.cancelEvent()
+    }
+
+    fun updateOverwrite() {
+        isOverwrited = false
+        doFix = state
+        silentFix = silentFixValue.get()
+    }
+
+    fun onStrafe(event: StrafeEvent) {
+        applyForceStrafe(silentFix, event)
     }
 }
