@@ -178,6 +178,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             ReverseStep,
             Rotations,
             RinReach,
+            RinStrafe,
             SafeWalk,
             Scaffold,
             ServerCrasher,
