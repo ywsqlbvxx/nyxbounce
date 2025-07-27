@@ -14,6 +14,7 @@ import net.ccbluex.liquidbounce.features.module.modules.fun.Derp;
 import net.ccbluex.liquidbounce.features.module.modules.movement.InventoryMove;
 import net.ccbluex.liquidbounce.features.module.modules.movement.NoSlow;
 import net.ccbluex.liquidbounce.features.module.modules.movement.Sneak;
+import net.ccbluex.liquidbounce.features.module.modules.movement.StrafeFix;
 import net.ccbluex.liquidbounce.features.module.modules.movement.Sprint;
 import net.ccbluex.liquidbounce.features.module.modules.render.FreeCam;
 import net.ccbluex.liquidbounce.features.module.modules.render.NoSwing;
@@ -142,6 +143,9 @@ public abstract class MixinEntityPlayerSP extends MixinAbstractClientPlayer {
         final InventoryMove inventoryMove = InventoryMove.INSTANCE;
         final Sneak sneak = Sneak.INSTANCE;
         final Derp derp = Derp.INSTANCE;
+
+        final StrafeFix strafeFix = LiquidBounce.moduleManager.getModule(StrafeFix.class);
+        strafeFix.updateOverwrite();
 
         final boolean fakeSprint = inventoryMove.handleEvents() && inventoryMove.getAacAdditionPro()
                 || AntiHunger.INSTANCE.handleEvents()
@@ -287,6 +291,8 @@ public abstract class MixinEntityPlayerSP extends MixinAbstractClientPlayer {
     @Overwrite
     public void onLivingUpdate() {
         EventManager.INSTANCE.call(UpdateEvent.INSTANCE);
+
+        final StrafeFix strafeFix = LiquidBounce.moduleManager.getModule(StrafeFix.class);
 
         if (sprintingTicksLeft > 0) {
             --sprintingTicksLeft;
