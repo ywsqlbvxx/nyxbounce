@@ -10,7 +10,7 @@ import net.ccbluex.liquidbounce.event.EventManager;
 import net.ccbluex.liquidbounce.event.EventState;
 import net.ccbluex.liquidbounce.event.JumpEvent;
 import net.ccbluex.liquidbounce.event.StrafeEvent;
-import net.ccbluex.liquidbounce.features.module.modules.movement.StrafeFix;
+import net.ccbluex.liquidbounce.features.module.modules.movement.RinStrafe;
 import net.ccbluex.liquidbounce.features.module.modules.movement.LiquidWalk;
 import net.ccbluex.liquidbounce.features.module.modules.movement.NoJumpDelay;
 import net.ccbluex.liquidbounce.features.module.modules.movement.Sprint;
@@ -102,7 +102,7 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
             }
 
             final Sprint sprint = Sprint.INSTANCE;
-            final StrafeFix strafeFix = LiquidBounce.moduleManager.getModule(StrafeFix.class);
+            final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
             if(RotationUtils.targetRotation != null && strafeFix.getDoFix()) {
                 fixedYaw = RotationUtils.targetRotation.getYaw();
             }
