@@ -258,7 +258,7 @@ public abstract class MixinEntity implements IMixinEntity {
         EventManager.INSTANCE.call(strafeEvent);
 
         if (strafeFix != null && strafeFix.getDoFix()) {
-            strafeFix.applyForceStrafe(strafeFix.getisSilent(), strafeEvent);
+            strafeFix.applyForceStrafe(strafeFix.getsilentFix(), strafeEvent);
             if (strafeEvent.isCancelled()) callbackInfo.cancel();
         }
     }
