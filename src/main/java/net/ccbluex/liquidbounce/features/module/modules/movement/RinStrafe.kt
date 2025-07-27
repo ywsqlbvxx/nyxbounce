@@ -28,15 +28,20 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
         return doFix
     }
 
+    override fun onEnable() {
+        EventManager.registerListener(this)
+    }
+
+    override fun onDisable() {
+        EventManager.unregisterListener(this)
+        doFix = false
+    }
+
     fun onUpdate(event: UpdateEvent) {
         if (!isOverwrited) {
             silentFix = silentFixValue.get()
             doFix = state
         }
-    }
-
-    override fun onDisable() {
-        doFix = false
     }
 
     fun applyForceStrafe(isSilent: Boolean, strafeEvent: StrafeEvent) {
