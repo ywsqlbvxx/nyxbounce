@@ -29,11 +29,9 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
     }
 
     override fun onEnable() {
-        EventManager.registerListener(this)
     }
 
     override fun onDisable() {
-        EventManager.unregisterListener(this)
         doFix = false
     }
 
