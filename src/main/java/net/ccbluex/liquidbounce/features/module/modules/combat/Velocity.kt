@@ -44,7 +44,7 @@ import kotlin.math.cos
 import kotlin.math.sqrt
 import kotlin.math.toRadians
 import kotlin.random.Random
-import net.ccbluex.liquidbounce.features.module.modules.combat.KillAura // Added assuming it's in the same package
+
 
 object Velocity : Module("Velocity", Category.COMBAT) {
 
