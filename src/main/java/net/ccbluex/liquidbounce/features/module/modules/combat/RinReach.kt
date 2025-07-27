@@ -22,8 +22,8 @@ object RinReach : Module("RinReach", Category.COMBAT) {
 
     private val modeValue by ListValue("Mode", arrayOf("RinIntave", "RinFakePlayer"), "RinFakePlayer")
     private val aura by BoolValue("Aura", false)
-    private val pulseDelayValue by IntegerValue("PulseDelay", 200, 50..500) { modeValue == "RinFakePlayer" || modeValue == "RinIntave" }
-    private val intaveTestHurtTimeValue by IntegerValue("Packets", 5, 0..30) { modeValue == "RinIntave" }
+    private val pulseDelayValue by IntValue("PulseDelay", 200, 50..500) 
+    private val intaveTestHurtTimeValue by IntValue("Packets", 5, 0..30) { modeValue == "RinIntave" }
 
     private var fakePlayer: EntityOtherPlayerMP? = null
     private var currentTarget: EntityLivingBase? = null
@@ -73,7 +73,6 @@ object RinReach : Module("RinReach", Category.COMBAT) {
         shown = true
     }
 
-    @EventTarget
     fun onAttack(event: AttackEvent) {
         val target = event.targetEntity as? EntityLivingBase ?: return
         CombatCheck.setTarget(target)
@@ -95,7 +94,6 @@ object RinReach : Module("RinReach", Category.COMBAT) {
         }
     }
 
-    @EventTarget
     fun onUpdate(event: UpdateEvent) {
         CombatCheck.updateCombatState()
         if (mc.thePlayer == null || currentTarget == null || !CombatCheck.inCombat) {

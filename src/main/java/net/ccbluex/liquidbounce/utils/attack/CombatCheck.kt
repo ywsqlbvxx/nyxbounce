@@ -5,7 +5,8 @@
  */
 package net.ccbluex.liquidbounce.utils.attack
 
-import net.ccbluex.liquidbounce.utils.timer.MSTimer
+import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
+import net.ccbluex.liquidbounce.utils.timing.MSTimer
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.player.EntityPlayer
 
@@ -29,7 +30,7 @@ object CombatCheck {
     }
 
     fun updateCombatState() {
-        if (target != null && mc.thePlayer != null) {
+        if (target != null && MinecraftInstance.mc.thePlayer != null) {
             if (target!!.hurtTime > 0) {
                 lastAttackTimer.reset()
                 inCombat = true
@@ -41,7 +42,7 @@ object CombatCheck {
                 return
             }
 
-            if (mc.thePlayer.getDistanceToEntity(target) > 7 || target!!.isDead) {
+            if (MinecraftInstance.mc.thePlayer.getDistanceToEntity(target) > 7 || target!!.isDead) {
                 target = null
                 inCombat = false
             } else {
