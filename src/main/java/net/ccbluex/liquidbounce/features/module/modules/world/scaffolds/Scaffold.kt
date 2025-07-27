@@ -10,6 +10,12 @@ import net.ccbluex.liquidbounce.event.*
 import net.ccbluex.liquidbounce.event.async.loopSequence
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
+import org.lwjgl.opengl.GL11
+import net.minecraft.network.play.client.*
+import net.minecraft.network.play.server.*
+import net.minecraft.util.BlockPos
+import net.minecraft.util.EnumFacing
+import net.minecraft.util.Vec3
 import net.ccbluex.liquidbounce.utils.attack.CPSCounter
 import net.ccbluex.liquidbounce.utils.block.*
 import net.ccbluex.liquidbounce.utils.client.PacketUtils.sendPacket
@@ -104,6 +110,12 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     val sprint by boolean("Sprint", false)
     private val swing by boolean("Swing", true).subjective()
     private val down by boolean("Down", true) { !sameY && scaffoldMode !in arrayOf("GodBridge", "Telly") }
+    private val autoJump by boolean("AutoJump", false)
+    
+    // HMC Blink options
+    private val hmcBlinkFlyEnabled by boolean("HMCBlinkFly", false)
+    private var hmcBlinkPlacedCount = 0
+    private val hmcBlinkVisibleLimit by int("HMCBlinkVisibleLimit", 5, 1..20) { hmcBlinkFlyEnabled }
 
     private val ticksUntilRotation by intRange("TicksUntilRotation", 3..3, 1..8) {
         scaffoldMode == "Telly"
@@ -868,6 +880,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
         SilentHotbar.resetSlot(this)
 
+        // Reset all GodBridge related properties
+        godBridgeBlockCount = 0
+        lastGodBridgePlaceTime = 0
         options.instant = false
     }
 
@@ -1013,9 +1028,17 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             val simPlayer = SimulatedPlayer.fromClientPlayer(player.movementInput)
             simPlayer.tick()
 
-            // We don't want to use block safe all the time, so we check if it's not needed.
-            options.instant =
-                blockSafe && simPlayer.fallDistance > player.fallDistance + 0.05 && rotationDifference > rotationDifference2 / 2
+            // Improved rotation validation with height consideration
+            val heightDiff = player.posY - blockPosition.y
+            options.instant = when {
+                !blockSafe -> true
+                rotationDifference < 30f -> true 
+                heightDiff > 1.5 -> rotationDifference < 45f
+                lastPlacementTime > 500 && godBridgeBlockCount < 2 && !isGodBridgeEnabled -> true
+                heightDiff <= 1.5 && rotationDifference < 35f -> true
+                isGodBridgeEnabled && godBridgeBlockCount < 3 && lastPlacementTime > 300 -> true
+                else -> false
+            }
 
             setRotation(placeRotation.rotation, if (scaffoldMode == "Telly") 1 else options.resetTicks)
         }
@@ -1189,6 +1212,12 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
             updatePlacedBlocksForTelly()
 
+            // Update GodBridge tracking
+            if (isGodBridgeEnabled) {
+                godBridgeBlockCount++
+                lastGodBridgePlaceTime = System.currentTimeMillis()
+            }
+
             if (stack.stackSize <= 0) {
                 thePlayer.inventory.mainInventory[SilentHotbar.currentSlot] = null
                 ForgeEventFactory.onPlayerDestroyItem(thePlayer, stack)
@@ -1283,54 +1312,77 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     }
 
     private var isOnRightSide = false
+    private var godBridgeBlockCount = 0
+    private var lastGodBridgePlaceTime = 0L
+
+    // Track block placement for rotation optimization
+    private val lastPlacementTime
+        get() = System.currentTimeMillis() - lastGodBridgePlaceTime
 
     /**
      * Generates rotations for God Bridge technique
-     * Based on movement direction and position relative to blocks - @credit from LB-NextGen
+     * Based on movement direction and position relative to blocks
      */
     private fun generateGodBridgeRotations(ticks: Int) {
         val player = mc.thePlayer ?: return
 
-        val rotation = if (!player.isMoving) {
-            placeRotation?.rotation?.let {
-                val axisMovement = floor(it.yaw / 90) * 90
+        val direction = if (options.applyServerSide) {
+            MovementUtils.direction.toDegreesF() + 180f
+        } else MathHelper.wrapAngleTo180_float(player.rotationYaw)
 
-                Rotation(axisMovement + 45, if (useOptimizedPitch) 75.0f else customGodPitch)
+        val movingYaw = round(direction / 45) * 45
+
+        val steps45 = arrayListOf(-135f, -45f, 45f, 135f)
+
+        val isMovingStraight = if (options.applyServerSide) {
+            movingYaw % 90 == 0f
+        } else movingYaw in steps45 && player.movementInput.isSideways
+
+        if (!player.isNearEdge(2.5f)) return
+
+        if (!player.isMoving) {
+            placeRotation?.run {
+                val axisMovement = floor(this.rotation.yaw / 90) * 90
+
+                val yaw = axisMovement + 45f
+                val pitch = 75f
+
+                setRotation(Rotation(yaw, pitch), ticks)
+                return
             }
-        } else {
-            val movingYaw = player.direction.toDegreesF()
-            val isMovingStraight = movingYaw % 90 == 0f
 
-            if (isMovingStraight) {
-                if (player.onGround) {
-                    isOnRightSide = floor(player.posX + cos(movingYaw.toRadians()) * 0.5) != floor(player.posX) ||
-                        floor(player.posZ + sin(movingYaw.toRadians()) * 0.5) != floor(player.posZ)
+            if (!options.keepRotation) return
+        }
 
-                    val posInDirection = BlockPos(
-                        player.posX + cos(movingYaw.toRadians()) * 0.6,
-                        player.posY,
-                        player.posZ + sin(movingYaw.toRadians()) * 0.6
-                    )
+        val rotation = if (isMovingStraight) {
+            if (player.onGround) {
+                isOnRightSide = floor(player.posX + cos(movingYaw.toRadians()) * 0.5) != floor(player.posX) || floor(
+                    player.posZ + sin(movingYaw.toRadians()) * 0.5
+                ) != floor(player.posZ)
 
-                    val isLeaningOffBlock = !BlockUtils.isBlockSolid(BlockPos(player).down())
-                    val nextBlockIsAir = !BlockUtils.isBlockSolid(posInDirection.down())
+                val posInDirection =
+                    BlockPos(player.positionVector.offset(EnumFacing.fromAngle(movingYaw.toDouble()), 0.6))
 
-                    if (isLeaningOffBlock && nextBlockIsAir) {
-                        isOnRightSide = !isOnRightSide
-                    }
+                val isLeaningOffBlock = player.position.down().block == air
+                val nextBlockIsAir = posInDirection.down().block == air
+
+                if (isLeaningOffBlock && nextBlockIsAir) {
+                    isOnRightSide = !isOnRightSide
                 }
-
-                val finalYaw = movingYaw + if (isOnRightSide) 45 else -45
-                Rotation(finalYaw, if (useOptimizedPitch) 75.7f else customGodPitch)
-            } else {
-                Rotation(movingYaw, if (useOptimizedPitch) 75.6f else customGodPitch)
             }
-        }
 
-        if (rotation != null) {
-            godBridgeTargetRotation = rotation
-            setRotation(rotation, ticks)
-        }
+            val side = if (options.applyServerSide) {
+                if (isOnRightSide) 45f else -45f
+            } else 0f
+
+            Rotation(movingYaw + side, if (useOptimizedPitch) 73.5f else customGodPitch)
+        } else {
+            Rotation(movingYaw, 75.6f)
+        }.fixedSensitivity()
+
+        godBridgeTargetRotation = rotation
+
+        setRotation(rotation, ticks)
     }
 
     override val tag
