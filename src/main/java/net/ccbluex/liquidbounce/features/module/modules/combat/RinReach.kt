@@ -7,8 +7,7 @@ package net.ccbluex.liquidbounce.features.module.modules.combat
 
 import net.ccbluex.liquidbounce.LiquidBounce
 import net.ccbluex.liquidbounce.features.module.Category
-import net.ccbluex.liquidbounce.features.module.Module
-import net.ccbluex.liquidbounce.features.module.modules.combat.KillAura
+import net.ccbluex.liquidbounce.features.module.*
 import net.ccbluex.liquidbounce.event.*
 import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils
@@ -25,7 +24,7 @@ object RinReach : Module("RinReach", Category.COMBAT) {
     private val modeValue by ListValue("Mode", arrayOf("RinIntave", "RinFakePlayer"), "RinFakePlayer")
     private val aura by BoolValue("Aura", false)
     private val pulseDelayValue by IntValue("PulseDelay", 200, 50..500) 
-    private val intaveTestHurtTimeValue by IntRangeValue("Packets", 5, 0..30) { modeValue.equals("RinIntave") }
+    private val intaveTestHurtTimeValue by IntValue("Intave-Packets", 5, 0..30) 
 
     private var fakePlayer: EntityOtherPlayerMP? = null
     private var currentTarget: EntityLivingBase? = null
