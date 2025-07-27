@@ -20,10 +20,10 @@ import net.minecraft.world.WorldSettings
 
 object RinReach : Module("RinReach", Category.COMBAT) {
 
-    private val modeValue by ListValue("Mode", arrayOf("RinIntave", "RinFakePlayer"), "RinFakePlayer")
-    private val aura by BoolValue("Aura", false)
-    private val pulseDelayValue by IntValue("PulseDelay", 200, 50..500) { modeValue == "RinFakePlayer" || modeValue == "RinIntave" }
-    private val intaveTestHurtTimeValue by IntValue("Intave-Packets", 5, 0..30) { modeValue == "RinIntave" }
+    private val modeValue by choices("Mode", arrayOf("RinIntave", "RinFakePlayer"), "RinFakePlayer")
+    private val aura by boolean("Aura", false)
+    private val pulseDelayValue by int("PulseDelay", 200, 50..500) { modeValue == "RinFakePlayer" || modeValue == "RinIntave" }
+    private val intaveTestHurtTimeValue by int("Intave-Packets", 5, 0..30) { modeValue == "RinIntave" }
 
     private var fakePlayer: EntityOtherPlayerMP? = null
     private var currentTarget: EntityLivingBase? = null
