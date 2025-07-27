@@ -1,4 +1,3 @@
-```kotlin
 /*
  * RinBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
@@ -43,7 +42,9 @@ import kotlin.math.atan2
 import kotlin.math.sin
 import kotlin.math.cos
 import kotlin.math.sqrt
+import kotlin.math.toRadians
 import kotlin.random.Random
+import net.ccbluex.liquidbounce.features.module.modules.combat.KillAura // Added assuming it's in the same package
 
 object Velocity : Module("Velocity", Category.COMBAT) {
 
@@ -394,16 +395,17 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
                     val reduce = grimTLZReduceFactor
                     thePlayer.motionX = lastVelocity.first * (1.0 - reduce)
-                    thePlayer.motionY = 0.41999998688697815
+                    thePlayer.motionY = 0.41999998688697815 // Standard jump motion
                     thePlayer.motionZ = lastVelocity.third * (1.0 - reduce)
 
+                    // Automatic smart rotation based on knockback direction
                     val kbAngle = atan2(lastVelocity.third, lastVelocity.first) * 180 / kotlin.math.PI
                     val newYaw = kbAngle.toFloat()
                     thePlayer.rotationYaw = newYaw
 
-                    val yawRad = kotlin.math.toRadians(newYaw.toDouble())
-                    thePlayer.motionX = thePlayer.motionX + (-kotlin.math.sin(yawRad) * grimTLZStrafeSpeed.toDouble())
-                    thePlayer.motionZ = thePlayer.motionZ + (kotlin.math.cos(yawRad) * grimTLZStrafeSpeed.toDouble())
+                    val yawRad = toRadians(newYaw.toDouble())
+                    thePlayer.motionX = thePlayer.motionX + (-sin(yawRad) * grimTLZStrafeSpeed.toDouble())
+                    thePlayer.motionZ = thePlayer.motionZ + (cos(yawRad) * grimTLZStrafeSpeed.toDouble())
 
                     if (grimTLZDebug) {
                         ClientUtils.displayChatMessage("Applied reduced velocity: X=${thePlayer.motionX}, Y=${thePlayer.motionY}, Z=${thePlayer.motionZ}")
