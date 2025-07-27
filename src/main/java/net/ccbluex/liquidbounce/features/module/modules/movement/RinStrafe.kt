@@ -44,8 +44,8 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
         }
     }
 
-    fun applyForceStrafe(isSilent: Boolean, strafeEvent: StrafeEvent) {
-        if (!doFix || strafeEvent.isCancelled) {
+    fun applyForceStrafe(isSilent: Boolean, event: StrafeEvent) {
+        if (!doFix || event.isCancelled) {
             return
         }
         silentFix = isSilent
@@ -53,24 +53,24 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
         val targetRotation = RotationUtils.targetRotation ?: return
 
         val yaw = targetRotation.yaw
-        var modifiedStrafe = strafeEvent.strafe
-        var modifiedForward = strafeEvent.forward
-        var friction = strafeEvent.friction
-        var factor = modifiedStrafe * modifiedStrafe + modifiedForward * modifiedForward
+        var strafe = event.strafe
+        var forward = event.forward
+        var friction = event.friction
+        var factor = strafe * strafe + forward * forward
 
         var angleDiff = ((MathHelper.wrapAngleTo180_float(player.rotationYaw - yaw - 22.5f - 135.0f) + 180.0).toDouble() / 45.0).toInt()
         var calcYaw = if (isSilent) yaw + 45.0f * angleDiff else yaw
 
-        var calcMoveDir = Math.max(Math.abs(modifiedStrafe), Math.abs(modifiedForward)).toFloat()
+        var calcMoveDir = Math.max(Math.abs(strafe), Math.abs(forward)).toFloat()
         calcMoveDir = calcMoveDir * calcMoveDir
         var calcMultiplier = MathHelper.sqrt_float(calcMoveDir / Math.min(1.0f, calcMoveDir * 2.0f))
 
         if (isSilent) {
             when (angleDiff) {
                 1, 3, 5, 7, 9 -> {
-                    if ((Math.abs(modifiedForward) > 0.005 || Math.abs(modifiedStrafe) > 0.005) && !(Math.abs(modifiedForward) > 0.005 && Math.abs(modifiedStrafe) > 0.005)) {
+                    if ((Math.abs(forward) > 0.005 || Math.abs(strafe) > 0.005) && !(Math.abs(forward) > 0.005 && Math.abs(strafe) > 0.005)) {
                         friction = friction / calcMultiplier
-                    } else if (Math.abs(modifiedForward) > 0.005 && Math.abs(modifiedStrafe) > 0.005) {
+                    } else if (Math.abs(forward) > 0.005 && Math.abs(strafe) > 0.005) {
                         friction = friction * calcMultiplier
                     }
                 }
@@ -85,22 +85,18 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
             }
 
             factor = friction / factor
-            modifiedStrafe *= factor
-            modifiedForward *= factor
+            strafe *= factor
+            forward *= factor
 
             val yawSin = MathHelper.sin((calcYaw * Math.PI / 180F).toFloat())
             val yawCos = MathHelper.cos((calcYaw * Math.PI / 180F).toFloat())
 
-            if (!isSilent) {
-                player.motionX += modifiedStrafe * yawCos - modifiedForward * yawSin
-                player.motionZ += modifiedForward * yawCos + modifiedStrafe * yawSin
-            }
-
-            strafeEvent.strafe = modifiedStrafe
-            strafeEvent.forward = modifiedForward
+            
+            player.motionX += strafe * yawCos - forward * yawSin
+            player.motionZ += forward * yawCos + strafe * yawSin
         }
 
-        strafeEvent.cancelEvent()
+        event.cancelEvent()
     }
 
     fun updateOverwrite() {
