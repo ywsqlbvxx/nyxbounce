@@ -253,7 +253,7 @@ public abstract class MixinEntity implements IMixinEntity {
         //noinspection ConstantConditions
         if ((Object) this != mc.thePlayer) return;
 
-        final StrafeEvent strafeEvent = new StrafeEvent(strafe, forward, friction);
+        final StrafeEvent strafeEvent = new StrafeEvent();
         final RinStrafe strafeFix = RinStrafe.INSTANCE;
         EventManager.INSTANCE.call(strafeEvent);
 
