@@ -14,11 +14,11 @@ import net.minecraft.util.MathHelper
 
 object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
 
-    private val silentFixValue = boolean("Silent", true)
+    val silentFixValue = boolean("Silent", true)
 
-    private var silentFix = false
-    private var doFix = false
-    private var isOverwrited = false
+    var silentFix = false
+    var doFix = false
+    var isOverwrited = false
 
     fun onUpdate(event: UpdateEvent) {
         if (!isOverwrited) {
