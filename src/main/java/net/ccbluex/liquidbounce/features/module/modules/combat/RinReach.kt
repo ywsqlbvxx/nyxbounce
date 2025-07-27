@@ -8,7 +8,6 @@ package net.ccbluex.liquidbounce.features.module.modules.combat
 import net.ccbluex.liquidbounce.LiquidBounce
 import net.ccbluex.liquidbounce.features.module.*
 import net.ccbluex.liquidbounce.event.*
-import net.ccbluex.liquidbounce.event.Event
 import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils
 import net.ccbluex.liquidbounce.utils.attack.CombatCheck
@@ -74,8 +73,7 @@ object RinReach : Module("RinReach", Category.COMBAT) {
         shown = true
     }
 
-
-val onAttack = handler<AttackEvent> { event ->
+    val onAttack = handler<AttackEvent> { event ->
         val target = event.targetEntity as? EntityLivingBase ?: return@handler
         CombatCheck.setTarget(target)
 
@@ -86,7 +84,7 @@ val onAttack = handler<AttackEvent> { event ->
                     createFakePlayer(target)
                 } else if (event.targetEntity == fakePlayer) {
                     currentTarget?.let { attackEntity(it) }
-                    event.cancelEvent()
+                    cancelEvent()
                 } else {
                     removeFakePlayer()
                     currentTarget = target
