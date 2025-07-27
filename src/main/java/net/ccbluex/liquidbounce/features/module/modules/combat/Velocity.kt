@@ -1,3 +1,4 @@
+```kotlin
 /*
  * RinBounce Hacked Client
  * A free open source mixin-based injection hacked client for Minecraft using Minecraft Forge.
@@ -38,8 +39,9 @@ import net.minecraft.util.EnumFacing.DOWN
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
-import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.sin
+import kotlin.math.cos
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -384,6 +386,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                         return@handler
                     }
 
+                    // JumpReset-like condition
                     if (thePlayer.hurtTime < 9) {
                         hasReceivedVelocity = false
                         return@handler
@@ -391,16 +394,16 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
                     val reduce = grimTLZReduceFactor
                     thePlayer.motionX = lastVelocity.first * (1.0 - reduce)
-                    thePlayer.motionY = 0.41999998688697815 
+                    thePlayer.motionY = 0.41999998688697815
                     thePlayer.motionZ = lastVelocity.third * (1.0 - reduce)
 
-                    val kbAngle = atan2(lastVelocity.third, lastVelocity.first) * 180 / PI
+                    val kbAngle = atan2(lastVelocity.third, lastVelocity.first) * 180 / kotlin.math.PI
                     val newYaw = kbAngle.toFloat()
                     thePlayer.rotationYaw = newYaw
 
-                    val yawRad = Math.toRadians(newYaw.toDouble())
-                    thePlayer.motionX += -sin(yawRad) * grimTLZStrafeSpeed
-                    thePlayer.motionZ += cos(yawRad) * grimTLZStrafeSpeed
+                    val yawRad = kotlin.math.toRadians(newYaw.toDouble())
+                    thePlayer.motionX = thePlayer.motionX + (-kotlin.math.sin(yawRad) * grimTLZStrafeSpeed.toDouble())
+                    thePlayer.motionZ = thePlayer.motionZ + (kotlin.math.cos(yawRad) * grimTLZStrafeSpeed.toDouble())
 
                     if (grimTLZDebug) {
                         ClientUtils.displayChatMessage("Applied reduced velocity: X=${thePlayer.motionX}, Y=${thePlayer.motionY}, Z=${thePlayer.motionZ}")
@@ -770,6 +773,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             sendPacketsByOrder(false)
 
         if (mode == "GrimTest-TLZ") {
+            val thePlayer = mc.thePlayer ?: return@handler
             delayedTransaction?.let { (actionNumber, timestamp) ->
                 if (System.currentTimeMillis() - timestamp >= 50) {
                     sendPacket(C0FPacketConfirmTransaction(0, actionNumber, true))
