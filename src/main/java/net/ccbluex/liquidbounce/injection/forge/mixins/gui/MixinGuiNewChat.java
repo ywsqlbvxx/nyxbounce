@@ -63,41 +63,40 @@ public abstract class MixinGuiNewChat {
         String messageId = rawMessage;
 
         if (ChatControl.INSTANCE.handleEvents() && ChatControl.INSTANCE.getStackMessage()) {
-            ChatLine targetLine = null;
-            int lastIndex = -1;
+            int currentCount = messageCounts.getOrDefault(messageId, 0);
+            int newCount = currentCount + 1;
 
-            for (int i = drawnChatLines.size() - 1; i >= 0; i--) {
+            if (newCount > 100) {
+                newCount = 1;
+                messageCounts.put(messageId, 1);
+            } else {
+                messageCounts.put(messageId, newCount);
+            }
+
+            ChatLine targetLine = null;
+            int targetIndex = -1;
+            for (int i = 0; i < drawnChatLines.size(); i++) {
                 ChatLine line = drawnChatLines.get(i);
-                String lastMessage = line.getChatComponent().getUnformattedText().trim();
-                String baseMessage = lastMessage.replaceAll(" \\[x\\d+\\]$", "").trim();
+                String existingMessage = line.getChatComponent().getUnformattedText().trim();
+                String baseMessage = existingMessage.replaceAll(" \\[x\\d+\\]$", "").trim();
                 if (baseMessage.equals(rawMessage)) {
-                    lastIndex = i;
                     targetLine = line;
+                    targetIndex = i;
                     break;
                 }
             }
 
-            int currentCount = messageCounts.getOrDefault(messageId, 0);
-            int newCount = currentCount + 1;
-            if (newCount > 100) {
-                newCount = 1; 
-            }
-            messageCounts.put(messageId, newCount);
+            String modifiedMessage = rawMessage + (newCount > 1 ? " " + EnumChatFormatting.GRAY + "[x" + newCount + "]" : "");
+            ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
 
-            if (newCount >= 1) {
-                String modifiedMessage = rawMessage + " " + EnumChatFormatting.GRAY + "[x" + newCount + "]";
-                ChatComponentText stackedComponent = new ChatComponentText(modifiedMessage);
-                if (targetLine != null || newCount > 1) {
-                    int updateIndex = (targetLine != null) ? lastIndex : (drawnChatLines.isEmpty() ? 0 : drawnChatLines.size() - 1);
-                    ChatLine baseLine = (targetLine != null) ? targetLine : (drawnChatLines.isEmpty() ? null : drawnChatLines.get(updateIndex));
-                    if (baseLine != null || !drawnChatLines.isEmpty()) {
-                        drawnChatLines.set(updateIndex, new ChatLine(baseLine != null ? baseLine.getUpdatedCounter() : 0, stackedComponent, baseLine != null ? baseLine.getChatLineID() : 0));
-                    } else {
-                        return;
-                    }
-                }
-                ci.cancel(); 
+            if (targetLine != null) {
+                drawnChatLines.set(targetIndex, new ChatLine(targetLine.getUpdatedCounter(), stackedComponent, targetLine.getChatLineID()));
+                ci.cancel();
+            } else if (newCount == 1) {
                 return;
+            } else {
+                drawnChatLines.add(0, new ChatLine(0, stackedComponent, 0));
+                ci.cancel();
             }
         }
     }
