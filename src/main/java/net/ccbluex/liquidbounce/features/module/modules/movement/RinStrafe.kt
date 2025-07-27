@@ -91,8 +91,6 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
                 player.motionZ += modifiedForward * yawCos + modifiedStrafe * yawSin
             }
 
-            strafeEvent.strafe = modifiedStrafe
-            strafeEvent.forward = modifiedForward
         }
 
         strafeEvent.cancelEvent()
