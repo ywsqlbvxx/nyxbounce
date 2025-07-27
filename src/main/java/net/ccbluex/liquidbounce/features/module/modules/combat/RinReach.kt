@@ -101,7 +101,7 @@ object RinReach : Module("RinReach", Category.COMBAT) {
             return
         }
 
-        if (aura.get() && !LiquidBounce.moduleManager.getModule(KillAura::class.java)!!.state) {
+        if (aura && !LiquidBounce.moduleManager.getModule(KillAura::class.java)!!.state) {
             removeFakePlayer()
             return
         }
@@ -117,7 +117,7 @@ object RinReach : Module("RinReach", Category.COMBAT) {
                             (0..4).forEach { index ->
                                 target.getEquipmentInSlot(index)?.let { faker.setCurrentItemOrArmor(index, it) }
                             }
-                            if (MinecraftInstance.mc.thePlayer.ticksExisted % intaveTestHurtTimeValue.get() == 0) {
+                            if (MinecraftInstance.mc.thePlayer.ticksExisted % intaveTestHurtTimeValue == 0) {
                                 faker.rotationYawHead = target.rotationYawHead
                                 faker.renderYawOffset = target.renderYawOffset
                                 faker.copyLocationAndAnglesFrom(target)
@@ -141,7 +141,7 @@ object RinReach : Module("RinReach", Category.COMBAT) {
                             (0..4).forEach { index ->
                                 target.getEquipmentInSlot(index)?.let { faker.setCurrentItemOrArmor(index, it) }
                             }
-                            if (pulseTimer.hasTimePassed(pulseDelayValue.get().toLong())) {
+                            if (pulseTimer.hasTimePassed(pulseDelayValue.toLong())) {
                                 faker.rotationYawHead = target.rotationYawHead
                                 faker.renderYawOffset = target.renderYawOffset
                                 faker.copyLocationAndAnglesFrom(target)
