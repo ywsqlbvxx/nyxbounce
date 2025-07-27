@@ -14,53 +14,60 @@ import net.minecraft.util.MathHelper
 
 object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
 
-    private val silentFixValue = boolean("Silent", true)
+    val silentFixValue = boolean("Silent", true)
 
-    private var silentFix = false
-    private var doFix = false
-    private var isOverwrited = false
+    var silentFix = false
+    var doFix = false
+    var isOverwritten = false
 
-    fun onUpdate(event: UpdateEvent) {
-        if (!isOverwrited) {
-            silentFix = silentFixValue.get()
-            doFix = true
-        }
+    override fun onEnable() {
     }
 
     override fun onDisable() {
         doFix = false
     }
 
+    fun onUpdate(event: UpdateEvent) {
+        if (!isOverwritten) {
+            silentFix = silentFixValue.get()
+            doFix = state
+        }
+    }
+
     fun applyForceStrafe(isSilent: Boolean, runStrafeFix: Boolean) {
         silentFix = isSilent
         doFix = runStrafeFix
-        isOverwrited = true
+        isOverwritten = true
     }
 
     fun updateOverwrite() {
-        isOverwrited = false
+        isOverwritten = false
         doFix = state
         silentFix = silentFixValue.get()
     }
 
-    fun onStrafe(event: StrafeEvent) {
+    fun runStrafeFixLoop(isSilent: Boolean, event: StrafeEvent) {
         if (!doFix || event.isCancelled) {
             return
         }
-        val (yaw) = RotationUtils.targetRotation ?: return
+        silentFix = isSilent
+        val player = mc.thePlayer ?: return
+        val targetRotation = RotationUtils.targetRotation ?: return
+
+        val yaw = targetRotation.yaw
         var strafe = event.strafe
         var forward = event.forward
         var friction = event.friction
         var factor = strafe * strafe + forward * forward
 
-        var angleDiff = ((MathHelper.wrapAngleTo180_float(mc.thePlayer.rotationYaw - yaw - 22.5f - 135.0f) + 180.0).toDouble() / 45.0).toInt()
-        var calcYaw = if (silentFix) yaw + 45.0f * angleDiff else yaw
+        var angleDiff = ((MathHelper.wrapAngleTo180_float(player.rotationYaw - yaw - 22.5f - 135.0f) + 180.0).toDouble() / 45.0).toInt()
+        var calcYaw = if (isSilent) yaw + 45.0f * angleDiff else yaw
 
         var calcMoveDir = Math.max(Math.abs(strafe), Math.abs(forward)).toFloat()
         calcMoveDir = calcMoveDir * calcMoveDir
         var calcMultiplier = MathHelper.sqrt_float(calcMoveDir / Math.min(1.0f, calcMoveDir * 2.0f))
 
-        if (silentFix) {
+        if (isSilent) {
             when (angleDiff) {
                 1, 3, 5, 7, 9 -> {
                     if ((Math.abs(forward) > 0.005 || Math.abs(strafe) > 0.005) && !(Math.abs(forward) > 0.005 && Math.abs(strafe) > 0.005)) {
@@ -71,6 +78,7 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
                 }
             }
         }
+
         if (factor >= 1.0E-4F) {
             factor = MathHelper.sqrt_float(factor)
 
@@ -85,9 +93,14 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
             val yawSin = MathHelper.sin((calcYaw * Math.PI / 180F).toFloat())
             val yawCos = MathHelper.cos((calcYaw * Math.PI / 180F).toFloat())
 
-            mc.thePlayer.motionX += strafe * yawCos - forward * yawSin
-            mc.thePlayer.motionZ += forward * yawCos + strafe * yawSin
+            player.motionX += strafe * yawCos - forward * yawSin
+            player.motionZ += forward * yawCos + strafe * yawSin
         }
+
         event.cancelEvent()
+    }
+
+    fun onStrafe(event: StrafeEvent) {
+        runStrafeFixLoop(silentFix, event)
     }
 }

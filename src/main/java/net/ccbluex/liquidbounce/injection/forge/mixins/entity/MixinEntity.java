@@ -5,10 +5,12 @@
  */
 package net.ccbluex.liquidbounce.injection.forge.mixins.entity;
 
+import net.ccbluex.liquidbounce.LiquidBounce;
 import net.ccbluex.liquidbounce.event.EventManager;
 import net.ccbluex.liquidbounce.event.RotationSetEvent;
 import net.ccbluex.liquidbounce.event.StrafeEvent;
 import net.ccbluex.liquidbounce.features.module.modules.combat.HitBox;
+import net.ccbluex.liquidbounce.features.module.modules.movement.RinStrafe;
 import net.ccbluex.liquidbounce.features.module.modules.exploit.NoPitchLimit;
 import net.ccbluex.liquidbounce.features.module.modules.movement.NoFluid;
 import net.ccbluex.liquidbounce.features.module.modules.render.FreeCam;
@@ -237,13 +239,13 @@ public abstract class MixinEntity implements IMixinEntity {
     private void getCollisionBorderSize(final CallbackInfoReturnable<Float> callbackInfoReturnable) {
         final HitBox hitBox = HitBox.INSTANCE;
 
-        if (hitBox.handleEvents())
+        if (hitBox != null && hitBox.handleEvents())
             callbackInfoReturnable.setReturnValue(0.1F + hitBox.determineSize((Entity) (Object) this));
     }
 
     @Redirect(method = "setAngles", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/MathHelper;clamp_float(FFF)F"))
     private float setAngles(float a, float min, float max) {
-        return NoPitchLimit.INSTANCE.handleEvents() ? a : MathHelper.clamp_float(a, min, max);
+        return NoPitchLimit.INSTANCE != null && NoPitchLimit.INSTANCE.handleEvents() ? a : MathHelper.clamp_float(a, min, max);
     }
 
     @Inject(method = "moveFlying", at = @At("HEAD"), cancellable = true)
@@ -252,28 +254,32 @@ public abstract class MixinEntity implements IMixinEntity {
         if ((Object) this != mc.thePlayer) return;
 
         final StrafeEvent strafeEvent = new StrafeEvent(strafe, forward, friction);
+        final RinStrafe strafeFix = RinStrafe.INSTANCE;
         EventManager.INSTANCE.call(strafeEvent);
 
-        if (strafeEvent.isCancelled()) callbackInfo.cancel();
+        if (strafeFix != null && strafeFix.getDoFix()) {
+            strafeFix.runStrafeFixLoop(strafeFix.getSilentFix(), strafeEvent);
+            if (strafeEvent.isCancelled()) callbackInfo.cancel();
+        }
     }
 
     @Inject(method = "isInWater", at = @At("HEAD"), cancellable = true)
     private void isInWater(final CallbackInfoReturnable<Boolean> cir) {
-        if (NoFluid.INSTANCE.handleEvents() && NoFluid.INSTANCE.getWaterValue()) {
+        if (NoFluid.INSTANCE != null && NoFluid.INSTANCE.handleEvents() && NoFluid.INSTANCE.getWaterValue()) {
             cir.setReturnValue(false);
         }
     }
 
     @Inject(method = "isInLava", at = @At("HEAD"), cancellable = true)
     private void isInLava(final CallbackInfoReturnable<Boolean> cir) {
-        if (NoFluid.INSTANCE.handleEvents() && NoFluid.INSTANCE.getLavaValue()) {
+        if (NoFluid.INSTANCE != null && NoFluid.INSTANCE.handleEvents() && NoFluid.INSTANCE.getLavaValue()) {
             cir.setReturnValue(false);
         }
     }
 
     @Inject(method = "getPositionEyes", at = @At("RETURN"), cancellable = true)
     private void hookFreeCamModifiedRaycast(float tickDelta, CallbackInfoReturnable<Vec3> cir) {
-        cir.setReturnValue(FreeCam.INSTANCE.modifyRaycast(cir.getReturnValue(), (Entity) (Object) this, tickDelta));
+        cir.setReturnValue(FreeCam.INSTANCE != null ? FreeCam.INSTANCE.modifyRaycast(cir.getReturnValue(), (Entity) (Object) this, tickDelta) : cir.getReturnValue());
     }
 
     @Inject(method = "setAngles", at = @At("HEAD"), cancellable = true)
@@ -282,7 +288,6 @@ public abstract class MixinEntity implements IMixinEntity {
             return;
 
         RotationSetEvent event = new RotationSetEvent((float) (yaw * 0.15), (float) (pitch * 0.15));
-
         EventManager.INSTANCE.call(event);
 
         if (event.isCancelled())

@@ -5,9 +5,12 @@
  */
 package net.ccbluex.liquidbounce.injection.forge.mixins.entity;
 
+import net.ccbluex.liquidbounce.LiquidBounce;
 import net.ccbluex.liquidbounce.event.EventManager;
 import net.ccbluex.liquidbounce.event.EventState;
 import net.ccbluex.liquidbounce.event.JumpEvent;
+import net.ccbluex.liquidbounce.event.StrafeEvent;
+import net.ccbluex.liquidbounce.features.module.modules.movement.RinStrafe;
 import net.ccbluex.liquidbounce.features.module.modules.movement.LiquidWalk;
 import net.ccbluex.liquidbounce.features.module.modules.movement.NoJumpDelay;
 import net.ccbluex.liquidbounce.features.module.modules.movement.Sprint;
@@ -90,42 +93,57 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
 
         if (isSprinting()) {
             float fixedYaw = this.rotationYaw;
-
             final RotationUtils rotationUtils = RotationUtils.INSTANCE;
             final Rotation currentRotation = rotationUtils.getCurrentRotation();
             final RotationSettings rotationData = rotationUtils.getActiveSettings();
+            final RinStrafe strafeFix = RinStrafe.INSTANCE;
+
             if (currentRotation != null && rotationData != null && rotationData.getStrafe()) {
                 fixedYaw = currentRotation.getYaw();
             }
 
+            if (rotationUtils.getTargetRotation() != null && strafeFix != null && strafeFix.getDoFix()) {
+                fixedYaw = rotationUtils.getTargetRotation().getYaw();
+            }
+
             final Sprint sprint = Sprint.INSTANCE;
-            if (sprint.handleEvents() && sprint.getMode().equals("Vanilla") && sprint.getAllDirections() && sprint.getJumpDirections()) {
+            if (sprint != null && sprint.handleEvents() && sprint.getMode().equals("Vanilla") && sprint.getAllDirections() && sprint.getJumpDirections()) {
                 fixedYaw += MathExtensionsKt.toDegreesF(MovementUtils.INSTANCE.getDirection()) - this.rotationYaw;
             }
 
             final float f = fixedYaw * 0.017453292F;
             motionX -= MathHelper.sin(f) * 0.2F;
             motionZ += MathHelper.cos(f) * 0.2F;
+
+            if (strafeFix != null && strafeFix.getDoFix()) {
+                StrafeEvent strafeEvent = new StrafeEvent((float) motionX, (float) motionZ, 0.0F);
+                EventManager.INSTANCE.call(strafeEvent);
+                if (strafeFix != null) {
+                    strafeFix.runStrafeFixLoop(strafeFix.getSilentFix(), strafeEvent);
+                    motionX = strafeEvent.getStrafe();
+                    motionZ = strafeEvent.getForward();
+                }
+            }
         }
 
         isAirBorne = true;
 
         if ((Object) this == Minecraft.getMinecraft().thePlayer) {
-            final JumpEvent postjumpEvent = new JumpEvent((float) motionY, EventState.POST);
-            EventManager.INSTANCE.call(postjumpEvent);
+            final JumpEvent postJumpEvent = new JumpEvent((float) motionY, EventState.POST);
+            EventManager.INSTANCE.call(postJumpEvent);
         }
     }
 
     @Inject(method = "onLivingUpdate", at = @At("HEAD"))
     private void headLiving(CallbackInfo callbackInfo) {
-        if (NoJumpDelay.INSTANCE.handleEvents() || Scaffold.INSTANCE.handleEvents() && Tower.INSTANCE.getTowerModeValues().equals("Pulldown")) jumpTicks = 0;
+        if (NoJumpDelay.INSTANCE != null && NoJumpDelay.INSTANCE.handleEvents() || Scaffold.INSTANCE != null && Scaffold.INSTANCE.handleEvents() && Tower.INSTANCE != null && Tower.INSTANCE.getTowerModeValues().equals("Pulldown")) jumpTicks = 0;
     }
 
     @Inject(method = "onLivingUpdate", at = @At(value = "FIELD", target = "Lnet/minecraft/entity/EntityLivingBase;isJumping:Z", ordinal = 1))
     private void onJumpSection(CallbackInfo callbackInfo) {
         final LiquidWalk liquidWalk = LiquidWalk.INSTANCE;
 
-        if (liquidWalk.handleEvents() && !isJumping && !isSneaking() && isInWater() && liquidWalk.getMode().equals("Swim")) {
+        if (liquidWalk != null && liquidWalk.handleEvents() && !isJumping && !isSneaking() && isInWater() && liquidWalk.getMode().equals("Swim")) {
             updateAITick();
         }
     }
@@ -142,10 +160,9 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
      */
     @Inject(method = "onLivingUpdate", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/EntityLivingBase;updateEntityActionState()V", shift = At.Shift.AFTER))
     private void hookHeadRotations(CallbackInfo ci) {
-        Rotation rotation = Rotations.INSTANCE.getRotation();
+        Rotation rotation = Rotations.INSTANCE != null ? Rotations.INSTANCE.getRotation() : null;
 
-        //noinspection ConstantValue
-        this.rotationYawHead = ((EntityLivingBase) (Object) this) instanceof EntityPlayerSP && Rotations.INSTANCE.shouldUseRealisticMode() && rotation != null ? rotation.getYaw() : this.rotationYawHead;
+        this.rotationYawHead = ((EntityLivingBase) (Object) this) instanceof EntityPlayerSP && Rotations.INSTANCE != null && Rotations.INSTANCE.shouldUseRealisticMode() && rotation != null ? rotation.getYaw() : this.rotationYawHead;
     }
 
     /**
@@ -153,9 +170,9 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
      */
     @Redirect(method = "onUpdate", at = @At(value = "FIELD", target = "Lnet/minecraft/entity/EntityLivingBase;rotationYaw:F", ordinal = 0))
     private float hookBodyRotationsA(EntityLivingBase instance) {
-        Rotation rotation = Rotations.INSTANCE.getRotation();
+        Rotation rotation = Rotations.INSTANCE != null ? Rotations.INSTANCE.getRotation() : null;
 
-        return instance instanceof EntityPlayerSP && Rotations.INSTANCE.shouldUseRealisticMode() && rotation != null ? rotation.getYaw() : instance.rotationYaw;
+        return instance instanceof EntityPlayerSP && Rotations.INSTANCE != null && Rotations.INSTANCE.shouldUseRealisticMode() && rotation != null ? rotation.getYaw() : instance.rotationYaw;
     }
 
     /**
@@ -163,9 +180,9 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
      */
     @Redirect(method = "updateDistance", at = @At(value = "FIELD", target = "Lnet/minecraft/entity/EntityLivingBase;rotationYaw:F"))
     private float hookBodyRotationsB(EntityLivingBase instance) {
-        Rotation rotation = Rotations.INSTANCE.getRotation();
+        Rotation rotation = Rotations.INSTANCE != null ? Rotations.INSTANCE.getRotation() : null;
 
-        return instance instanceof EntityPlayerSP && Rotations.INSTANCE.shouldUseRealisticMode() && rotation != null ? rotation.getYaw() : instance.rotationYaw;
+        return instance instanceof EntityPlayerSP && Rotations.INSTANCE != null && Rotations.INSTANCE.shouldUseRealisticMode() && rotation != null ? rotation.getYaw() : instance.rotationYaw;
     }
 
     /**
@@ -176,6 +193,6 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
     private int injectAnimationsModule(int constant) {
         Animations module = Animations.INSTANCE;
 
-        return module.handleEvents() ? (2 + (20 - module.getSwingSpeed())) : constant;
+        return module != null && module.handleEvents() ? (2 + (20 - module.getSwingSpeed())) : constant;
     }
 }
