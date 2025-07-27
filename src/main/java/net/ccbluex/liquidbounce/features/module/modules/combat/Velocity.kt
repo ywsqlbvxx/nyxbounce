@@ -130,11 +130,10 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
     // GrimTest-TLZ options
     private val grimTLZReduceFactor by float("GrimTLZReduceFactor", 0.2f, 0f..1f) { mode == "GrimTest-TLZ" }
-    private val grimTLZMinHurtTime by int("GrimTLZMinHurtTime", 5, 0..10) { mode == "GrimTest-TLZ" }
-    private val grimTLZMaxHurtTime by int("GrimTLZMaxHurtTime", 10, 0..20) { mode == "GrimTest-TLZ" }
-    private val grimTLZOnlyGround by boolean("GrimTLZOnlyGround", true) { mode == "GrimTest-TLZ" }
+    private val grimTLZOnlyGround by boolean("OnlyGround", true) { mode == "GrimTest-TLZ" }
     private val grimTLZChance by int("GrimTLZChance", 100, 0..100) { mode == "GrimTest-TLZ" }
     private val grimTLZDebug by boolean("GrimTLZDebug", false) { mode == "GrimTest-TLZ" }
+
 
     private val pauseOnExplosion by boolean("PauseOnExplosion", true)
     private val ticksToPause by int("TicksToPause", 20, 1..50) { pauseOnExplosion }
@@ -379,7 +378,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             }
 
             "grimtest-tlz" -> {
-                if (hasReceivedVelocity && thePlayer.hurtTime in grimTLZMinHurtTime..grimTLZMaxHurtTime && nextInt(endExclusive = 100) < grimTLZChance) {
+                if (hasReceivedVelocity && nextInt(endExclusive = 100) < grimTLZChance) {
                     if (grimTLZOnlyGround && !thePlayer.onGround) {
                         hasReceivedVelocity = false
                         return@handler
@@ -387,14 +386,14 @@ object Velocity : Module("Velocity", Category.COMBAT) {
 
                     val reduce = grimTLZReduceFactor
                     thePlayer.motionX = lastVelocity.first * (1.0 - reduce)
-                    thePlayer.motionY = 0.41999998688697815 // Standard jump motion
+                    thePlayer.motionY = 0.41999998688697815 
                     thePlayer.motionZ = lastVelocity.third * (1.0 - reduce)
 
                     val expectedX = thePlayer.posX + lastVelocity.first
                     val expectedY = thePlayer.posY + 0.41999998688697815
                     val expectedZ = thePlayer.posZ + lastVelocity.third
                     sendPacket(C03PacketPlayer.C04PacketPlayerPosition(
-                        expectedX + Random.nextDouble(-0.0005, 0.0005),
+                        expectedX + Random.nextDouble(-0.0005, 0.0005), 
                         expectedY + Random.nextDouble(-0.0005, 0.0005),
                         expectedZ + Random.nextDouble(-0.0005, 0.0005),
                         false 
@@ -619,14 +618,12 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                             packet.motionZ / 8000.0
                         )
 
-                        if (thePlayer.hurtTime in grimTLZMinHurtTime..grimTLZMaxHurtTime) {
-                            if (grimTLZDebug) {
-                                ClientUtils.displayChatMessage("[GrimTest-TLZ] Velocity packet received: X=${lastVelocity.first}, Y=${lastVelocity.second}, Z=${lastVelocity.third}")
-                            }
-
-                            event.cancelEvent()
-                            hasReceivedVelocity = true
+                        if (grimTLZDebug) {
+                            ClientUtils.displayChatMessage("[GrimTest-TLZ] Velocity packet received: X=${lastVelocity.first}, Y=${lastVelocity.second}, Z=${lastVelocity.third}")
                         }
+
+                        event.cancelEvent()
+                        hasReceivedVelocity = true
                     } else if (packet is S27PacketExplosion) {
                         if (grimTLZDebug) {
                             ClientUtils.displayChatMessage("[GrimTest-TLZ] Cancelling explosion knockback")
