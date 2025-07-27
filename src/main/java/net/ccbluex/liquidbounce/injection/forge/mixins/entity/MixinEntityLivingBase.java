@@ -5,6 +5,7 @@
  */
 package net.ccbluex.liquidbounce.injection.forge.mixins.entity;
 
+import net.ccbluex.liquidbounce.LiquidBounce;
 import net.ccbluex.liquidbounce.event.EventManager;
 import net.ccbluex.liquidbounce.event.EventState;
 import net.ccbluex.liquidbounce.event.JumpEvent;
@@ -92,19 +93,20 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
 
         if (isSprinting()) {
             float fixedYaw = this.rotationYaw;
-
             final RotationUtils rotationUtils = RotationUtils.INSTANCE;
             final Rotation currentRotation = rotationUtils.getCurrentRotation();
             final RotationSettings rotationData = rotationUtils.getActiveSettings();
+            final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
+
             if (currentRotation != null && rotationData != null && rotationData.getStrafe()) {
                 fixedYaw = currentRotation.getYaw();
             }
 
-            final Sprint sprint = Sprint.INSTANCE;
-            final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
             if (rotationUtils.getTargetRotation() != null && strafeFix.getDoFix()) {
                 fixedYaw = rotationUtils.getTargetRotation().getYaw();
             }
+
+            final Sprint sprint = Sprint.INSTANCE;
             if (sprint.handleEvents() && sprint.getMode().equals("Vanilla") && sprint.getAllDirections() && sprint.getJumpDirections()) {
                 fixedYaw += MathExtensionsKt.toDegreesF(MovementUtils.INSTANCE.getDirection()) - this.rotationYaw;
             }
@@ -112,13 +114,21 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
             final float f = fixedYaw * 0.017453292F;
             motionX -= MathHelper.sin(f) * 0.2F;
             motionZ += MathHelper.cos(f) * 0.2F;
+
+            if (strafeFix.getDoFix()) {
+                StrafeEvent strafeEvent = new StrafeEvent((float) motionX, (float) motionY, (float) motionZ, fixedYaw);
+                EventManager.INSTANCE.call(strafeEvent);
+                strafeFix.applyForceStrafe(strafeFix.getSilent(), strafeEvent);
+                motionX = strafeEvent.getStrafe();
+                motionZ = strafeEvent.getForward();
+            }
         }
 
         isAirBorne = true;
 
         if ((Object) this == Minecraft.getMinecraft().thePlayer) {
-            final JumpEvent postjumpEvent = new JumpEvent((float) motionY, EventState.POST);
-            EventManager.INSTANCE.call(postjumpEvent);
+            final JumpEvent postJumpEvent = new JumpEvent((float) motionY, EventState.POST);
+            EventManager.INSTANCE.call(postJumpEvent);
         }
     }
 

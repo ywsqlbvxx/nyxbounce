@@ -256,11 +256,11 @@ public abstract class MixinEntity implements IMixinEntity {
         final StrafeEvent strafeEvent = new StrafeEvent(strafe, forward, friction);
         final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
         EventManager.INSTANCE.call(strafeEvent);
-        if (strafeFix.getDoFix()) { 
-            strafeFix.applyForceStrafe(strafeFix.getSilent(), strafeEvent);
-        }
 
-        if (strafeEvent.isCancelled()) callbackInfo.cancel();
+        if (strafeFix.getDoFix()) {
+            strafeFix.applyForceStrafe(strafeFix.getSilent(), strafeEvent);
+            if (strafeEvent.isCancelled()) callbackInfo.cancel();
+        }
     }
 
     @Inject(method = "isInWater", at = @At("HEAD"), cancellable = true)
@@ -288,7 +288,6 @@ public abstract class MixinEntity implements IMixinEntity {
             return;
 
         RotationSetEvent event = new RotationSetEvent((float) (yaw * 0.15), (float) (pitch * 0.15));
-
         EventManager.INSTANCE.call(event);
 
         if (event.isCancelled())
