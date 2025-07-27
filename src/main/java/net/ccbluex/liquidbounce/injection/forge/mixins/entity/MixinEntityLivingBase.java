@@ -119,7 +119,7 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
                 StrafeEvent strafeEvent = new StrafeEvent((float) motionX, (float) motionZ, 0.0F);
                 EventManager.INSTANCE.call(strafeEvent);
                 if (strafeFix != null) {
-                    strafeFix.applyForceStrafe(strafeFix.getSilentFix(), strafeEvent);
+                    strafeFix.runStrafeFixLoop(strafeFix.getSilentFix(), strafeEvent);
                     motionX = strafeEvent.getStrafe();
                     motionZ = strafeEvent.getForward();
                 }
