@@ -5,13 +5,14 @@
  */
 package net.ccbluex.liquidbounce.features.module.modules.combat
 
+import net.ccbluex.liquidbounce.LiquidBounce
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.event.*
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils
 import net.ccbluex.liquidbounce.utils.attack.CombatCheck
 import net.ccbluex.liquidbounce.utils.timing.MSTimer
-import net.ccbluex.liquidbounce.value.*
+import net.ccbluex.liquidbounce.config.*
 import net.minecraft.client.entity.EntityOtherPlayerMP
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.network.play.client.C02PacketUseEntity
@@ -102,7 +103,7 @@ object RinReach : Module("RinReach", Category.COMBAT) {
             return
         }
 
-        if (aura.get() && !FDPClient.moduleManager[KillAura::class.java]!!.state) {
+        if (aura.get() && !LiquidBounce.moduleManager[KillAura::class.java]!!.state) {
             removeFakePlayer()
             return
         }
