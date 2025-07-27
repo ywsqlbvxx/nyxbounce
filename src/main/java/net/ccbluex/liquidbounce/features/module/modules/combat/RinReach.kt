@@ -73,8 +73,9 @@ object RinReach : Module("RinReach", Category.COMBAT) {
         shown = true
     }
 
-    fun onAttack(event: AttackEvent) {
-        val target = event.targetEntity as? EntityLivingBase ?: return
+
+val onAttack = handler<AttackEvent> { event ->
+        val target = event.targetEntity as? EntityLivingBase ?: return@handler
         CombatCheck.setTarget(target)
 
         when (modeValue) {
@@ -94,16 +95,16 @@ object RinReach : Module("RinReach", Category.COMBAT) {
         }
     }
 
-    fun onUpdate(event: UpdateEvent) {
+    val onUpdate = handler<UpdateEvent> { event ->
         CombatCheck.updateCombatState()
         if (MinecraftInstance.mc.thePlayer == null || currentTarget == null || !CombatCheck.inCombat) {
             removeFakePlayer()
-            return
+            return@handler
         }
 
         if (aura && !LiquidBounce.moduleManager.getModule(KillAura::class.java)!!.state) {
             removeFakePlayer()
-            return
+            return@handler
         }
 
         when (modeValue) {
