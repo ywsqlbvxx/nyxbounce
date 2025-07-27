@@ -14,7 +14,7 @@ import net.minecraft.util.MathHelper
 
 object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
 
-    private val silentFixValue = BoolValue("Silent", true)
+    private val silentFixValue = boolean("Silent", true)
 
     private var silentFix = false
     private var doFix = false
