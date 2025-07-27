@@ -40,25 +40,25 @@ object RinReach : Module("RinReach", Category.COMBAT) {
     private fun removeFakePlayer() {
         fakePlayer?.let {
             currentTarget = null
-            mc.theWorld?.removeEntity(it)
+            MinecraftInstance.mc.theWorld?.removeEntity(it)
             fakePlayer = null
             shown = false
         }
     }
 
     private fun attackEntity(entity: EntityLivingBase) {
-        mc.thePlayer?.run {
+        MinecraftInstance.mc.thePlayer?.run {
             swingItem()
-            mc.netHandler.addToSendQueue(C02PacketUseEntity(entity, C02PacketUseEntity.Action.ATTACK))
-            if (mc.playerController.currentGameType != WorldSettings.GameType.SPECTATOR) {
+            MinecraftInstance.mc.netHandler.addToSendQueue(C02PacketUseEntity(entity, C02PacketUseEntity.Action.ATTACK))
+            if (MinecraftInstance.mc.playerController.currentGameType != WorldSettings.GameType.SPECTATOR) {
                 attackTargetEntityWithCurrentItem(entity)
             }
         }
     }
 
     private fun createFakePlayer(target: EntityLivingBase) {
-        val world = mc.theWorld ?: return
-        val playerInfo = mc.netHandler.getPlayerInfo(target.uniqueID) ?: return
+        val world = MinecraftInstance.mc.theWorld ?: return
+        val playerInfo = MinecraftInstance.mc.netHandler.getPlayerInfo(target.uniqueID) ?: return
         val faker = EntityOtherPlayerMP(world, playerInfo.gameProfile).apply {
             rotationYawHead = target.rotationYawHead
             renderYawOffset = target.renderYawOffset
@@ -84,7 +84,7 @@ object RinReach : Module("RinReach", Category.COMBAT) {
                     createFakePlayer(target)
                 } else if (event.targetEntity == fakePlayer) {
                     currentTarget?.let { attackEntity(it) }
-                    event.cancelEvent()
+                    event.cancel()
                 } else {
                     removeFakePlayer()
                     currentTarget = target
@@ -96,12 +96,12 @@ object RinReach : Module("RinReach", Category.COMBAT) {
 
     fun onUpdate(event: UpdateEvent) {
         CombatCheck.updateCombatState()
-        if (mc.thePlayer == null || currentTarget == null || !CombatCheck.inCombat) {
+        if (MinecraftInstance.mc.thePlayer == null || currentTarget == null || !CombatCheck.inCombat) {
             removeFakePlayer()
             return
         }
 
-        if (aura.get() && !LiquidBounce.moduleManager[KillAura::class.java]!!.state) {
+        if (aura.get() && !LiquidBounce.moduleManager.getModule(KillAura::class.java)!!.state) {
             removeFakePlayer()
             return
         }
@@ -110,14 +110,14 @@ object RinReach : Module("RinReach", Category.COMBAT) {
             "RinIntave" -> {
                 fakePlayer?.let { faker ->
                     currentTarget?.let { target ->
-                        if (!EntityUtils.isRendered(faker) || target.isDead || !EntityUtils.isRendered(target)) {
+                        if (!faker.isEntityAlive || target.isDead || !target.isEntityAlive) {
                             removeFakePlayer()
                         } else {
                             faker.health = target.health
                             (0..4).forEach { index ->
                                 target.getEquipmentInSlot(index)?.let { faker.setCurrentItemOrArmor(index, it) }
                             }
-                            if (mc.thePlayer.ticksExisted % intaveTestHurtTimeValue.get() == 0) {
+                            if (MinecraftInstance.mc.thePlayer.ticksExisted % intaveTestHurtTimeValue.get() == 0) {
                                 faker.rotationYawHead = target.rotationYawHead
                                 faker.renderYawOffset = target.renderYawOffset
                                 faker.copyLocationAndAnglesFrom(target)
@@ -127,14 +127,14 @@ object RinReach : Module("RinReach", Category.COMBAT) {
                     }
                 }
 
-                if (!shown && currentTarget != null && mc.netHandler.getPlayerInfo(currentTarget?.uniqueID)?.gameProfile != null) {
+                if (!shown && currentTarget != null && MinecraftInstance.mc.netHandler.getPlayerInfo(currentTarget?.uniqueID)?.gameProfile != null) {
                     createFakePlayer(currentTarget!!)
                 }
             }
             "RinFakePlayer" -> {
                 fakePlayer?.let { faker ->
                     currentTarget?.let { target ->
-                        if (!EntityUtils.isRendered(faker) || target.isDead || !EntityUtils.isRendered(target)) {
+                        if (!faker.isEntityAlive || target.isDead || !target.isEntityAlive) {
                             removeFakePlayer()
                         } else {
                             faker.health = target.health
@@ -151,7 +151,7 @@ object RinReach : Module("RinReach", Category.COMBAT) {
                     }
                 }
 
-                if (!shown && currentTarget != null && mc.netHandler.getPlayerInfo(currentTarget?.uniqueID)?.gameProfile != null) {
+                if (!shown && currentTarget != null && MinecraftInstance.mc.netHandler.getPlayerInfo(currentTarget?.uniqueID)?.gameProfile != null) {
                     createFakePlayer(currentTarget!!)
                 }
             }
