@@ -5,6 +5,7 @@
  */
 package net.ccbluex.liquidbounce.injection.forge.mixins.entity;
 
+import net.ccbluex.liquidbounce.LiquidBounce;
 import net.ccbluex.liquidbounce.event.*;
 import net.ccbluex.liquidbounce.features.module.modules.combat.KillAura;
 import net.ccbluex.liquidbounce.features.module.modules.exploit.AntiHunger;
@@ -144,7 +145,7 @@ public abstract class MixinEntityPlayerSP extends MixinAbstractClientPlayer {
         final Sneak sneak = Sneak.INSTANCE;
         final Derp derp = Derp.INSTANCE;
 
-        final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
+        final RinStrafe strafeFix = LiquidBounce.INSTANCE.getModule(RinStrafe.class);
         strafeFix.updateOverwrite();
 
         final boolean fakeSprint = inventoryMove.handleEvents() && inventoryMove.getAacAdditionPro()
@@ -292,7 +293,7 @@ public abstract class MixinEntityPlayerSP extends MixinAbstractClientPlayer {
     public void onLivingUpdate() {
         EventManager.INSTANCE.call(UpdateEvent.INSTANCE);
 
-        final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
+        final RinStrafe strafeFix = LiquidBounce.INSTANCE.getModule(RinStrafe.class);
 
         if (sprintingTicksLeft > 0) {
             --sprintingTicksLeft;

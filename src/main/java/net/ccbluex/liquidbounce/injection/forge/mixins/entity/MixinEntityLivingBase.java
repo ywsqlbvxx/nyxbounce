@@ -102,7 +102,7 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
             }
 
             final Sprint sprint = Sprint.INSTANCE;
-            final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
+            final RinStrafe strafeFix = LiquidBounce.INSTANCE.getModule(RinStrafe.class);
             if(RotationUtils.targetRotation != null && strafeFix.getDoFix()) {
                 fixedYaw = RotationUtils.targetRotation.getYaw();
             }

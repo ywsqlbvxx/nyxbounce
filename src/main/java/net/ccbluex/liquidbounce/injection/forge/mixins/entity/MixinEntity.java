@@ -254,7 +254,7 @@ public abstract class MixinEntity implements IMixinEntity {
         if ((Object) this != mc.thePlayer) return;
 
         final StrafeEvent strafeEvent = new StrafeEvent(strafe, forward, friction);
-        final RinStrafe strafeFix = LiquidBounce.moduleManager.getModule(RinStrafe.class);
+        final RinStrafe strafeFix = LiquidBounce.INSTANCE.getModule(RinStrafe.class);
         EventManager.INSTANCE.call(strafeEvent);
         if (strafeFix.getDoFix()) { 
             strafeFix.runStrafeFixLoop(strafeFix.getSilentFix(), strafeEvent);
