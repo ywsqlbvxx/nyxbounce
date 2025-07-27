@@ -8,6 +8,7 @@ package net.ccbluex.liquidbounce.features.module.modules.combat
 import net.ccbluex.liquidbounce.LiquidBounce
 import net.ccbluex.liquidbounce.features.module.*
 import net.ccbluex.liquidbounce.event.*
+import net.ccbluex.liquidbounce.event.Event
 import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils
 import net.ccbluex.liquidbounce.utils.attack.CombatCheck
