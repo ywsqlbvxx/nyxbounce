@@ -7,14 +7,21 @@ package net.ccbluex.liquidbounce.features.module.modules.movement.speedmodes.oth
 
 import net.ccbluex.liquidbounce.features.module.modules.movement.speedmodes.SpeedMode
 import net.ccbluex.liquidbounce.utils.extensions.isMoving
-import net.ccbluex.liquidbounce.utils.extensions.tryJump
+import net.minecraft.client.entity.EntityPlayerSP
 
 object Legit : SpeedMode("Legit") {
+    private var isJumping = false 
+
     override fun onStrafe() {
         val player = mc.thePlayer ?: return
 
-        if (mc.thePlayer.onGround && player.isMoving) {
-            player.tryJump()
+        if (player.onGround && player.isMoving && !isJumping) {
+            try {
+                isJumping = true 
+                player.jump()
+            } finally {
+                isJumping = false 
+            }
         }
     }
 
