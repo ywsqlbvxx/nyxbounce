@@ -52,7 +52,7 @@ object Animations : Module("Animations", Category.RENDER, gameDetecting = false)
         SmoothFloatAnimation(),
         ReverseAnimation(),
         FluxAnimation(),
-        ETBAnimation(),
+        ETBAnimation()
     )
 
     private val animationMode by choices("Mode", animations.map { it.name }.toTypedArray(), "Pushdown")
@@ -373,7 +373,7 @@ class ReverseAnimation : Animation("Reverse") {
  */
 class ETBAnimation : Animation("ETB") {
     override fun transform(f1: Float, f: Float, clientPlayer: AbstractClientPlayer) {
-        val progress = MathHelper.sin(MathHelper.sqrt(f) * 3.1415927f)
+        val progress = MathHelper.sin(MathHelper.sqrt_float(f) * 3.1415927f)
         val progress2 = MathHelper.sin(f * f * 3.1415927f)
 
         transformFirstPersonItem(f1 * -0.6f, 0f)
@@ -384,7 +384,7 @@ class ETBAnimation : Animation("ETB") {
         rotate(progress * -20.7f, 0.2f, 0.1f, 1.0f)
         rotate(progress * -68.6f, 1.3f, 0.1f, 0.2f)
         
-        scale(Animations.getInstance().scale.get(), Animations.getInstance().scale.get(), Animations.getInstance().scale.get())
+        scale(0.4f, 0.4f, 0.4f)
         doBlockTransformations()
         
         if (itemRotate) {
