@@ -163,8 +163,8 @@ class ScoreboardElement(
                                     val colorCode = name?.substring(0, 2) ?: "§9"
                                     name = when (serverIp.lowercase()) {
                                         "none" -> ""
-                                        "client" -> "Rinbounce.saygex"
-                                        "website" -> "discord.gg/GC9fdRByEC"
+                                        "client" -> "rinbounce69"
+                                        "website" -> "rinbounce.wtf"
                                         else -> return null
                                     }
                                 }
