@@ -100,7 +100,7 @@ object RinStrafe : Module("RinStrafe", Category.MOVEMENT) {
         event.cancelEvent()
     }
 
-    fun onStrafe(event: StrafeEvent) {
+    fun onRinStrafe(event: StrafeEvent) {
         runStrafeFixLoop(silentFix, event)
     }
 }
