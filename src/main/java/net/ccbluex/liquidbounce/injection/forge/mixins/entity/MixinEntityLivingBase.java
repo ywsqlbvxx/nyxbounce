@@ -5,12 +5,9 @@
  */
 package net.ccbluex.liquidbounce.injection.forge.mixins.entity;
 
-import net.ccbluex.liquidbounce.LiquidBounce;
 import net.ccbluex.liquidbounce.event.EventManager;
 import net.ccbluex.liquidbounce.event.EventState;
 import net.ccbluex.liquidbounce.event.JumpEvent;
-import net.ccbluex.liquidbounce.event.StrafeEvent;
-import net.ccbluex.liquidbounce.features.module.modules.movement.RinStrafe;
 import net.ccbluex.liquidbounce.features.module.modules.movement.LiquidWalk;
 import net.ccbluex.liquidbounce.features.module.modules.movement.NoJumpDelay;
 import net.ccbluex.liquidbounce.features.module.modules.movement.Sprint;
@@ -93,17 +90,12 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
 
         if (isSprinting()) {
             float fixedYaw = this.rotationYaw;
+
             final RotationUtils rotationUtils = RotationUtils.INSTANCE;
             final Rotation currentRotation = rotationUtils.getCurrentRotation();
             final RotationSettings rotationData = rotationUtils.getActiveSettings();
-            final RinStrafe strafeFix = RinStrafe.INSTANCE;
-
             if (currentRotation != null && rotationData != null && rotationData.getStrafe()) {
                 fixedYaw = currentRotation.getYaw();
-            }
-
-            if (rotationUtils.getTargetRotation() != null && strafeFix.getDoFix()) {
-                fixedYaw = rotationUtils.getTargetRotation().getYaw();
             }
 
             final Sprint sprint = Sprint.INSTANCE;
@@ -114,23 +106,13 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
             final float f = fixedYaw * 0.017453292F;
             motionX -= MathHelper.sin(f) * 0.2F;
             motionZ += MathHelper.cos(f) * 0.2F;
-
-            if (strafeFix.getDoFix()) {
-                StrafeEvent strafeEvent = new StrafeEvent((float) motionX, (float) motionZ, 0.0F);
-                EventManager.INSTANCE.call(strafeEvent);
-                if (strafeFix != null) {
-                    strafeFix.runStrafeFixLoop(strafeFix.getSilentFix(), strafeEvent);
-                    motionX = strafeEvent.getStrafe();
-                    motionZ = strafeEvent.getForward();
-                }
-            }
         }
 
         isAirBorne = true;
 
         if ((Object) this == Minecraft.getMinecraft().thePlayer) {
-            final JumpEvent postJumpEvent = new JumpEvent((float) motionY, EventState.POST);
-            EventManager.INSTANCE.call(postJumpEvent);
+            final JumpEvent postjumpEvent = new JumpEvent((float) motionY, EventState.POST);
+            EventManager.INSTANCE.call(postjumpEvent);
         }
     }
 
@@ -162,6 +144,7 @@ public abstract class MixinEntityLivingBase extends MixinEntity {
     private void hookHeadRotations(CallbackInfo ci) {
         Rotation rotation = Rotations.INSTANCE.getRotation();
 
+        //noinspection ConstantValue
         this.rotationYawHead = ((EntityLivingBase) (Object) this) instanceof EntityPlayerSP && Rotations.INSTANCE.shouldUseRealisticMode() && rotation != null ? rotation.getYaw() : this.rotationYawHead;
     }
 
