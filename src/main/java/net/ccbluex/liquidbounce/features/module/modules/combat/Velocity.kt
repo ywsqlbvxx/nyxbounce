@@ -54,9 +54,15 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             "Reverse", "SmoothReverse", "JumpReset", "Glitch", "Legit",
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce", 
             "Delay", "Hypixel", "HypixelAir",
-            "Click", "BlocksMC", "3FMC", "GrimReduce", "Intave"
+            "Click", "BlocksMC", "3FMC", "GrimReduce", "Intave", "LegitSmart", "IntaveJump"
         ), "Simple"
     )
+    
+    // LegitSmart
+    private val legitSmartJumpLimit by int("LegitSmartJumpLimit", 2, 1..5) { mode == "LegitSmart" }
+
+    // IntaveJump
+    private val intaveJumpResetCount by int("IntaveJumpReset", 2, 1..5) { mode == "IntaveJump" }
 
     // GrimReduce
     private val reduceGrimFactor by float("GrimReduceFactor", 0.6f, 0f..1f) { mode == "GrimReduce" }
@@ -126,6 +132,9 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     private var intaveCurrentDelay = 0
     private var intaveDelayCounter = 0
     private var intaveLastAttackTime = 0L
+    
+    private var legitSmartJumpCount = 0
+    private var intaveJumpCount = 0
 
     private val pauseOnExplosion by boolean("PauseOnExplosion", true)
     private val ticksToPause by int("TicksToPause", 20, 1..50) { pauseOnExplosion }
@@ -200,6 +209,8 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         pauseTicks = 0
         mc.thePlayer?.speedInAir = 0.02F
         timerTicks = 0
+        legitSmartJumpCount = 0
+        intaveJumpCount = 0
         reset()
     }
     
@@ -215,6 +226,45 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             return@handler
 
         when (mode.lowercase()) {
+            "legitsmart" -> {
+                if (hasReceivedVelocity) {
+                    if (thePlayer.onGround && 
+                        thePlayer.hurtTime == 9 && 
+                        thePlayer.isSprinting && 
+                        mc.currentScreen == null) {
+            
+                        if (legitSmartJumpCount > legitSmartJumpLimit) {
+                            legitSmartJumpCount = 0
+                        } else {
+                            legitSmartJumpCount++
+                            if (thePlayer.ticksExisted % 5 != 0) {
+                                thePlayer.tryJump()
+                            }
+                        }
+                    } else if (thePlayer.hurtTime == 8) {
+                        hasReceivedVelocity = false
+                        legitSmartJumpCount = 0
+                    }
+                }
+            }
+            "intavejump" -> {
+                if (hasReceivedVelocity) {
+                    if (thePlayer.hurtTime == 9) {
+                        intaveJumpCount++
+                        if (intaveJumpCount % intaveJumpResetCount == 0 && 
+                            thePlayer.onGround && 
+                            thePlayer.isSprinting && 
+                            mc.currentScreen == null) {
+                            thePlayer.tryJump()
+                            intaveJumpCount = 0
+                        }
+                    } else {
+                        hasReceivedVelocity = false
+                        intaveJumpCount = 0
+                    }
+                }
+            }
+            
             "grimreduce" -> {
                 if (hasReceivedVelocity && thePlayer.hurtTime in reduceGrimMinHurtTime..reduceGrimMaxHurtTime) {
                     thePlayer.motionX *= reduceGrimFactor
@@ -480,7 +530,6 @@ object Velocity : Module("Velocity", Category.COMBAT) {
         val thePlayer = mc.thePlayer ?: return@handler
 
         val packet = event.packet
-
         if (!handleEvents())
             return@handler
 
@@ -505,6 +554,10 @@ object Velocity : Module("Velocity", Category.COMBAT) {
             }
 
                 when (mode.lowercase()) {
+                "legitsmart", "intavejump" -> {
+                    hasReceivedVelocity = true
+                    velocityTimer.reset()
+                }    
                 "simple" -> handleVelocity(event)
 
                 "aac", "reverse", "smoothreverse", "aaczero", "ghostblock" -> hasReceivedVelocity = true            "jumpreset" -> {
