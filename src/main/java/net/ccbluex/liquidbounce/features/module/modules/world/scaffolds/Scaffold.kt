@@ -107,7 +107,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
     private val autoF5 by boolean("AutoF5", false).subjective()
 
     // Basic stuff
-    val sprint by boolean("Sprint", false)
+    val sprint by choices("Sprint", arrayOf("Always", "Dynamic", "OnGround", "OffGround", "OFF"), "Dynamic")
     private val swing by boolean("Swing", true).subjective()
     private val down by boolean("Down", true) { !sameY && scaffoldMode !in arrayOf("GodBridge", "Telly") }
     private val autoJump by boolean("AutoJump", false)
@@ -431,6 +431,18 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
                 placedBlocksWithoutEagle = 0
             }
         }
+        val canSprint = when (sprint.get().lowercase()) {
+            "always", "dynamic" -> true
+            "onground" -> player.onGround
+            "offground" -> !player.onGround
+            else -> false
+        }
+
+        if (canSprint && MovementUtils.isMoving()) {
+            player.isSprinting = true
+        } else if (sprint.get() != "OFF") {
+            player.isSprinting = false
+        }
 
         if (player.onGround) {
             // Still a thing?
@@ -523,6 +535,9 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     val onStrafe = handler<StrafeEvent> {
         val player = mc.thePlayer ?: return@handler
+        if (sprint.equals("dynamic") && player.onGround && MovementUtils.isMoving()) {
+            MovementUtils.strafe(0.2f)
+        }
 
         // Jumping needs to be done here, so it doesn't get detected by movement-sensitive anti-cheats.
         if (scaffoldMode == "Telly" && player.onGround && player.isMoving && currRotation == player.rotation && ticksUntilJump >= jumpTicks) {
@@ -1337,7 +1352,11 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         val isMovingStraight = if (options.applyServerSide) {
             movingYaw % 90 == 0f
         } else movingYaw in steps45 && player.movementInput.isSideways
-
+        
+        if (sprint != "OFF" && canSprint && player.isMoving) {
+            player.isSprinting = true
+        }
+        
         if (!player.isNearEdge(2.5f)) return
 
         if (!player.isMoving) {
