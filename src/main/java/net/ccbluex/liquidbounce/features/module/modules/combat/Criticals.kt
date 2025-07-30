@@ -50,7 +50,6 @@ object Criticals : Module("Criticals", Category.COMBAT) {
 
     override fun onEnable() {
         when (mode) {
-            "NoGround" -> mc.thePlayer.tryJump()
             "Blink" -> {
                 isBlinkActive = false
                 blinkPackets.clear()
