@@ -93,6 +93,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             ComponentOnHover,
             ConsoleSpammer,
             Criticals,
+            Criticals2,
             ChatControl,
             Damage,
             Derp,
