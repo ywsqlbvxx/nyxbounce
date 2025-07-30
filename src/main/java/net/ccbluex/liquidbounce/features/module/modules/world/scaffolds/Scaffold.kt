@@ -52,6 +52,7 @@ import net.minecraftforge.event.ForgeEventFactory
 import org.lwjgl.input.Keyboard
 import java.awt.Color
 import kotlin.math.*
+import java.util.Random
 
 object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
@@ -303,11 +304,22 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         launchY = player.posY.roundToInt()
         blocksUntilAxisChange = 0
     }
-
+    
+    private fun canSprint(player: EntityPlayer): Boolean {
+        return when (sprint.get().lowercase()) {
+            "always", "dynamic" -> true
+            "onground" -> player.onGround
+            "offground" -> !player.onGround
+            else -> false
+        }
+    }
+    
     // Events
     val onUpdate = loopSequence {
         val player = mc.thePlayer ?: return@loopSequence
-
+        val canSprintValue = canSprint(player)
+        player.isSprinting = canSprintValue
+        
         if (mc.playerController.currentGameType == WorldSettings.GameType.SPECTATOR) return@loopSequence
 
         mc.timer.timerSpeed = timer
@@ -319,7 +331,8 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             mc.gameSettings.keyBindSneak.pressed = false
         }
         
-        if (autoJump && player.onGround && player.isMoving) {
+        if (autoJump && player.onGround && 
+            (player.movementInput.moveForward != 0f || player.movementInput.moveStrafe != 0f)) {
             player.jump()
         }
 
@@ -535,14 +548,17 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     val onStrafe = handler<StrafeEvent> {
         val player = mc.thePlayer ?: return@handler
-        if (sprint.equals("dynamic") && player.onGround && MovementUtils.isMoving()) {
+        if (sprint == "dynamic" && player.onGround && 
+            (player.movementInput.moveForward != 0f || player.movementInput.moveStrafe != 0f)) {
             MovementUtils.strafe(0.2f)
         }
 
         // Jumping needs to be done here, so it doesn't get detected by movement-sensitive anti-cheats.
-        if (scaffoldMode == "Telly" && player.onGround && player.isMoving && currRotation == player.rotation && ticksUntilJump >= jumpTicks) {
+        if (scaffoldMode == "Telly" && player.onGround && 
+            (player.movementInput.moveForward != 0f || player.movementInput.moveStrafe != 0f) && 
+            currRotation == player.rotation && ticksUntilJump >= jumpTicks) {
+            
             player.tryJump()
-
             ticksUntilJump = 0
             jumpTicks = jumpTicksRange.random()
         }
@@ -1353,7 +1369,8 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
             movingYaw % 90 == 0f
         } else movingYaw in steps45 && player.movementInput.isSideways
         
-        if (sprint != "OFF" && canSprint && player.isMoving) {
+        if (sprint != "OFF" && canSprint(player) && 
+            (player.movementInput.moveForward != 0f || player.movementInput.moveStrafe != 0f)) {
             player.isSprinting = true
         }
         
