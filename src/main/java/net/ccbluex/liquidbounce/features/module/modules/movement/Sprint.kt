@@ -62,13 +62,11 @@ object Sprint : Module("Sprint", Category.MOVEMENT, gameDetecting = false) {
             return
 
         if (Scaffold.handleEvents()) {
-             if (Scaffold.state) {
-            if (Scaffold.sprint == "OFF") {
+            if (!Scaffold.sprint) {
                 player setSprintSafely false
                 isSprinting = false
                 return
-            } else if (Scaffold.sprint != "OFF" && Scaffold.eagle == "Normal" && 
-                       player.isMoving && player.onGround && Scaffold.eagleSneaking && Scaffold.eagleSprint) {
+            } else if (Scaffold.sprint && Scaffold.eagle == "Normal" && player.isMoving && player.onGround && Scaffold.eagleSneaking && Scaffold.eagleSprint) {
                 player setSprintSafely true
                 isSprinting = true
                 return
