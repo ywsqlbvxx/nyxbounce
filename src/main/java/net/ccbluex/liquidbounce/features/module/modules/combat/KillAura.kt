@@ -92,7 +92,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private var blockReleasedAt = 0L
 
     // CPS - Attack speed
-    private val cps by intRange("CPS", 5..8, 1..50) { !simulateCooldown }.onChanged {
+    private val cps by intRange("CPS", 5..8, 1..200) { !simulateCooldown }.onChanged {
         attackDelay = randomClickDelay(it.first, it.last)
     }
 
