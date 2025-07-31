@@ -307,7 +307,7 @@ class GuiMainMenu : AbstractScreen() {
 
         // ? cailonmaskidskidconcak VERSION TEXT (TOP LEFT)
         mc.fontRendererObj.drawStringWithShadow(
-            "b1.1.8", 10f, 10f, 0xFFFFFF
+            "b1.2.0", 10f, 10f, 0xFFFFFF
 
         )
 

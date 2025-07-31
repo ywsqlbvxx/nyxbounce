@@ -34,7 +34,7 @@ object NoSlow : Module("NoSlow", Category.MOVEMENT, gameDetecting = false) {
 
     private val swordMode by choices(
         "SwordMode",
-    arrayOf("None", "NCP", "UpdatedNCP", "AAC5", "SwitchItem", "InvalidC08", "Blink", "OldGrim", "Intave14", "GrimTest", "Test"),
+        arrayOf("None", "NCP", "UpdatedNCP", "AAC5", "SwitchItem", "InvalidC08", "Blink", "OldGrim", "Intave14", "GrimAC", "Test"),
         "None"
     )
 
@@ -45,7 +45,7 @@ object NoSlow : Module("NoSlow", Category.MOVEMENT, gameDetecting = false) {
 
     private val consumeMode by choices(
         "ConsumeMode",
-        arrayOf("None", "UpdatedNCP", "Test", "AAC5", "SwitchItem", "InvalidC08", "Intave", "Drop"),
+        arrayOf("None", "UpdatedNCP", "Test", "AAC5", "SwitchItem", "InvalidC08", "Intave14", "Drop"),
         "None"
     )
 
@@ -134,9 +134,16 @@ object NoSlow : Module("NoSlow", Category.MOVEMENT, gameDetecting = false) {
                         }
                     }
 
-                    "intave" -> {
+        // Credit: @LiquidBounce NextGen
+                    "intave14" -> {
                         if (event.eventState == EventState.PRE) {
-                            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.UP))
+                            if (mc.thePlayer.isUsingItem) {
+                                sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.UP))
+                            }
+                            if (mc.thePlayer.itemInUseCount == 3) {
+                                mc.thePlayer.stopUsingItem()
+                                sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.UP))
+                            }
                         }
                     }
                 }
@@ -232,7 +239,7 @@ object NoSlow : Module("NoSlow", Category.MOVEMENT, gameDetecting = false) {
                         sendPacket(C08PacketPlayerBlockPlacement(BlockPos(-1, -1, -1), 255, heldItem, 0f, 0f, 0f))
                     }
                 }
-
+        // Credit: @LiquidBounce NextGen
                 "intave14" -> {
                     if (event.eventState == EventState.PRE) {
                         if (player.isMoving) {
@@ -242,21 +249,12 @@ object NoSlow : Module("NoSlow", Category.MOVEMENT, gameDetecting = false) {
                         }
                     }
                 }
-
-                "grimtest" -> {
+        // Credit: @Kevin
+                "grimac" -> {
                     if (event.eventState == EventState.PRE) {
-                        if (player.isMoving) {
-                            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
-
-                            if (player.ticksExisted % 2 == 0) {
-                                val pos = BlockPos(player.posX.toInt(), (player.posY - 1).toInt(), player.posZ.toInt())
-                                sendPacket(C08PacketPlayerBlockPlacement(pos, 1, heldItem, 0f, 0f, 0f))
-                            }
-                        }
+                        sendPacket(C09PacketHeldItemChange((mc.thePlayer.inventory.currentItem + 1) % 9))
                     } else if (event.eventState == EventState.POST) {
-                        if (!player.isBlocking && KillAura.blockStatus) {
-                            sendPacket(C08PacketPlayerBlockPlacement(BlockPos.ORIGIN, 255, heldItem, 0f, 0f, 0f))
-                        }
+                        sendPacket(C09PacketHeldItemChange(mc.thePlayer.inventory.currentItem))
                     }
                 }
             }
