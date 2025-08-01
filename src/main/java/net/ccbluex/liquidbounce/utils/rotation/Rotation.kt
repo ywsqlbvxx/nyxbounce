@@ -65,7 +65,7 @@ data class Rotation(var yaw: Float, var pitch: Float) : MinecraftInstance {
         if (changePitch) player.rotationPitch = pitch
     }
 
-    /**
+   /**
      * Patch gcd exploit in aim
      *
      * @see net.minecraft.client.renderer.EntityRenderer.updateCameraAndRender

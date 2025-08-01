@@ -49,6 +49,33 @@ object RotationUtils : MinecraftInstance, Listenable {
 
     private const val MAX_CAPTURE_TICKS = 3
 
+    private var keepLength: Int = 0
+    
+
+    /**
+     * Reset your target rotation
+     */
+    fun reset() {
+        keepLength = 0
+
+        if (Rotations.doSb() && targetRotation != null) {
+            val yawSpeed = Rotations.sbYawSpeed()
+            val pitchSpeed = Rotations.sbPitchSpeed()
+
+            val currentRotation = targetRotation
+            val thePlayer = mc.thePlayer
+            val rotation = Rotation(thePlayer.rotationYaw, thePlayer.rotationPitch)
+
+            if (getAngleDifference(currentRotation!!.yaw, rotation.yaw) > yawSpeed || Math.abs(rotation.pitch - currentRotation.pitch) > pitchSpeed) {
+                val limited = limitAngleChange(currentRotation, rotation, yawSpeed, pitchSpeed)
+                limited.fixedSensitivity()
+                targetRotation = limited
+                return
+            }
+        }
+        targetRotation = null
+    }
+
     var modifiedInput = MovementInput()
 
     /**

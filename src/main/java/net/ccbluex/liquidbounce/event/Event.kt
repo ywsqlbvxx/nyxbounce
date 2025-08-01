@@ -15,8 +15,7 @@ abstract class CancellableEvent : Event() {
      * @return state of cancel
      */
     var isCancelled = false
-        private set
-
+    
     /**
      * Allows you to cancel an event
      *

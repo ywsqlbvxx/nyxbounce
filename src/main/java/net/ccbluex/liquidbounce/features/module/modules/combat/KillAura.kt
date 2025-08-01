@@ -14,6 +14,7 @@ import net.ccbluex.liquidbounce.features.module.modules.player.Blink
 import net.ccbluex.liquidbounce.features.module.modules.world.Fucker
 import net.ccbluex.liquidbounce.features.module.modules.world.Nuker
 import net.ccbluex.liquidbounce.features.module.modules.world.scaffolds.*
+import net.ccbluex.liquidbounce.utils.movement.FallingPlayer
 import net.ccbluex.liquidbounce.utils.attack.CPSCounter
 import net.ccbluex.liquidbounce.utils.attack.CooldownHelper.getAttackCooldownProgress
 import net.ccbluex.liquidbounce.utils.attack.CooldownHelper.resetLastAttackedTicks
@@ -72,8 +73,10 @@ import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
 import net.minecraft.potion.Potion
 import net.minecraft.util.*
 import org.lwjgl.input.Keyboard
+import org.lwjgl.opengl.GL11
 import java.awt.Color
 import kotlin.math.*
+import net.ccbluex.liquidbounce.utils.timing.TickTimer
 
 object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     /**
@@ -97,6 +100,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     }
 
     private val hurtTime by int("HurtTime", 10, 0..10) { !simulateCooldown }
+    private val noSpamClick by boolean("NoSpamClick", true)
 
     private val activationSlot by boolean("ActivationSlot", false)
     private val preferredSlot by int("PreferredSlot", 1, 1..9) { activationSlot }
@@ -139,6 +143,14 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     // Bypass
     private val swing by boolean("Swing", true)
     private val keepSprint by boolean("KeepSprint", true)
+    private val scaffoldCheck by boolean("ScaffoldCheck", true)
+
+    // Timing
+    private val highVersionAttackDelay by boolean("HighVersionAttackDelay", false)
+    private val highVersionAttackSwing by boolean("HighVersionAttackSwing", false)
+    private val attackTiming by choices("AttackTiming", arrayOf("Legit", "Pre", "Post", "Update"), "Legit")
+    private val extraBlockTiming by choices("ExtraBlockTiming", arrayOf("NoExtra", "Pre", "Post", "Update", "Pre&Post", "Update&Pre", "Update&Post", "Update&Pre&Post"), "NoExtra")
+    private val afterTickTiming by choices("AfterTickBlockTiming", arrayOf("Pre", "Post", "Both"), "Post")
 
     // Settings
     private val autoF5 by boolean("AutoF5", false)
@@ -146,12 +158,12 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val onDestroyBlock by boolean("OnDestroyBlock", false)
 
     // AutoBlock
-    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent", "Test"), "Packet")
-    private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" || autoBlock == "Silent" }
+    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent", "Test", "AfterTick", "Keep", "Vulcan"), "Packet")
+    private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" || autoBlock == "Silent" || autoBlock == "AfterTick" || autoBlock == "Keep" || autoBlock == "Vulcan" }
     private val unblockMode by choices(
         "UnblockMode", arrayOf("Stop", "Switch", "Empty"), "Stop"
-    ) { autoBlock == "Packet" || autoBlock == "Silent" }
-    private val releaseAutoBlock by boolean("ReleaseAutoBlock", true) { autoBlock !in arrayOf("Off", "Fake") }
+    ) { autoBlock == "Packet" || autoBlock == "Silent" || autoBlock == "AfterTick" || autoBlock == "Keep" || autoBlock == "Vulcan" }
+    private val releaseAutoBlock by boolean("ReleaseAutoBlock", true) { autoBlock !in arrayOf("Off", "Fake", "Keep", "Vulcan") }
     val forceBlockRender by boolean("ForceBlockRender", true) {
         autoBlock !in arrayOf(
             "Off", "Fake"
@@ -171,11 +183,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     }
 
     private val switchStartBlock by boolean("SwitchStartBlock", false) { autoBlock !in arrayOf("Off", "Fake") }
-
     private val interactAutoBlock by boolean("InteractAutoBlock", true) { autoBlock !in arrayOf("Off", "Fake") }
-
     val blinkAutoBlock by boolean("BlinkAutoBlock", false) { autoBlock !in arrayOf("Off", "Fake") }
-
     private val blinkBlockTicks by int("BlinkBlockTicks", 3, 2..5) {
         autoBlock !in arrayOf(
             "Off", "Fake"
@@ -183,7 +192,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     }
 
     // AutoBlock conditions
-    private val smartAutoBlock by boolean("SmartAutoBlock", false) { autoBlock == "Packet" }
+    private val smartAutoBlock by boolean("SmartAutoBlock", false) { autoBlock == "Packet" || autoBlock == "AfterTick" || autoBlock == "Keep" || autoBlock == "Vulcan" }
 
     // Ignore all blocking conditions, except for block rate, when standing still
     private val forceBlock by boolean("ForceBlockWhenStill", true) { smartAutoBlock }
@@ -319,6 +328,21 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         "Duration", 1.5F, 0.5F..3F, suffix = "Seconds"
     ) { animateCircleY || animateHeight }.subjective()
     
+    // kevin client skidded
+    private val extraRandomCPS by choices("ExtraCPSRandomization", arrayOf("Off", "Simple", "RangeBase"), "Off")
+    private val smartAttack by boolean("SmartAttack", false)
+    private val rotationMode by choices("RotationMode", arrayOf("LiquidBounce", "Advanced", "LiquidSense", "NearestPoint"), "LiquidBounce")
+    private val silentRotation by choices("SilentRotation", arrayOf("Always", "OnlyNoMove", "Off"), "Always")
+    private val strafe by choices("Strafe", arrayOf("Off", "Vanilla", "Strict", "Silent"), "Off")
+    private val randomCenter by boolean("RandomCenter", true)
+    private val maxPredictSize by float("MaxPredictSize", 1f, 0.1f..5f)
+    private val minPredictSize by float("MinPredictSize", 1f, 0.1f..5f)
+    private val alwaysHitable by boolean("AlwaysHitable", false)
+    private val failRate by float("FailRate", 0f, 0f..100f)
+    private val hitBoxMode by choices("HitBoxMode", arrayOf("1.8", "HigherVersion"), "1.8")
+    private val reachCalculateMode by choices("ReachCalculateMode", arrayOf("Look", "DirectionDistance"), "Look")
+    private val renderViewLine by boolean("RenderViewLine", false)
+    
     private fun getAnimationProgress() = (System.currentTimeMillis() % (duration * 1000L)) / (duration * 1000L)
 
     // Box option
@@ -361,6 +385,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     // Swing fails
     private val swingFails = mutableListOf<SwingFailData>()
 
+    // Ticked actions for timing
+    private val attackTickTimer = TickTimer()
+
     /**
      * Disable kill aura module
      */
@@ -372,7 +399,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         attackTimer.reset()
         clicks = 0
         
-        if (autoBlock == "RightHold") {
+        if (autoBlock == "RightHold" || autoBlock == "Keep" || autoBlock == "Vulcan") {
             mc.gameSettings.keyBindUseItem.pressed = false
         }
         
@@ -393,6 +420,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         synchronized(swingFails) {
             swingFails.clear()
         }
+        
+        RotationUtils.reset()
     }
 
     val onRotationUpdate = handler<RotationUpdateEvent> {
@@ -423,6 +452,110 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
         synchronized(swingFails) {
             swingFails.clear()
+        }
+    }
+
+    /**
+     * Motion event
+     */
+    val onMotion = handler<MotionEvent> {
+        if (it.eventState == EventState.PRE) {
+            if (attackTiming == "Pre") {
+                runAttackLoop()
+            }
+            if (extraBlockTiming.contains("Pre") || extraBlockTiming.contains("Pre&") || extraBlockTiming == "Update&Pre") {
+                runBlock()
+            }
+            if (afterTickTiming == "Pre" || afterTickTiming == "Both") {
+                updateHittable()
+                if (canBlock && target != null && mc.thePlayer.getDistanceToEntityBox(target!!) <= blockMaxRange) {
+                    startBlocking(target!!, interactAutoBlock, autoBlock == "Fake")
+                }
+            }
+        } else if (it.eventState == EventState.POST) {
+            if (attackTiming == "Post") {
+                runAttackLoop()
+            }
+            if (extraBlockTiming.contains("Post") || extraBlockTiming.contains("&Post") || extraBlockTiming == "Update&Post") {
+                runBlock()
+            }
+            if (afterTickTiming == "Post" || afterTickTiming == "Both") {
+                updateHittable()
+                if (canBlock && target != null && mc.thePlayer.getDistanceToEntityBox(target!!) <= blockMaxRange) {
+                    startBlocking(target!!, interactAutoBlock, autoBlock == "Fake")
+                }
+            }
+        }
+    }
+
+    /**
+     * Strafe event
+     */
+    val onStrafe = handler<StrafeEvent> {
+        if (strafe == "Off") return@handler
+
+        update()
+
+        if (target != null && currentRotation != null && !(scaffoldCheck && Scaffold.handleEvents())) {
+            when (strafe.lowercase()) {
+                "vanilla", "strict" -> {
+                    val yaw = currentRotation?.yaw ?: return@handler
+                    it.yaw = yaw
+                }
+                "silent" -> {
+                    update()
+                    currentRotation?.applyStrafeToPlayer(it)
+                    it.cancelEvent()
+                }
+            }
+        }
+    }
+
+    /**
+     * Update event
+     */
+    val onUpdate = handler<UpdateEvent> {
+        if (attackTiming == "Update" || attackTiming.contains("Update&")) {
+            runAttackLoop()
+        }
+        if (extraBlockTiming == "Update" || extraBlockTiming.contains("Update&")) {
+            runBlock()
+        }
+        attackTickTimer.update()
+    }
+
+    private fun runAttackLoop() {
+        if (target != null) {
+            if (noSpamClick) {
+                if (clicks > 0) {
+                    runAttack(true, true)
+                    clicks = 0
+                }
+            } else {
+                while (clicks > 0) {
+                    runAttack(true, true)
+                    clicks--
+                }
+            }
+        }
+    }
+
+    private fun runBlock() {
+        if (canBlock && target != null && mc.thePlayer.getDistanceToEntityBox(target!!) <= blockMaxRange) {
+            startBlocking(target!!, interactAutoBlock, autoBlock == "Fake")
+        } else if (!mc.thePlayer.isBlocking) {
+            stopBlocking()
+        }
+    }
+
+    /**
+     * Click event
+     */
+    val onClick = handler<ClickUpdateEvent> {
+        if (attackTiming == "Legit") {
+            updateTarget()
+            updateHittable()
+            runAttackLoop()
         }
     }
 
@@ -526,7 +659,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         }
         
-        if (autoBlock == "RightHold") {
+        if (autoBlock == "RightHold" || autoBlock == "Keep" || autoBlock == "Vulcan") {
             val localTarget = target
             if (localTarget != null
                 && player.heldItem?.item is ItemSword
@@ -636,6 +769,40 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                     )
                 }
             }
+        }
+        
+        // Render view line
+        if (renderViewLine && target != null) {
+            val targetEntity = target!!
+            val partialTicks = mc.timer.renderPartialTicks
+            val box = targetEntity.entityBoundingBox.expand(0.0, targetEntity.collisionBorderSize.toDouble(), 0.0)
+            val rot = currentRotation ?: player.rotation
+            val vecEyes = mc.thePlayer.getPositionEyes(partialTicks)
+            var vecRot = rot.toDirection().multiply(range.toDouble()).add(vecEyes)
+            val obj = box.calculateIntercept(vecEyes, vecRot)
+            vecRot = obj?.hitVec ?: vecRot
+            val renderPosX = mc.renderManager.renderPosX
+            val renderPosY = mc.renderManager.renderPosY
+            val renderPosZ = mc.renderManager.renderPosZ
+            GL11.glPushMatrix()
+            GL11.glDisable(GL11.GL_TEXTURE_2D)
+            GL11.glEnable(GL11.GL_LINE_SMOOTH)
+            GL11.glDisable(GL11.GL_LIGHTING)
+            GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST)
+            GL11.glLoadIdentity()
+            mc.entityRenderer.setupCameraTransform(mc.timer.renderPartialTicks, 2)
+            GL11.glColor4f(1F, 1F, 1F, 1F)
+            GL11.glLineWidth(1.2f)
+
+            GL11.glBegin(GL11.GL_LINES)
+            GL11.glVertex3d(vecEyes.xCoord - renderPosX, vecEyes.yCoord - renderPosY, vecEyes.zCoord - renderPosZ)
+            GL11.glVertex3d(vecRot.xCoord - renderPosX, vecRot.yCoord - renderPosY, vecRot.zCoord - renderPosZ)
+            GL11.glEnd()
+            GL11.glColor4f(1F, 1F, 1F, 1F)
+            GL11.glDisable(GL11.GL_LINE_SMOOTH)
+            GL11.glEnable(GL11.GL_TEXTURE_2D)
+            GL11.glEnable(GL11.GL_LIGHTING)
+            GL11.glPopMatrix()
         }
     }
 
@@ -889,7 +1056,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         val thePlayer = mc.thePlayer
 
         if (shouldPrioritize()) return
-        if (autoBlock == "RightHold") {
+        if (autoBlock == "RightHold" || autoBlock == "Keep" || autoBlock == "Vulcan") {
             mc.gameSettings.keyBindUseItem.pressed = false
         }
 
@@ -918,7 +1085,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             val affectSprint = false.takeIf { KeepSprint.handleEvents() || keepSprint }
 
             thePlayer.attackEntityWithModifiedSprint(entity, affectSprint) { if (swing) thePlayer.swingItem() }
-            if (autoBlock == "RightHold"
+            if (autoBlock == "RightHold" || autoBlock == "Keep" || autoBlock == "Vulcan"
                 && thePlayer.heldItem?.item is ItemSword
                 && thePlayer.getDistanceToEntityBox(entity) <= blockMaxRange) {
                 mc.gameSettings.keyBindUseItem.pressed = true
