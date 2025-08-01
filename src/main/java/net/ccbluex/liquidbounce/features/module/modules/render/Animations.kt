@@ -1,16 +1,15 @@
-
 package net.ccbluex.liquidbounce.features.module.modules.render
 
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.features.module.modules.render.Animations.animations
 import net.ccbluex.liquidbounce.features.module.modules.render.Animations.defaultAnimation
-import net.ccbluex.liquidbounce.utils.MinecraftInstance
+import net.ccbluex.liquidbounce.features.module.modules.render.Animations.delay
+import net.ccbluex.liquidbounce.features.module.modules.render.Animations.itemRotate
+import net.ccbluex.liquidbounce.features.module.modules.render.Animations.itemRotateSpeed
+import net.ccbluex.liquidbounce.features.module.modules.render.Animations.itemRotationMode
+import net.ccbluex.liquidbounce.utils.client.MinecraftInstance
 import net.ccbluex.liquidbounce.utils.timing.MSTimer
-import net.ccbluex.liquidbounce.value._boolean
-import net.ccbluex.liquidbounce.value.choices
-import net.ccbluex.liquidbounce.value.floatValue
-import net.ccbluex.liquidbounce.value.intValue
 import net.minecraft.client.entity.AbstractClientPlayer
 import net.minecraft.client.renderer.GlStateManager.*
 import net.minecraft.util.MathHelper
@@ -35,7 +34,7 @@ import org.lwjgl.opengl.GL11.glTranslatef
  *
  * @author CCBlueX
  */
-object Animations : Module("Animations", Category.RENDER, gameDetecting = false, hideModule = false) {
+object Animations : Module("Animations", Category.RENDER, gameDetecting = false) {
 
     // Default animation
     val defaultAnimation = OneSevenAnimation()
@@ -49,50 +48,95 @@ object Animations : Module("Animations", Category.RENDER, gameDetecting = false,
         ArgonAnimation(),
         CesiumAnimation(),
         SulfurAnimation(),
+        SmoothFloatAnimation(),
+        ReverseAnimation(),
+        FluxAnimation(),
         SpinAnimation(),
         ModelSpinAnimation(),
-        AstolfoAnimation(),
-        EtherealAnimation(),
-        ExhibitionAnimation(),
-        InteriaAnimation(),
-        LeakedAnimation(),
-        MoonAnimation(),
-        OldExhibitionAnimation(),
-        OneDotSevenAnimation(),
-        PunchAnimation(),
         PushAnimation(),
-        SigmaAnimation(),
-        SlideAnimation(),
-        SmallAnimation(),
-        SmoothAnimation(),
-        SpinningAnimation(),
+        PunchAnimation(),
         StellaAnimation(),
+        MoonAnimation(),
+        LeakedAnimation(),
+        AstolfoAnimation(),
+        SmallAnimation(),
+        OneDotSevenAnimation(),
         StylesAnimation(),
-        SwaingAnimation(),
         SwankAnimation(),
         SwangAnimation(),
+        SwongAnimation(),
+        SwaingAnimation(),
         SwingAnimation(),
-        SwongAnimation()
+        SmoothAnimation(),
+        SigmaAnimation(),
+        SlideAnimation(),
+        InteriaAnimation(),
+        EtherealAnimation(),
+        OldExhibitionAnimation(),
+        ExhibitionAnimation(),
+        SpinningAnimation()
     )
 
-    private val animationMode by choices("Mode", animations.map { it.name }.sorted().toTypedArray(), "Pushdown")
-    val oddSwing by _boolean("OddSwing", false)
-    val swingSpeed by intValue("SwingSpeed", 15, 0..20)
-    val cancelEquip by _boolean("CancelEquip", false) {animationMode == "Spin" }
-    val scale by floatValue("Scale", 0f, -5f..5f) {animationMode == "Spin" }
-    val spinSpeed by intValue("SpinSpeed", 72, 1..360) { animationMode == "ModelSpin" }
-    val autoCenter by _boolean("AutoCenter", true) { animationMode == "ModelSpin" }
-    val modelCenterX by floatValue("CenterX", 0f, -2f..2f) {animationMode == "ModelSpin" }
-    val modelCenterY by floatValue("CenterY", -0.4f, -2f..2f) {animationMode == "ModelSpin" }
-    val modelCenterZ by floatValue("CenterZ", 0f, -2f..2f) {animationMode == "ModelSpin" }
-    val handItemScale by floatValue("ItemScale", 0f, -5f..5f)
-    val handX by floatValue("X", 0f, -5f..5f)
-    val handY by floatValue("Y", 0f, -5f..5f)
-    val handPosX by floatValue("PositionRotationX", 0f, -50f..50f)
-    val handPosY by floatValue("PositionRotationY", 0f, -50f..50f)
-    val handPosZ by floatValue("PositionRotationZ", 0f, -50f..50f)
+    private val animationMode by choices("Mode", animations.map { it.name }.toTypedArray(), "Pushdown")
+    val oddSwing by boolean("OddSwing", false)
+    val swingSpeed by int("SwingSpeed", 15, 0..20)
+    val cancelEquip by boolean("CancelEquip", false) { animationMode == "Spin" }
+    val scale by float("Scale", 0f, -5f..5f) { animationMode == "Spin" }
+    val spinSpeed by int("SpinSpeed", 72, 1..360) { animationMode == "ModelSpin" }
+    val autoCenter by boolean("AutoCenter", true) { animationMode == "ModelSpin" }
+    val modelCenterX by float("CenterX", 0f, -2f..2f) { animationMode == "ModelSpin" }
+    val modelCenterY by float("CenterY", -0.4f, -2f..2f) { animationMode == "ModelSpin" }
+    val modelCenterZ by float("CenterZ", 0f, -2f..2f) { animationMode == "ModelSpin" }
+
+    val handItemScale by float("ItemScale", 0f, -5f..5f)
+    val handX by float("X", 0f, -5f..5f)
+    val handY by float("Y", 0f, -5f..5f)
+    val handPosX by float("PositionRotationX", 0f, -50f..50f)
+    val handPosY by float("PositionRotationY", 0f, -50f..50f)
+    val handPosZ by float("PositionRotationZ", 0f, -50f..50f)
+
+
+    var itemRotate by boolean("ItemRotate", false)
+    val itemRotationMode by choices("ItemRotateMode", arrayOf("None", "Straight", "Forward", "Nano", "Uh"), "None") { itemRotate }
+    val itemRotateSpeed by float("RotateSpeed", 8f, 1f.. 15f)  { itemRotate }
+
+    var delay = 0f
 
     fun getAnimation() = animations.firstOrNull { it.name == animationMode }
+
+}
+
+/**
+ * Item Render Rotation
+ *
+ * This class allows you to rotate item animation.
+ *
+ * @author Zywl
+ */
+fun itemRenderRotate() {
+    val rotationTimer = MSTimer()
+
+    if (Animations.itemRotationMode == "none") {
+        Animations.itemRotate = false
+        return
+    }
+
+    when (Animations.itemRotationMode.lowercase()) {
+        "straight" -> rotate(Animations.delay, 0.0f, 1.0f, 0.0f)
+        "forward" -> rotate(Animations.delay, 1.0f, 1.0f, 0.0f)
+        "nano" -> rotate(Animations.delay, 0.0f, 0.0f, 0.0f)
+        "uh" -> rotate(Animations.delay, 1.0f, 0.0f, 1.0f)
+    }
+
+    if (rotationTimer.hasTimePassed(1L)) {
+        Animations.delay++
+        Animations.delay += Animations.itemRotateSpeed
+        rotationTimer.reset()
+    }
+
+    if (Animations.delay > 360.0f) {
+        Animations.delay = 0.0f
+    }
 }
 
 /**
@@ -103,7 +147,7 @@ object Animations : Module("Animations", Category.RENDER, gameDetecting = false,
  *
  * @author CCBlueX
  */
-abstract class Animation(val name: String) : MinecraftInstance() {
+abstract class Animation(val name: String) : MinecraftInstance {
     abstract fun transform(f1: Float, f: Float, clientPlayer: AbstractClientPlayer)
 
     /**
@@ -116,6 +160,9 @@ abstract class Animation(val name: String) : MinecraftInstance() {
         rotate(30f, 0f, 1f, 0f)
         rotate(-80f, 1f, 0f, 0f)
         rotate(60f, 0f, 1f, 0f)
+        if (Animations.itemRotate) {
+            itemRenderRotate()
+        }
     }
 
     /**
@@ -133,6 +180,9 @@ abstract class Animation(val name: String) : MinecraftInstance() {
         rotate(f1 * -20f, 0f, 0f, 1f)
         rotate(f1 * -80f, 1f, 0f, 0f)
         scale(0.4f, 0.4f, 0.4f)
+        if (Animations.itemRotate) {
+            itemRenderRotate()
+        }
     }
 
 }
@@ -148,7 +198,6 @@ class OneSevenAnimation : Animation("OneSeven") {
         doBlockTransformations()
         translate(-0.5f, 0.2f, 0f)
     }
-
 }
 
 class OldAnimation : Animation("Old") {
@@ -157,93 +206,11 @@ class OldAnimation : Animation("Old") {
         doBlockTransformations()
     }
 }
-class ModelSpinAnimation : Animation("ModelSpin") {
-    private var rotationAngle = 0f
-    private val rotationTimer = MSTimer()
-
-    override fun transform(f1: Float, f: Float, clientPlayer: AbstractClientPlayer) {
-        val (centerX, centerY, centerZ) = if (Animations.autoCenter) {
-            Triple(0.0, -0.4, 0.0)
-        } else {
-            Triple(
-                Animations.modelCenterX.toDouble(),
-                Animations.modelCenterY.toDouble(),
-                Animations.modelCenterZ.toDouble()
-            )
-        }
-
-        // 动态计算角度增量（每秒Animations.spinSpeed度）
-        val anglePerTick = Animations.spinSpeed * 0.05f // 50ms间隔
-
-        // 中心点变换流程
-        glTranslated(centerX, centerY, centerZ)
-        rotate(rotationAngle, 0f, 1f, 0f)
-        glTranslated(-centerX, -centerY, -centerZ)
-
-        // 基础动画
-        transformFirstPersonItem(f, f1)
-        doBlockTransformations()
-
-        // 角度更新逻辑
-        if (rotationTimer.hasTimePassed(50L)) {
-            rotationAngle += anglePerTick
-            rotationAngle %= 360f
-            rotationTimer.reset()
-        }
-    }
-}
-
 
 /**
- * Spin animation
+ * Pushdown animation
  */
-class SpinAnimation : Animation("Spin") {
-    private var delay = 0f
-    private val rotateTimer = MSTimer()
-    private var lastUpdateTime = System.currentTimeMillis()
-
-    override fun transform(f1: Float, f: Float, clientPlayer: AbstractClientPlayer) {
-        // 应用位置变换
-        glTranslated(
-            Animations.handPosX.toDouble(),
-            Animations.handPosY.toDouble(),
-            Animations.handPosZ.toDouble()
-        )
-
-        // 旋转动画逻辑
-        rotate(delay, 0f, 0f, -0.1f)
-
-        // 装备动画控制
-        if (Animations.cancelEquip) {
-            transformFirstPersonItem(0f, 0f)
-        } else {
-            transformFirstPersonItem(f / 1.5f, 0f)
-        }
-
-        // 计时器更新
-        val currentTime = System.currentTimeMillis()
-        val elapsedTime = currentTime - lastUpdateTime
-        if (rotateTimer.hasTimePassed(1L)) {
-            delay += (elapsedTime * 360.0 / 850.0).toFloat()
-            rotateTimer.reset()
-        }
-        lastUpdateTime = currentTime
-
-        // 延迟值循环
-        if (delay > 360f) delay = 0f
-
-        // 执行方块变形
-        doBlockTransformations()
-
-        // 应用缩放
-        scale(Animations.scale + 1, Animations.scale + 1, Animations.scale + 1)
-    }
-}
-
-/**
- * Old Pushdown animation.
- */
-class OldPushdownAnimation : Animation("OldPushdown") {
+class OldPushdownAnimation : Animation("Pushdown") {
 
     /**
      * @author CzechHek. Taken from Animations script.
@@ -268,14 +235,12 @@ class OldPushdownAnimation : Animation("OldPushdown") {
         glTranslated(1.05, 0.35, 0.4)
         glTranslatef(-1f, 0f, 0f)
     }
-
 }
 
 /**
  * New Pushdown animation.
  * @author EclipsesDev
  *
- * Taken from NightX Moon Animation (I made it smoother here xd)
  */
 class NewPushdownAnimation : Animation("NewPushdown") {
 
@@ -296,7 +261,6 @@ class NewPushdownAnimation : Animation("NewPushdown") {
 
         scale(1.0, 1.0, 1.0)
     }
-
 }
 
 /**
@@ -339,9 +303,8 @@ class CesiumAnimation : Animation("Cesium") {
         transformFirstPersonItem(f, 0.0f)
         rotate(-c4 * 10.0f / 20.0f, c4 / 2.0f, 0.0f, 4.0f)
         rotate(-c4 * 30.0f, 0.0f, c4 / 3.0f, 0.0f)
-        rotate(-c4 * 10.0f, 1.0f, c4 / 10.0f, 0.0f)
+        rotate(-c4 * 10.0f, 1.0f, c4/10.0f, 0.0f)
         translate(0.0, 0.2, 0.0)
-        doBlockTransformations()
     }
 }
 
@@ -360,7 +323,138 @@ class SulfurAnimation : Animation("Sulfur") {
     }
 }
 
-// Below are the newly added animations
+/**
+ * SmoothFloat animation.
+ * @author MinusBounce
+ */
+class SmoothFloatAnimation : Animation("SmoothFloat") {
+    override fun transform(f1: Float, f: Float, clientPlayer: AbstractClientPlayer) {
+        val smoothSpeed = Animations.itemRotateSpeed * 0.7f
+        val progress = MathHelper.sin(MathHelper.sqrt_float(f1) * 3.1415927f)
+        
+        transformFirstPersonItem(f / 3f, 0f)
+        
+        rotate(progress * 20f / smoothSpeed, 1f, -0.5f, 0.1f)
+        rotate(progress * 40f, 0.2f, 0.5f, 0.1f)
+        rotate(-progress * 20f, 1f, -0.3f, 0.7f)
+        
+        translate(0.1f, -0.1f, -0.2f)
+        doBlockTransformations()
+        
+        rotate(progress * 20f, 0f, 1f, 0f)
+    }
+}
+
+/**
+ * Reverse animation.
+ * @author MinusBounce
+ */
+class ReverseAnimation : Animation("Reverse") {
+    override fun transform(f1: Float, f: Float, clientPlayer: AbstractClientPlayer) {
+        val progress = MathHelper.sin(MathHelper.sqrt_float(f1) * 3.1415927f)
+        
+        transformFirstPersonItem(f, 0f)
+        translate(0.0f, 0.3f, -0.4f)
+        rotate(progress * -30f, 1f, 0f, 2f)
+        rotate(progress * -20f, 0f, 1f, 0f)
+        rotate(-progress * 20f, 0f, 0f, 1f)
+        
+        scale(0.4f, 0.4f, 0.4f)
+        doBlockTransformations()
+    }
+}
+
+/**
+ * Flux animation.
+ * @author MinusBounce
+ */
+class FluxAnimation : Animation("Flux") {
+    override fun transform(f1: Float, f: Float, clientPlayer: AbstractClientPlayer) {
+        val progress = MathHelper.sin(MathHelper.sqrt_float(f1) * 3.1415927f)
+        
+        transformFirstPersonItem(f, 0f)
+        translate(0.1f, 0.2f, 0.1f)
+        
+        rotate(-progress * 40f, 1f, -0.2f, 0.1f)
+        rotate(progress * 20f, 0f, 1f, 0f)
+        rotate(-progress * 20f, 0f, 0f, 0.5f)
+        
+        translate(0f, -0.3f, 0f)
+        scale(0.4f, 0.4f, 0.4f)
+        doBlockTransformations()
+    }
+}
+
+/**
+ * Spin animation
+ */
+class SpinAnimation : Animation("Spin") {
+    private var delay = 0f
+    private val rotateTimer = MSTimer()
+    private var lastUpdateTime = System.currentTimeMillis()
+
+    override fun transform(f1: Float, f: Float, clientPlayer: AbstractClientPlayer) {
+        glTranslated(
+            Animations.handPosX.toDouble(),
+            Animations.handPosY.toDouble(),
+            Animations.handPosZ.toDouble()
+        )
+
+        rotate(delay, 0f, 0f, -0.1f)
+
+        if (Animations.cancelEquip) {
+            transformFirstPersonItem(0f, 0f)
+        } else {
+            transformFirstPersonItem(f / 1.5f, 0f)
+        }
+
+        val currentTime = System.currentTimeMillis()
+        val elapsedTime = currentTime - lastUpdateTime
+        if (rotateTimer.hasTimePassed(1L)) {
+            delay += (elapsedTime * 360.0 / 850.0).toFloat()
+            rotateTimer.reset()
+        }
+        lastUpdateTime = currentTime
+
+        if (delay > 360f) delay = 0f
+
+        doBlockTransformations()
+
+        scale(Animations.scale + 1, Animations.scale + 1, Animations.scale + 1)
+    }
+}
+
+class ModelSpinAnimation : Animation("ModelSpin") {
+    private var rotationAngle = 0f
+    private val rotationTimer = MSTimer()
+
+    override fun transform(f1: Float, f: Float, clientPlayer: AbstractClientPlayer) {
+        val (centerX, centerY, centerZ) = if (Animations.autoCenter) {
+            Triple(0.0, -0.4, 0.0)
+        } else {
+            Triple(
+                Animations.modelCenterX.toDouble(),
+                Animations.modelCenterY.toDouble(),
+                Animations.modelCenterZ.toDouble()
+            )
+        }
+
+        val anglePerTick = Animations.spinSpeed * 0.05f
+
+        glTranslated(centerX, centerY, centerZ)
+        rotate(rotationAngle, 0f, 1f, 0f)
+        glTranslated(-centerX, -centerY, -centerZ)
+
+        transformFirstPersonItem(f, f1)
+        doBlockTransformations()
+
+        if (rotationTimer.hasTimePassed(50L)) {
+            rotationAngle += anglePerTick
+            rotationAngle %= 360f
+            rotationTimer.reset()
+        }
+    }
+}
 
 class PushAnimation : Animation("Push") {
     override fun transform(f1: Float, f: Float, clientPlayer: AbstractClientPlayer) {
@@ -610,7 +704,7 @@ class SpinningAnimation : Animation("Spinning") {
         }
         val delta = System.currentTimeMillis() - lastTime
         lastTime = System.currentTimeMillis()
-        spin += delta * 0.3f // Control spin speed
+        spin += delta * 0.3f 
         if (spin > 360f) {
             spin -= 360f
         }
