@@ -811,7 +811,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         }
 
-        if (!isLastClick) return@handler
+        if (!isLastClick) return@repeat
 
         val switchMode = targetMode == "Switch"
 
@@ -1263,7 +1263,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         
       
         if (autoBlock == "Vulcan" && blockStatus) {
-            if (packet is C07PacketPlayerDigging && packet.action == RELEASE_USE_ITEM ||
+            if (packet is C07PacketPlayerDigging && packet.status == RELEASE_USE_ITEM ||
                 packet is C08PacketPlayerBlockPlacement) {
                 event.cancelEvent()
             }
