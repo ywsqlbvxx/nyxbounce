@@ -811,8 +811,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         }
 
-        if (!isLastClick) return@repeat
-
         val switchMode = targetMode == "Switch"
 
         if (!switchMode || switchTimer.hasTimePassed(switchDelay)) {
