@@ -75,6 +75,7 @@ object LiquidBounce {
     const val CLIENT_CLOUD = "https://cloud.liquidbounce.net/LiquidBounce"
     const val CLIENT_WEBSITE = "rinbounce.wtf"
     const val CLIENT_GITHUB = "https://github.com/rattermc/rinbounce69/"
+    const val MAPLEAI_API_URL = "https://api.mapleai.lol/v1/chat/completions"
 
     const val MINECRAFT_VERSION = "1.8.9"
     
