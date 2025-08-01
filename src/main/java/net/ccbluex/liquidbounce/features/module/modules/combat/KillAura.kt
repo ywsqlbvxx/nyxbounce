@@ -145,12 +145,11 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val onScaffold by boolean("OnScaffold", false)
     private val onDestroyBlock by boolean("OnDestroyBlock", false)
 
-    // AutoBlock
-    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent", "Test"), "Packet")
-    private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" || autoBlock == "Silent" }
+    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent", "Test", "Vulcan"), "Packet")
+    private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" || autoBlock == "Silent" || autoBlock == "Vulcan" }
     private val unblockMode by choices(
         "UnblockMode", arrayOf("Stop", "Switch", "Empty"), "Stop"
-    ) { autoBlock == "Packet" || autoBlock == "Silent" }
+    ) { autoBlock == "Packet" || autoBlock == "Silent" || autoBlock == "Vulcan" }
     private val releaseAutoBlock by boolean("ReleaseAutoBlock", true) { autoBlock !in arrayOf("Off", "Fake") }
     val forceBlockRender by boolean("ForceBlockRender", true) {
         autoBlock !in arrayOf(
@@ -183,7 +182,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     }
 
     // AutoBlock conditions
-    private val smartAutoBlock by boolean("SmartAutoBlock", false) { autoBlock == "Packet" }
+    private val smartAutoBlock by boolean("SmartAutoBlock", false) { autoBlock == "Packet" || autoBlock == "Vulcan" }
 
     // Ignore all blocking conditions, except for block rate, when standing still
     private val forceBlock by boolean("ForceBlockWhenStill", true) { smartAutoBlock }
@@ -361,6 +360,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     // Swing fails
     private val swingFails = mutableListOf<SwingFailData>()
 
+   
+    private var lastBlocking = false
+
     /**
      * Disable kill aura module
      */
@@ -371,6 +373,11 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         attackTickTimes.clear()
         attackTimer.reset()
         clicks = 0
+        
+      
+        if (autoBlock == "Vulcan" && blockStatus) {
+            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+        }
         
         if (autoBlock == "RightHold") {
             mc.gameSettings.keyBindUseItem.pressed = false
@@ -430,6 +437,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Tick event
      */
     val onTick = handler<GameTickEvent>(priority = 2) {
+       
+        val wasBlocking = lastBlocking
+        lastBlocking = blockStatus
+        
         if (pauseOnRightClick) {
             if (mc.gameSettings.keyBindUseItem.isKeyDown) {
                 if (!pausedByRightClick) {
@@ -579,6 +590,11 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         } else {
             renderBlocking = false
+        }
+        
+     
+        if (autoBlock == "Vulcan" && wasBlocking && !blockStatus) {
+            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
         }
     }
 
@@ -795,8 +811,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         }
 
-        if (!isLastClick) return
-
         val switchMode = targetMode == "Switch"
 
         if (!switchMode || switchTimer.hasTimePassed(switchDelay)) {
@@ -886,7 +900,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Attack [entity]
      */
     private fun attackEntity(entity: EntityLivingBase, isLastClick: Boolean) {
-        val thePlayer = mc.thePlayer
+        val thePlayer = mc.thePlayer ?: return
 
         if (shouldPrioritize()) return
         if (autoBlock == "RightHold") {
@@ -1180,7 +1194,12 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                 switchToSlot((SilentHotbar.currentSlot + 1) % 9)
             }
 
-            sendPacket(C08PacketPlayerBlockPlacement(player.heldItem))
+          
+            if (autoBlock == "Vulcan") {
+                sendPacket(C08PacketPlayerBlockPlacement(BlockPos(-1, -1, -1), 255, player.heldItem, 0f, 0f, 0f))
+            } else {
+                sendPacket(C08PacketPlayerBlockPlacement(player.heldItem))
+            }
             blockStatus = true
         }
 
@@ -1197,33 +1216,37 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
         if (!forceStop) {
             if (blockStatus && !mc.thePlayer.isBlocking) {
+              
+                if (autoBlock != "Vulcan") {
+                    when (unblockMode.lowercase()) {
+                        "stop" -> {
+                            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+                        }
 
-                when (unblockMode.lowercase()) {
-                    "stop" -> {
-                        sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
-                    }
+                        "switch" -> {
+                            switchToSlot((SilentHotbar.currentSlot + 1) % 9)
+                        }
 
-                    "switch" -> {
-                        switchToSlot((SilentHotbar.currentSlot + 1) % 9)
-                    }
+                        "empty" -> {
+                            player.inventory.firstEmptyStack.takeIf { it in 0..8 }.let {
+                                if (it == null) {
+                                    sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+                                    return@let
+                                }
 
-                    "empty" -> {
-                        player.inventory.firstEmptyStack.takeIf { it in 0..8 }.let {
-                            if (it == null) {
-                                sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
-                                return@let
+                                switchToSlot(it)
                             }
-
-                            switchToSlot(it)
                         }
                     }
                 }
-
                 blockStatus = false
             }
         } else {
             if (blockStatus) {
-                sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+            
+                if (autoBlock != "Vulcan") {
+                    sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+                }
             }
 
             blockStatus = false
@@ -1235,6 +1258,14 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     val onPacket = handler<PacketEvent> { event ->
         val player = mc.thePlayer ?: return@handler
         val packet = event.packet
+        
+      
+        if (autoBlock == "Vulcan" && blockStatus) {
+            if (packet is C07PacketPlayerDigging && packet.status == RELEASE_USE_ITEM ||
+                packet is C08PacketPlayerBlockPlacement) {
+                event.cancelEvent()
+            }
+        }
         
         if (removeReduceDmgEnabled && packet is C02PacketUseEntity && packet.action == C02PacketUseEntity.Action.ATTACK) {
             val now = System.currentTimeMillis()
@@ -1414,7 +1445,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                     if (target!!.getDistanceToEntityBox(player) > blockRange) return false
                 }
 
-                if (player.getDistanceToEntityBox(target!!) > blockMaxRange) return false
+                if (target!!.getDistanceToEntityBox(player) > blockMaxRange) return false
 
                 return true
             }
