@@ -146,7 +146,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val onDestroyBlock by boolean("OnDestroyBlock", false)
 
     // AutoBlock
-    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent", "Test", "Vulcan"), "Packet")
+    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent", "Test"), "Packet")
     private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" || autoBlock == "Silent" }
     private val unblockMode by choices(
         "UnblockMode", arrayOf("Stop", "Switch", "Empty"), "Stop"
@@ -327,8 +327,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     /**
      * MODULE
      */
-     
-    private var lastBlocking = false
 
     // Target
     var target: EntityLivingBase? = null
@@ -582,13 +580,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         } else {
             renderBlocking = false
         }
-        lastBlocking = if (mc.thePlayer.isBlocking || blockStatus) {
-            true
-        } else {
-            if (lastBlocking && autoBlock == "Vulcan") {
-        sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
-            }
-            false
     }
 
     /**
@@ -1203,10 +1194,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      */
     private fun stopBlocking(forceStop: Boolean = false) {
         val player = mc.thePlayer ?: return
-        
-        if (autoBlock == "Vulcan" && (lastBlocking || forceStop)) {
-        sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
-        }
 
         if (!forceStop) {
             if (blockStatus && !mc.thePlayer.isBlocking) {
