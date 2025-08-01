@@ -40,7 +40,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.max
 
 object WaterMark : Module("WaterMark", Category.RENDER) {
-    private val ClientName by text("ClientName", "Opai")
+    private val ClientName by text("ClientName", "Rin")
     private val animationSpeed by float("AnimationSpeed", 0.2F, 0.05F..1F)
     private val Opal by boolean("Opal",false)
     private val ColorA_ by int("Red",255,0..255)
@@ -52,6 +52,10 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
     private val versionNameUp by text("VersionName","development")
     private val ModuleNotify by boolean("Notification",true)
     private val versionNameDown = clientVersionText
+    
+    private val positionX by float("PositionX", -1f, -1000f..1000f)
+    private val positionY by float("PositionY", -1f, -1000f..1000f)
+
     enum class State {
         Normal,
         Normal2,
@@ -77,8 +81,11 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
         scaledScreen = ScaledResolution(mc)
         width = scaledScreen.scaledWidth
         height = scaledScreen.scaledHeight
+        
+        start_y = if (positionY == -1f) (height/9).toFloat() else positionY
+        val baseX = if (positionX == -1f) (width/2).toFloat() else positionX
+        
         island_State = State.Normal
-        start_y = (height/9).toFloat()
         if (moduleManager.getModule("Scaffold")?.state == true) {
             island_State = State.Scaffold
         }else{
@@ -92,14 +99,15 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
             island_State = State.Notify
         }
         when (island_State) {
-            State.Normal -> drawNormal()
-            State.Normal2 -> drawNormal2()
-            State.Scaffold -> drawScaffold()
-            State.Notify -> drawNotificationsUI(scaledScreen,start_y)
+            State.Normal -> drawNormal(baseX)
+            State.Normal2 -> drawNormal2(baseX)
+            State.Scaffold -> drawScaffold(baseX)
+            State.Notify -> drawNotificationsUI(scaledScreen, start_y)
             else -> {}
         }
     }
-    private fun drawNormal(){
+    
+    private fun drawNormal(baseX: Float){
         val username = mc.session.username
         val fps = Minecraft.getDebugFPS()
         val pings = mc.thePlayer.getPing()
@@ -112,16 +120,28 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
         val maintextlen = Fonts.fontSemibold40.getStringWidth(maintext)
         val maintextlen2 = Fonts.fontSemibold40.getStringWidth(maintext2)
         val allLen = containerToUiDistance+imageLen+uiToUIDistance+maintextlen+maintextlen2+containerToUiDistance
-        val startX = width/2-allLen/2
+        val startX = baseX - allLen/2
         AnimStartX = AnimationUtil.base(AnimStartX.toDouble(),startX.toDouble(), animationSpeed.toDouble()).toFloat().coerceAtLeast(0f)
         AnimEndX = AnimationUtil.base(AnimEndX.toDouble(),allLen+startX+2.0, animationSpeed.toDouble()).toFloat().coerceAtLeast(0f)
+        
+        glPushMatrix()
         drawRoundedRect(AnimStartX,start_y, AnimEndX, start_y+27F,Color(0,0,0, BackgroundAlpha).rgb,13F)
-        ShowShadow(AnimStartX,start_y, AnimEndX-startX, 27F)
+        if (ShadowCheck) {
+            GlowUtils.drawGlow(
+                AnimStartX, start_y,
+                AnimEndX - AnimStartX, 27F,
+                (shadowStrengh * 13F).toInt(),
+                Color(0, 0, 0, 120)
+            )
+        }
+        glPopMatrix()
+        
         drawImage(ResourceLocation("${CLIENT_NAME.lowercase()}/logo_icon.png"), startX+containerToUiDistance+2F, start_y+4F, 19, 19,ColorAL)
         Fonts.fontSemibold40.drawString(maintext,startX+containerToUiDistance+imageLen+uiToUIDistance,start_y+9F,ColorAL.rgb,false)
         Fonts.fontSemibold40.drawString(maintext2,startX+containerToUiDistance+imageLen+uiToUIDistance+maintextlen,start_y+9F,Color(255,255,255,255).rgb,false)
     }
-    private fun drawNormal2() {
+    
+    private fun drawNormal2(baseX: Float) {
         val serverip = ServerUtils.remoteIp
         val playerPing = "${mc.thePlayer.getPing()}ms"
         val textWidth = Fonts.fontSemibold40.getStringWidth(ClientName)
@@ -136,16 +156,27 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
         val LineWidth = 2F
         val fastLen1 = containerToUiDistance+imageLen+uiToUIDistance
         val allLen = fastLen1+textWidth+uiToUIDistance+LineWidth+uiToUIDistance+textBar2+uiToUIDistance+LineWidth+uiToUIDistance+textBar3+containerToUiDistance+3F
-        val startX = width /2-allLen/2
+        val startX = baseX - allLen/2
         AnimStartX = AnimationUtil.base(AnimStartX.toDouble(),startX.toDouble(), animationSpeed.toDouble()).toFloat().coerceAtLeast(0f)
         AnimEndX = AnimationUtil.base(AnimEndX.toDouble(),allLen+startX.toDouble(), animationSpeed.toDouble()).toFloat().coerceAtLeast(0f)
+        
+        glPushMatrix()
         drawRoundedRect(
             AnimStartX,
             start_y, AnimEndX , start_y +27F,Color(0,0,0,
                 BackgroundAlpha
             ).rgb,13F)
-        ShowShadow(AnimStartX, start_y, AnimEndX-startX, 27F)
-        drawImage(ResourceLocation("${CLIENT_NAME.lowercase()}/logo_icon.png"), startX+containerToUiDistance+2F, start_y +4F, 19, 19,ColorAL)//23F, 23F
+        if (ShadowCheck) {
+            GlowUtils.drawGlow(
+                AnimStartX, start_y,
+                AnimEndX - AnimStartX, 27F,
+                (shadowStrengh * 13F).toInt(),
+                Color(0, 0, 0, 120)
+            )
+        }
+        glPopMatrix()
+        
+        drawImage(ResourceLocation("${CLIENT_NAME.lowercase()}/logo_icon.png"), startX+containerToUiDistance+2F, start_y +4F, 19, 19,ColorAL)
         Fonts.fontSemibold40.drawString(ClientName,startX+fastLen1, start_y +9F,ColorAL.rgb,false)
         Fonts.fontSemibold40.drawString("|",startX+fastLen1+textWidth+uiToUIDistance-1F,
             start_y +9F,Color(120,120,120,250).rgb,false)
@@ -162,7 +193,8 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
         Fonts.fontSemibold35.drawString(playerPing,startX+fastLen1+textWidth+uiToUIDistance+LineWidth+uiToUIDistance+textBar2+uiToUIDistance+LineWidth+uiToUIDistance,
             start_y +14F,Color(255,255,255,110).rgb,false)
     }
-    private fun drawScaffold() {
+    
+    private fun drawScaffold(baseX: Float) {
         val stack = mc.thePlayer?.inventory?.getStackInSlot(SilentHotbar.currentSlot)
         val shouldRender = stack?.item is ItemBlock
         val colorAL1 = Color(255,255,255,255)
@@ -175,13 +207,25 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
         val countWidth = Fonts.fontSemibold40.getStringWidth("$blockAmount blocks")
         val percentProLen = progressLen/64
         val allLen = offsetLen+imageLen+offsetLen+progressLen+offsetLen+4F+countWidth+offsetLen
-        val startXScaffold=((width/2)-(allLen/2))
+        val startXScaffold= baseX - allLen/2
         AnimStartX = AnimationUtil.base(AnimStartX.toDouble(),startXScaffold.toDouble(), animationSpeed.toDouble()).toFloat().coerceAtLeast(0f)
         AnimEndX = AnimationUtil.base(AnimEndX.toDouble(),allLen+startXScaffold+1.0, animationSpeed.toDouble()).toFloat().coerceAtLeast(0f)
         val progressLenReal2 = offsetLen+imageLen+offsetLen+percentProLen*blockAmount
         ProgressBarAnimationWidth = AnimationUtil.base(ProgressBarAnimationWidth.toDouble(),progressLenReal2.toDouble(), animationSpeed.toDouble()).toFloat().coerceAtLeast(0f)
+        
+        
+        glPushMatrix()
         drawRoundedRect(AnimStartX-1F,start_y, AnimEndX, start_y+27F,Color(0,0,0, BackgroundAlpha).rgb,13F)
-        ShowShadow(AnimStartX,start_y, AnimEndX-startXScaffold, 27F)
+        if (ShadowCheck) {
+            GlowUtils.drawGlow(
+                AnimStartX, start_y,
+                AnimEndX - AnimStartX, 27F,
+                (shadowStrengh * 13F).toInt(),
+                Color(0, 0, 0, 120)
+            )
+        }
+        glPopMatrix()
+        
         drawRoundedRect(startXScaffold+offsetLen+imageLen+offsetLen, start_y+27F/2-progressLen_height/2,startXScaffold+offsetLen+imageLen+offsetLen+progressLen,start_y+27F/2+progressLen_height/2,colorAL2.rgb,3F)
         drawRoundedRect(startXScaffold+offsetLen+imageLen+offsetLen, start_y+27F/2-progressLen_height/2,startXScaffold+ProgressBarAnimationWidth,start_y+27F/2+progressLen_height/2,colorAL1.rgb,3F)
         Fonts.fontSemibold40.drawString("$blockAmount blocks",startXScaffold+offsetLen+imageLen+offsetLen+progressLen+offsetLen+3F,start_y+4.5F,Color.WHITE.rgb)
@@ -199,6 +243,44 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
         if (mc.currentScreen is GuiHudDesigner) glEnable(GL_DEPTH_TEST)
         glPopMatrix()
     }
+
+    private fun drawNotificationsUI(sr: ScaledResolution, StartY: Float) {
+        val screenWidth = sr.scaledWidth.toFloat()
+        val myBordersA: Pair<Float, Float> = calcNotification()
+        val startX_a = screenWidth / 2 - myBordersA.first / 2
+        AnimModuleEndY = AnimationUtil.base(AnimModuleEndY.toDouble(),(StartY + myBordersA.second).toDouble(),0.2).toFloat().coerceAtLeast(0f)
+
+        AnimStartX = AnimationUtil.base(AnimStartX.toDouble(),startX_a.toDouble(),0.8).toFloat().coerceAtLeast(0f)
+        AnimEndX = AnimationUtil.base(AnimEndX.toDouble(),3.0+startX_a+myBordersA.first.toDouble(),0.8).toFloat().coerceAtLeast(0f)
+
+        
+        glPushMatrix()
+        drawRoundedBorderRect(AnimStartX, StartY, AnimEndX , AnimModuleEndY,1F,Color(0, 0, 0, 150).rgb,Color(0, 0, 0, 150).rgb, 10F)
+        if (ShadowCheck) {
+            GlowUtils.drawGlow(
+                AnimStartX, StartY,
+                AnimEndX - AnimStartX, AnimModuleEndY - StartY,
+                (shadowStrengh * 13F).toInt(),
+                Color(0, 0, 0, 120)
+            )
+        }
+        glPopMatrix()
+
+        var currentY = StartY
+        for (notify in notifications) {
+            if (myBordersA.second > 0) {
+                notify.draw(startX_a, currentY)
+                currentY += notify.getHeight()
+            }
+        }
+    }
+    
+    private fun safeColor(ColorA: Int) : Int{
+        if (ColorA>255) return 255
+        else if (ColorA<0) return 0
+        else return ColorA
+    }
+    
     private fun ShowShadow(startX: Float,startY: Float,width: Float,height:Float){
         if (ShadowCheck) {
             GlowUtils.drawGlow(
@@ -238,7 +320,6 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
         }
         drawRoundedBorderRect(smallButtonStartX,StartY+ButtonStartX+buttonToButtonDistance,smallButtonStartX+smallButtonWidth,StartY+ButtonStartX+buttonToButtonDistance+smallButtonHeight,1F,
             awtColorChanges,awtColorChanges,smallButtonRounded)
-        //抗锯齿
     }
     private fun drawToggleText(StartX:Float,StartY: Float, TextBar: Pair<String,String>, BigBoardHeight: Float) {
         val TextHeight = 9F
@@ -280,7 +361,6 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
     }
 
     fun showToggleNotification(title: String, message: String, enabled: Boolean, duration: Long = 3000L) {
-        //notifications.find { it.title == title}?.isMarkedForDelete = true
         notifications.add(ToggleNotification(title, message, duration, enabled))
     }
     private fun updateNotifications() {
@@ -298,33 +378,5 @@ object WaterMark : Module("WaterMark", Category.RENDER) {
             maxWidth = max(maxWidth, width)
         }
         return Pair(maxWidth, resultHeight)
-    }
-    private fun drawNotificationsUI(sr: ScaledResolution, StartY: Float) {
-        val screenWidth = sr.scaledWidth.toFloat()
-        val myBordersA: Pair<Float, Float> = calcNotification()
-        val startX_a = screenWidth / 2 - myBordersA.first / 2
-        AnimModuleEndY = AnimationUtil.base(AnimModuleEndY.toDouble(),(StartY + myBordersA.second).toDouble(),0.2).toFloat().coerceAtLeast(0f)
-
-        AnimStartX = AnimationUtil.base(AnimStartX.toDouble(),startX_a.toDouble(),0.8).toFloat().coerceAtLeast(0f)
-        AnimEndX = AnimationUtil.base(AnimEndX.toDouble(),3.0+startX_a+myBordersA.first.toDouble(),0.8).toFloat().coerceAtLeast(0f)
-
-        drawRoundedBorderRect(AnimStartX, StartY, AnimEndX , AnimModuleEndY,1F,Color(0, 0, 0, 150).rgb,Color(0, 0, 0, 150).rgb, 10F)
-        ShowShadow(AnimStartX, StartY, AnimEndX-startX_a, AnimModuleEndY-StartY)
-        //glEnable(GL_SCISSOR_TEST)
-
-        var currentY = StartY
-        for (notify in notifications) {
-            if (myBordersA.second > 0) {
-                notify.draw(startX_a, currentY)
-                currentY += notify.getHeight()
-            }
-
-        }
-        //glDisable(GL_SCISSOR_TEST)
-    }
-    private fun safeColor(ColorA: Int) : Int{
-        if (ColorA>255) return 255
-        else if (ColorA<0) return 0
-        else return ColorA
     }
 }
