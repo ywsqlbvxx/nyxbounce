@@ -146,7 +146,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     private val onDestroyBlock by boolean("OnDestroyBlock", false)
 
     // AutoBlock
-    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent", "Test", "Vulcan", "BlocksMC"), "Packet")
+    val autoBlock by choices("AutoBlock", arrayOf("Off", "Packet", "Fake", "RightHold", "Silent", "Test", "Vulcan"), "Packet")
     private val blockMaxRange by float("BlockMaxRange", 3f, 0f..8f) { autoBlock == "Packet" || autoBlock == "Silent" }
     private val unblockMode by choices(
         "UnblockMode", arrayOf("Stop", "Switch", "Empty"), "Stop"
@@ -327,14 +327,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     /**
      * MODULE
      */
-    
+     
     private var lastBlocking = false
-    
-    private var asw = 0
-    private var blockTick: Int = 0
-    private var attack = 0
-    private var blinking = false
-    private val blinkedPackets = mutableListOf<Packet<*>>()
 
     // Target
     var target: EntityLivingBase? = null
@@ -379,18 +373,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         attackTickTimes.clear()
         attackTimer.reset()
         clicks = 0
-        
-        // Thêm vào hàm onToggle
-        if (autoBlock == "BlocksMC" && blockStatus) {
-            sendPacket(C09PacketHeldItemChange((mc.thePlayer.inventory.currentItem + 2) % 8)
-            sendPacket(C09PacketHeldItemChange(mc.thePlayer.inventory.currentItem))
-        }
-
-        asw = 0
-        blockTick = 0
-        attack = 0
-        blinking = false
-        blinkedPackets.clear()
         
         if (autoBlock == "RightHold") {
             mc.gameSettings.keyBindUseItem.pressed = false
@@ -450,11 +432,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Tick event
      */
     val onTick = handler<GameTickEvent>(priority = 2) {
-        if (autoBlock == "BlocksMC") {
-            handleBlocksMC()
-            return@handler
-        }
-        
         if (pauseOnRightClick) {
             if (mc.gameSettings.keyBindUseItem.isKeyDown) {
                 if (!pausedByRightClick) {
@@ -609,10 +586,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             true
         } else {
             if (lastBlocking && autoBlock == "Vulcan") {
-                sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+        sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
             }
             false
-        }
     }
 
     /**
@@ -671,72 +647,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         }
     }
-    
-    /**
-     * Handle BlocksMC AutoBlock mode
-    */
-    private fun handleBlocksMC() {
-        updateHittable()
 
-    val player = mc.thePlayer ?: return
-    val currentTarget = target ?: return
-
-    asw++
-    when (asw) {
-        1 -> {
-            val attackRangeCheck = player.getDistanceToEntityBox(currentTarget) <= (if (blinking) range else 3.0F)
-
-            if (attackRangeCheck && hittable) {
-                attackEntityDirectly(currentTarget)
-                attack++
-            } else {
-                attack = 0
-                player.swingItem()
-            }
-
-            sendPacket(C08PacketPlayerBlockPlacement(player.heldItem))
-            blockStatus = true
-            renderBlocking = true
-
-            blinking = false
-            releaseBlinkedPackets()
-        }
-        2 -> {
-            if (attack % 3 == 0) {
-                blinking = true
-                sendPacket(C09PacketHeldItemChange((player.inventory.currentItem + 2) % 8))
-                sendPacket(C09PacketHeldItemChange(player.inventory.currentItem))
-                sendPacket(C08PacketPlayerBlockPlacement(BlockPos(-1, -1, -1), 255, player.heldItem, 0f, 0f, 0f))
-                asw = 0
-            } else if (attack % 6 == 1) {
-                blinking = true
-                sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
-                blockStatus = false
-                renderBlocking = false
-                asw = 0
-            }
-        }
-        3 -> {
-            blinking = true
-            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
-            blockStatus = false
-            renderBlocking = false
-            asw = 0
-        }
-    }
-}
-
-    private fun attackEntityDirectly(entity: EntityLivingBase) {
-        mc.thePlayer.swingItem()
-        mc.playerController.attackEntity(mc.thePlayer, entity)
-        resetLastAttackedTicks()
-    }
-
-    private fun releaseBlinkedPackets() {
-        blinkedPackets.forEach { sendPacket(it) }
-        blinkedPackets.clear()
-        blinking = false
-    }
     /**
      * Attack enemy
      */
@@ -1292,8 +1203,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      */
     private fun stopBlocking(forceStop: Boolean = false) {
         val player = mc.thePlayer ?: return
+        
         if (autoBlock == "Vulcan" && (lastBlocking || forceStop)) {
-            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+        sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
         }
 
         if (!forceStop) {
@@ -1336,13 +1248,6 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     val onPacket = handler<PacketEvent> { event ->
         val player = mc.thePlayer ?: return@handler
         val packet = event.packet
-        
-        if (autoBlock == "Vulcan") {
-            if ((packet is C07PacketPlayerDigging && packet.action == RELEASE_USE_ITEM) || 
-                packet is C08PacketPlayerBlockPlacement) && lastBlocking) {
-                event.cancelEvent()
-            }
-        }
         
         if (removeReduceDmgEnabled && packet is C02PacketUseEntity && packet.action == C02PacketUseEntity.Action.ATTACK) {
             val now = System.currentTimeMillis()
