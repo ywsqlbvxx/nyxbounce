@@ -43,7 +43,14 @@ class ClickBlockEvent(val clickedBlock: BlockPos?, val enumFacing: EnumFacing?) 
  * Called when client is shutting down
  */
 object ClientShutdownEvent : Event()
-
+/**
+ * Click Update Event
+ */
+object ClickUpdateEvent : CancellableEvent() {
+    fun reInit() {
+        isCancelled = false;
+    }
+}
 /**
  * Called when another entity moves
  */
@@ -68,8 +75,7 @@ class KeyEvent(val key: Int) : Event()
  *
  * @param eventState PRE or POST
  */
-class MotionEvent(var x: Double, var y: Double, var z: Double, var onGround: Boolean, val eventState: EventState) :
-    Event()
+class MotionEvent(var x: Double, var y: Double, var z: Double, var onGround: Boolean, val eventState: EventState) : Event()
 
 /**
  * Called in "onLivingUpdate" when the player is using a use item.
@@ -213,8 +219,7 @@ class WorldEvent(val worldClient: WorldClient?) : Event()
 /**
  * Called when window clicked
  */
-class ClickWindowEvent(val windowId: Int, val slotId: Int, val mouseButtonClicked: Int, val mode: Int) :
-    CancellableEvent()
+class ClickWindowEvent(val windowId: Int, val slotId: Int, val mouseButtonClicked: Int, val mode: Int) : CancellableEvent()
 
 /**
  * Called when LiquidBounce finishes starting up
@@ -256,5 +261,6 @@ internal val ALL_EVENT_CLASSES = arrayOf(
     Render3DEvent::class.java,
     MotionEvent::class.java,
     WorldEvent::class.java,
-    DelayedPacketProcessEvent::class.java
+    DelayedPacketProcessEvent::class.java,
+    ClickUpdateEvent::class.java
 )

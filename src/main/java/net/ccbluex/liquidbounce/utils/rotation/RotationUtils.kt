@@ -49,6 +49,43 @@ object RotationUtils : MinecraftInstance, Listenable {
 
     private const val MAX_CAPTURE_TICKS = 3
 
+    private var keepLength: Int = 0
+    
+    /**
+     * Calculate difference between two angle points
+     *
+     * @param a angle point
+     * @param b angle point
+    * @return difference between angle points
+    */
+    fun getAngleDifference(a: Float, b: Float): Float {
+        return ((((a - b) % 360f) + 540f) % 360f) - 180f    
+    }
+
+    /**
+     * Reset your target rotation
+     */
+    fun reset() {
+        keepLength = 0
+
+        if (Rotations.doSb() && targetRotation != null) {
+            val yawSpeed = Rotations.sbYawSpeed()
+            val pitchSpeed = Rotations.sbPitchSpeed()
+
+            val currentRotation = targetRotation
+            val thePlayer = mc.thePlayer
+            val rotation = Rotation(thePlayer.rotationYaw, thePlayer.rotationPitch)
+
+            if (getAngleDifference(currentRotation!!.yaw, rotation.yaw) > yawSpeed || Math.abs(rotation.pitch - currentRotation.pitch) > pitchSpeed) {
+                val limited = limitAngleChange(currentRotation, rotation, yawSpeed, pitchSpeed)
+                limited.fixedSensitivity()
+                targetRotation = limited
+                return
+            }
+        }
+        targetRotation = null
+    }
+
     var modifiedInput = MovementInput()
 
     /**
@@ -323,21 +360,13 @@ object RotationUtils : MinecraftInstance, Listenable {
     fun rotationDifference(a: Rotation, b: Rotation = serverRotation) =
         hypot(angleDifference(a.yaw, b.yaw), a.pitch - b.pitch)
 
-    fun limitAngleChange(
-        currentRotation: Rotation, targetRotation: Rotation, settings: RotationSettings
-    ): Rotation {
-        val (hSpeed, vSpeed) = if (settings.instant) {
-            180f to 180f
-        } else settings.horizontalSpeed to settings.verticalSpeed
+    fun limitAngleChange(currentRotation: Rotation, targetRotation: Rotation, horizontalSpeed: Float, verticalSpeed: Float): Rotation {
+        val yawDifference = getAngleDifference(targetRotation.yaw, currentRotation.yaw)
+        val pitchDifference = getAngleDifference(targetRotation.pitch, currentRotation.pitch)
 
-        return performAngleChange(
-            currentRotation,
-            targetRotation,
-            hSpeed,
-            vSpeed,
-            !settings.instant && settings.legitimize,
-            settings.minRotationDifference,
-            settings.minRotationDifferenceResetTiming
+        return Rotation(
+            currentRotation.yaw + if (yawDifference > horizontalSpeed) horizontalSpeed else maxOf(yawDifference, -horizontalSpeed),
+            currentRotation.pitch + if (pitchDifference > verticalSpeed) verticalSpeed else maxOf(pitchDifference, -verticalSpeed)
         )
     }
 
@@ -647,16 +676,16 @@ object RotationUtils : MinecraftInstance, Listenable {
             if (isDifferenceAcceptableForReset(serverRotation, playerRotation, settings)) {
                 resetRotation()
                 return
-            }
+            }   
 
             currentRotation = limitAngleChange(
-                serverRotation, playerRotation, settings
+                serverRotation, playerRotation, settings.horizontalSpeed, settings.verticalSpeed
             ).fixedSensitivity()
             return
         }
 
         targetRotation?.let {
-            limitAngleChange(serverRotation, it, settings).let { rotation ->
+            limitAngleChange(serverRotation, it, settings.horizontalSpeed, settings.verticalSpeed).let { rotation ->
                 if (!settings.applyServerSide) {
                     rotation.toPlayer(player)
                 } else {
