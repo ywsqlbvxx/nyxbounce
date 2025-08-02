@@ -9,7 +9,8 @@ import net.ccbluex.liquidbounce.event.MoveEvent
 import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.FlyMode
 import net.ccbluex.liquidbounce.utils.movement.MovementUtils
-import kotlin.random.Random
+import net.ccbluex.liquidbounce.utils.kotlin.RandomUtils
+
 
 object GrimTest : FlyMode("GrimTest") {
 
@@ -27,9 +28,9 @@ object GrimTest : FlyMode("GrimTest") {
         val tick = thePlayer.ticksExisted
 
         val randomOffset = if (tick % 2 == 0) {
-            Random.nextDouble(1.0E-10, 1.0E-5)
+            RandomUtils.nextDouble(1.0E-10, 1.0E-5)
         } else {
-            -Random.nextDouble(1.0E-10, 1.0E-5)
+            -RandomUtils.nextDouble(1.0E-10, 1.0E-5)
         }
 
         event.y += 1.0E-5 + randomOffset
