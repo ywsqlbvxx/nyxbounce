@@ -11,10 +11,12 @@ import net.ccbluex.liquidbounce.event.handler
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.features.module.modules.`fun`.Derp
+import net.ccbluex.liquidbounce.features.module.modules.render.FreeCam
+import net.ccbluex.liquidbounce.utils.kotlin.RandomUtils
 import net.ccbluex.liquidbounce.utils.rotation.Rotation
 import net.ccbluex.liquidbounce.utils.rotation.RotationUtils.currentRotation
 import net.ccbluex.liquidbounce.utils.rotation.RotationUtils.serverRotation
-import net.ccbluex.liquidbounce.utils.kotlin.RandomUtils
+import net.ccbluex.liquidbounce.config.*
 
 object Rotations : Module("Rotations", Category.RENDER, gameDetecting = false) {
 
@@ -23,25 +25,10 @@ object Rotations : Module("Rotations", Category.RENDER, gameDetecting = false) {
 
     private val smoothBackValue by boolean("SmoothBackRotation", true)
 
-    private var smoothBackMinYawSpeed by float("SmoothBackMinYawSpeed", 30F, 1F..180F)
-        set(value) {
-            field = if (value > smoothBackMaxYawSpeed) smoothBackMaxYawSpeed else value
-        }
-
-    private var smoothBackMaxYawSpeed by float("SmoothBackMaxYawSpeed", 80F, 1F..180F)
-        set(value) {
-            field = if (value < smoothBackMinYawSpeed) smoothBackMinYawSpeed else value
-        }
-
-    private var smoothBackMinPitchSpeed by float("SmoothBackMinPitchSpeed", 10F, 1F..180F)
-        set(value) {
-            field = if (value > smoothBackMaxPitchSpeed) smoothBackMaxPitchSpeed else value
-        }
-
-    private var smoothBackMaxPitchSpeed by float("SmoothBackMaxPitchSpeed", 70F, 1F..180F)
-        set(value) {
-            field = if (value < smoothBackMinPitchSpeed) smoothBackMinPitchSpeed else value
-        }
+    private val smoothBackMinYawSpeed by float("SmoothBackMinYawSpeed", 30f, 1f..180f) { smoothBackValue }
+    private val smoothBackMaxYawSpeed by float("SmoothBackMaxYawSpeed", 80f, 1f..180f) { smoothBackValue }
+    private val smoothBackMinPitchSpeed by float("SmoothBackMinPitchSpeed", 10f, 1f..180f) { smoothBackValue }
+    private val smoothBackMaxPitchSpeed by float("SmoothBackMaxPitchSpeed", 70f, 1f..180f) { smoothBackValue }
 
     private val smoothRotations by boolean("SmoothRotations", false)
     private val smoothingFactor by float("SmoothFactor", 0.15f, 0.1f..0.9f) { smoothRotations }
@@ -119,8 +106,8 @@ object Rotations : Module("Rotations", Category.RENDER, gameDetecting = false) {
     fun doSb() = smoothBackValue
 
     @JvmStatic
-    fun sbYawSpeed() = if (smoothBackValue) RandomUtils.nextFloat(smoothBackMinYawSpeed, smoothBackMaxYawSpeed) else 180F
+    fun sbYawSpeed() = if (smoothBackValue) RandomUtils.nextFloat(smoothBackMinYawSpeed, smoothBackMaxYawSpeed) else 180f
 
     @JvmStatic
-    fun sbPitchSpeed() = if (smoothBackValue) RandomUtils.nextFloat(smoothBackMinPitchSpeed, smoothBackMaxPitchSpeed) else 180F
+    fun sbPitchSpeed() = if (smoothBackValue) RandomUtils.nextFloat(smoothBackMinPitchSpeed, smoothBackMaxPitchSpeed) else 180f
 }

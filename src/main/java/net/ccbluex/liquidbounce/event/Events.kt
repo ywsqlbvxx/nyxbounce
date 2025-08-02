@@ -261,5 +261,6 @@ internal val ALL_EVENT_CLASSES = arrayOf(
     Render3DEvent::class.java,
     MotionEvent::class.java,
     WorldEvent::class.java,
-    DelayedPacketProcessEvent::class.java
+    DelayedPacketProcessEvent::class.java,
+    ClickUpdateEvent::class.java
 )

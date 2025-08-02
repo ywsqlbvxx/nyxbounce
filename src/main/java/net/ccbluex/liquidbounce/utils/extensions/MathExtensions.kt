@@ -96,6 +96,10 @@ fun Vec3.offset(direction: EnumFacing, value: Double): Vec3 {
     )
 }
 
+fun Vec3.multiply(value: Double): Vec3 {
+    return Vec3(xCoord * value, yCoord * value, zCoord * value)
+}
+
 fun Vec3.withY(value: Double, useCurrentY: Boolean = false): Vec3 {
     return Vec3(xCoord, (if (useCurrentY) yCoord else 0.0) + value, zCoord)
 }

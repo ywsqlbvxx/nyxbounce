@@ -499,8 +499,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         if (target != null && currentRotation != null && !(scaffoldCheck && Scaffold.handleEvents())) {
             when (strafe.lowercase()) {
                 "vanilla", "strict" -> {
-                    val yaw = currentRotation?.yaw ?: return@handler
-                    it.yaw = yaw
+                    val yaw = RotationUtils.targetRotation ?: return@handler
+                    mc.thePlayer.rotationYaw = yaw.yaw
                 }
                 "silent" -> {
                     update()
@@ -776,7 +776,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             val targetEntity = target!!
             val partialTicks = mc.timer.renderPartialTicks
             val box = targetEntity.entityBoundingBox.expand(0.0, targetEntity.collisionBorderSize.toDouble(), 0.0)
-            val rot = currentRotation ?: player.rotation
+            val rot = currentRotation ?: mc.thePlayer.rotation
             val vecEyes = mc.thePlayer.getPositionEyes(partialTicks)
             var vecRot = rot.toDirection().multiply(range.toDouble()).add(vecEyes)
             val obj = box.calculateIntercept(vecEyes, vecRot)
