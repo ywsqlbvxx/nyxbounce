@@ -19,7 +19,6 @@ import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.sparta
 import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.vanilla.*
 import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.verus.*
 import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.vulcan.*
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.test.*
 import net.ccbluex.liquidbounce.utils.client.PacketUtils.sendPacket
 import net.ccbluex.liquidbounce.utils.extensions.stop
 import net.ccbluex.liquidbounce.utils.extensions.stopXZ
