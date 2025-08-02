@@ -387,6 +387,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
     // Ticked actions for timing
     private val attackTickTimer = TickTimer()
+    
+    private var lastBlocking = false
 
     /**
      * Disable kill aura module
@@ -399,9 +401,13 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         attackTimer.reset()
         clicks = 0
         
-        if (autoBlock == "RightHold" || autoBlock == "Keep" || autoBlock == "Vulcan") {
-            mc.gameSettings.keyBindUseItem.pressed = false
+        if (autoBlock == "Vulcan" && blockStatus) {
+            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
         }
+        
+        if (autoBlock == "RightHold" || autoBlock == "Keep") {
+             mc.gameSettings.keyBindUseItem.pressed = false
+         }
         
         if (autoBlock == "Test") { 
              mc.netHandler.addToSendQueue(C09PacketHeldItemChange(mc.thePlayer.inventory.currentItem % 8 + 1)) 
@@ -563,6 +569,9 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
      * Tick event
      */
     val onTick = handler<GameTickEvent>(priority = 2) {
+        val wasBlocking = lastBlocking
+        lastBlocking = blockStatus
+        
         if (pauseOnRightClick) {
             if (mc.gameSettings.keyBindUseItem.isKeyDown) {
                 if (!pausedByRightClick) {
@@ -659,7 +668,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         }
         
-        if (autoBlock == "RightHold" || autoBlock == "Keep" || autoBlock == "Vulcan") {
+        if (autoBlock == "RightHold" || autoBlock == "Keep") {
             val localTarget = target
             if (localTarget != null
                 && player.heldItem?.item is ItemSword
@@ -712,6 +721,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             }
         } else {
             renderBlocking = false
+        }
+        
+        if (autoBlock == "Vulcan" && wasBlocking && !blockStatus) {
+            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
         }
     }
 
@@ -1056,7 +1069,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
         val thePlayer = mc.thePlayer
 
         if (shouldPrioritize()) return
-        if (autoBlock == "RightHold" || autoBlock == "Keep" || autoBlock == "Vulcan") {
+        if (autoBlock == "RightHold" || autoBlock == "Keep") {
             mc.gameSettings.keyBindUseItem.pressed = false
         }
 
@@ -1085,7 +1098,7 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
             val affectSprint = false.takeIf { KeepSprint.handleEvents() || keepSprint }
 
             thePlayer.attackEntityWithModifiedSprint(entity, affectSprint) { if (swing) thePlayer.swingItem() }
-            if (autoBlock == "RightHold" || autoBlock == "Keep" || autoBlock == "Vulcan"
+            if (autoBlock == "RightHold" || autoBlock == "Keep"
                 && thePlayer.heldItem?.item is ItemSword
                 && thePlayer.getDistanceToEntityBox(entity) <= blockMaxRange) {
                 mc.gameSettings.keyBindUseItem.pressed = true
@@ -1347,7 +1360,11 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
                 switchToSlot((SilentHotbar.currentSlot + 1) % 9)
             }
 
-            sendPacket(C08PacketPlayerBlockPlacement(player.heldItem))
+            if (autoBlock == "Vulcan") {
+                sendPacket(C08PacketPlayerBlockPlacement(BlockPos(-1, -1, -1), 255, player.heldItem, 0f, 0f, 0f))
+            } else {
+                sendPacket(C08PacketPlayerBlockPlacement(player.heldItem))
+            }
             blockStatus = true
         }
 
@@ -1364,33 +1381,35 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
 
         if (!forceStop) {
             if (blockStatus && !mc.thePlayer.isBlocking) {
+                if (autoBlock != "Vulcan") {
+                    when (unblockMode.lowercase()) {
+                        "stop" -> {
+                            sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+                        }
 
-                when (unblockMode.lowercase()) {
-                    "stop" -> {
-                        sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
-                    }
+                        "switch" -> {
+                            switchToSlot((SilentHotbar.currentSlot + 1) % 9)
+                        }
 
-                    "switch" -> {
-                        switchToSlot((SilentHotbar.currentSlot + 1) % 9)
-                    }
+                        "empty" -> {
+                            player.inventory.firstEmptyStack.takeIf { it in 0..8 }.let {
+                                if (it == null) {
+                                    sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+                                    return@let
+                                }
 
-                    "empty" -> {
-                        player.inventory.firstEmptyStack.takeIf { it in 0..8 }.let {
-                            if (it == null) {
-                                sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
-                                return@let
+                                switchToSlot(it)
                             }
-
-                            switchToSlot(it)
                         }
                     }
                 }
-
                 blockStatus = false
             }
         } else {
             if (blockStatus) {
-                sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+                if (autoBlock != "Vulcan") {
+                    sendPacket(C07PacketPlayerDigging(RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN))
+                }
             }
 
             blockStatus = false
@@ -1402,6 +1421,12 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R) {
     val onPacket = handler<PacketEvent> { event ->
         val player = mc.thePlayer ?: return@handler
         val packet = event.packet
+        if (autoBlock == "Vulcan" && blockStatus) {
+            if (packet is C07PacketPlayerDigging && packet.status == RELEASE_USE_ITEM ||
+                packet is C08PacketPlayerBlockPlacement) {
+                event.cancelEvent()
+            }
+        }
         
         if (removeReduceDmgEnabled && packet is C02PacketUseEntity && packet.action == C02PacketUseEntity.Action.ATTACK) {
             val now = System.currentTimeMillis()
