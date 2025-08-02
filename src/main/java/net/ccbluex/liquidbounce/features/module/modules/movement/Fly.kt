@@ -11,24 +11,15 @@ import net.ccbluex.liquidbounce.event.async.waitTicks
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.aac.*
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.blocksmc.BlocksMC
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.blocksmc.BlocksMC2
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.hypixel.BoostHypixel
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.hypixel.FreeHypixel
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.hypixel.Hypixel
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.ncp.NCP
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.ncp.OldNCP
+import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.blocksmc.*
+import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.hypixel.*
+import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.ncp.*
 import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.other.*
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.spartan.BugSpartan
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.spartan.Spartan
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.spartan.Spartan2
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.vanilla.SmoothVanilla
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.vanilla.Vanilla
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.verus.Verus
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.verus.VerusGlide
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.vulcan.Vulcan
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.vulcan.VulcanGhost
-import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.vulcan.VulcanOld
+import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.spartan.*
+import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.vanilla.*
+import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.verus.*
+import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.vulcan.*
+import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.test.*
 import net.ccbluex.liquidbounce.utils.client.PacketUtils.sendPacket
 import net.ccbluex.liquidbounce.utils.extensions.stop
 import net.ccbluex.liquidbounce.utils.extensions.stopXZ
@@ -73,7 +64,10 @@ object Fly : Module("Fly", Category.MOVEMENT, Keyboard.KEY_F) {
         MineSecure, HawkEye, HAC, WatchCat,
 
         // Other
-        Jetpack, KeepAlive, Collide, Jump, Flag, Fireball, IntaveFlagFly
+        Jetpack, KeepAlive, Collide, Jump, Flag, Fireball, IntaveFlagFly,
+
+        // Test modes
+        GrimTest
     )
 
     /**

@@ -144,5 +144,15 @@ object MovementUtils : MinecraftInstance, Listenable {
         }
     }
 
+    fun getBaseSpeed(): Double {
+        return mc.thePlayer?.run {
+            sqrt(motionX * motionX + motionZ * motionZ)
+        } ?: 0.0
+    }
 
+    fun setSpeed(baseSpeed: Double, extraSpeed: Double) {
+        mc.thePlayer?.run {
+            strafe((baseSpeed + extraSpeed).toFloat())
+        }
+    }
 }
