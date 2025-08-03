@@ -11,6 +11,7 @@ import net.ccbluex.liquidbounce.ui.client.hud.element.Element
 import net.ccbluex.liquidbounce.ui.client.hud.element.ElementInfo
 import net.ccbluex.liquidbounce.ui.client.hud.element.elements.target.LiquidBounce
 import net.ccbluex.liquidbounce.ui.client.hud.element.elements.target.RinBounce
+import net.ccbluex.liquidbounce.ui.client.hud.element.elements.target.RavenB4
 import net.ccbluex.liquidbounce.ui.font.AWTFontRenderer.Companion.assumeNonVolatile
 import net.ccbluex.liquidbounce.ui.font.Fonts
 import net.ccbluex.liquidbounce.utils.attack.EntityUtils.getHealth
@@ -42,9 +43,7 @@ import kotlin.math.pow
  */
 @ElementInfo(name = "Target")
 class Target : Element("Target") {
-    private val targetHudStyle by choices("Style", arrayOf("LiquidBounce", "RinBounce"), "RinBounce")
-
-    // LiquidBounce Style Settings
+    private val targetHudStyle by choices("Style", arrayOf("LiquidBounce", "RinBounce", "RavenB4"), "RinBounce")
     private val roundedRectRadius by float("Rounded-Radius", 3F, 0F..5F)
     private val borderStrength by float("Border-Strength", 3F, 1F..5F)
     private val backgroundMode by choices("Background-ColorMode", arrayOf("Custom", "Rainbow"), "Custom")
@@ -134,6 +133,19 @@ class Target : Element("Target") {
                     healthFont,
                     textShadow
                 )
+                "ravenb4" -> RavenB4(
+                    roundedRectRadius,
+                    borderStrength,
+                    backgroundColor,
+                    healthBarColor1,
+                    healthBarColor2,
+                    roundHealthBarShape,
+                    borderColor,
+                    textColor,
+                    titleFont,
+                    healthFont,
+                    textShadow
+                )
                 else -> LiquidBounce(
                     roundedRectRadius,
                     borderStrength,
@@ -173,12 +185,20 @@ class Target : Element("Target") {
                     width = AnimationUtil.base(width.toDouble(), targetWidth.toDouble(), animationSpeed.toDouble())
                         .toFloat().coerceAtLeast(0f)
 
-                    val targetHeight = if (shouldRender) 36f else if (delayCounter >= vanishDelay) 0f else height
+                    val targetHeight = if (shouldRender) {
+                        when (targetHudStyle.lowercase()) {
+                            "ravenb4" -> 35f
+                            else -> 36f
+                        }
+                    } else if (delayCounter >= vanishDelay) 0f else height
                     height = AnimationUtil.base(height.toDouble(), targetHeight.toDouble(), animationSpeed.toDouble())
                         .toFloat().coerceAtLeast(0f)
                 } else {
                     width = stringWidth
-                    height = 36f
+                    height = when (targetHudStyle.lowercase()) {
+                        "ravenb4" -> 35f
+                        else -> 36f
+                    }
 
                     val targetText =
                         if (shouldRender) textColor.alpha else if (delayCounter >= vanishDelay) 0f else alphaText
@@ -227,7 +247,6 @@ class Target : Element("Target") {
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
                 if (fadeMode && isAlpha || smoothMode && isRendered || delayCounter < vanishDelay) {
-                    // Render current style
                     style.render(target, easingHealth, maxHealth, easingHurtTime, if (fadeMode) alphaBackground.toDouble() else 255.0)
                     val border = style.getBorder(target, easingHealth, maxHealth)
                     if (border != null) {
@@ -241,6 +260,9 @@ class Target : Element("Target") {
         }
 
         lastTarget = target
-        return Border(0F, 0F, stringWidth, 36F)
+        return Border(0F, 0F, stringWidth, when (targetHudStyle.lowercase()) {
+            "ravenb4" -> 35F
+            else -> 36F
+        })
     }
 }
