@@ -17,6 +17,7 @@ import net.ccbluex.liquidbounce.utils.timing.MSTimer
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.network.play.client.C03PacketPlayer
 import net.minecraft.network.play.client.C03PacketPlayer.C04PacketPlayerPosition
+import net.minecraft.potion.Potion
 
 object Criticals2 : Module("Criticals2", Category.COMBAT) {
 
@@ -110,9 +111,15 @@ object Criticals2 : Module("Criticals2", Category.COMBAT) {
                 }
 
                 "jump" -> {
-                    // Regular jump motion (0.42) copied from Minecraft vanilla
-                    thePlayer.motionY = 0.42
-                    thePlayer.onCriticalHit(entity)
+                    // Base jump motion (0.42) copied from Minecraft vanilla
+                    val baseJumpMotion: Double = 0.42
+                    if (thePlayer.isPotionActive(Potion.jump)) {
+                        val jumpBoostLevel: Int = thePlayer.getActivePotionEffect(Potion.jump).getAmplifier() + 1;
+                        thePlayer.motionY = baseJumpMotion + (jumpBoostLevel * 0.1);
+                    } else {
+                        thePlayer.motionY = baseJumpMotion;
+                    }
+                    thePlayer.onCriticalHit(entity);
                 }
 
                 "lowjump" -> {
