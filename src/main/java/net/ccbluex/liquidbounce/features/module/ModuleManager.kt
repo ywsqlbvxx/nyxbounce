@@ -222,8 +222,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             AutoPlace,
             AutoHitselect,
             CombatHelper,
-            WaterMark,
-            MoveFix
+            WaterMark
         )
 
         registerModules(modules = modules)
