@@ -53,7 +53,7 @@ import org.lwjgl.input.Keyboard
 import java.awt.Color
 import kotlin.math.*
 
-object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
+object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_G) {
 
     /**
      * TOWER MODES & SETTINGS
@@ -167,7 +167,7 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
 
     // Rotation Options
     private val modeList =
-        choices("Rotations", arrayOf("Off", "Normal", "Stabilized", "ReverseYaw", "GodBridge"), "Normal")
+        choices("Rotations", arrayOf("Off", "Normal", "Stabilized", "ReverseYaw", "GodBridge", "SmoothPredictive", "LegitMimic"), "Normal")
 
     private val options = RotationSettingsWithRotationModes(this, modeList).apply {
         strictValue.excludeWithState()
@@ -1097,6 +1097,30 @@ object Scaffold : Module("Scaffold", Category.WORLD, Keyboard.KEY_I) {
         val roundYaw45 = round(rotation.yaw / 45f) * 45f
 
         rotation = when (options.rotationMode) {
+            "SmoothPredictive" -> {
+                val targetYaw = MathHelper.wrapAngleTo180_float(MovementUtils.direction.toDegreesF() + 180f)
+                val targetPitch = 75.6f
+                val rotationDiff = RotationUtils.rotationDifference(Rotation(targetYaw, targetPitch), currRotation)
+                val movementSpeed = MovementUtils.speed
+                val isOnGround = mc.thePlayer?.onGround ?: true
+                val baseSmoothFactor = 0.1f
+                val rotationFactor = (rotationDiff / 90f).coerceIn(0f, 1f) 
+                val speedFactor = (movementSpeed / 0.2f).coerceIn(0f, 1f) 
+                val groundFactor = if (isOnGround) 0.8f else 1.2f 
+                val smoothFactor = (baseSmoothFactor + rotationFactor * 0.1f + speedFactor * 0.05f) * groundFactor
+                    .coerceIn(0.08f, 0.25f)
+                val smoothYaw = rotation.yaw + (targetYaw - rotation.yaw) * smoothFactor
+                val smoothPitch = rotation.pitch + (targetPitch - rotation.pitch) * smoothFactor
+                Rotation(smoothYaw, smoothPitch)
+            }
+            "LegitMimic" -> {
+                val targetYaw = MathHelper.wrapAngleTo180_float(rotation.yaw + RandomUtils.nextFloat(-2f, 2f))
+                val targetPitch = rotation.pitch + RandomUtils.nextFloat(-2f, 2f)
+                val legitSmoothFactor = 0.15f
+                val legitYaw = currRotation.yaw + (targetYaw - currRotation.yaw) * legitSmoothFactor
+                val legitPitch = currRotation.pitch + (targetPitch - currRotation.pitch) * legitSmoothFactor
+                Rotation(legitYaw, legitPitch.coerceIn(0f, 90f))
+            }
             "Stabilized" -> Rotation(roundYaw45, rotation.pitch)
             "ReverseYaw" -> Rotation(if (!isLookingDiagonally) roundYaw90 else roundYaw45, rotation.pitch)
             else -> rotation
