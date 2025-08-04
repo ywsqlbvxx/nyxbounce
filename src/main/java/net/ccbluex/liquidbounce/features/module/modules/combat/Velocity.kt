@@ -340,7 +340,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                     return@handler
                 if (mc.thePlayer.maxHurtResistantTime != mc.thePlayer.hurtResistantTime || mc.thePlayer.maxHurtResistantTime == 0)
                     return@handler
-                if (nextInt(until = 100) < chance) {
+                if (nextInt(endExclusive = 100) < chance) {
                     val horizontalMod = horizontal / 100f
                     val verticalMod = vertical / 100f
                     thePlayer.motionX *= horizontalMod
@@ -673,7 +673,7 @@ object Velocity : Module("Velocity", Category.COMBAT) {
     val onStrafe = handler<StrafeEvent> {
         val player = mc.thePlayer ?: return@handler
         if (mode == "jumpreset" && hasReceivedVelocity) {
-            if (player.onGround && nextInt(until = 100) < jumpChance) {
+            if (player.onGround && nextInt(endExclusive = 100) < jumpChance) {
                 player.tryJump()
                 player.motionX *= 0.6
                 player.motionZ *= 0.6

@@ -24,7 +24,7 @@ import net.ccbluex.liquidbounce.utils.render.RenderUtils.glColor
 import net.ccbluex.liquidbounce.utils.rotation.Rotation
 import net.ccbluex.liquidbounce.utils.timing.MSTimer
 import net.ccbluex.liquidbounce.utils.timing.TimeUtils.randomDelay
-import net.minecraft.client.renderer.GlStateManager.color
+import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.player.EntityPlayer
@@ -44,14 +44,10 @@ import java.util.concurrent.ConcurrentLinkedQueue
 object Backtrack : Module("Backtrack", Category.COMBAT) {
 
     private val nextBacktrackDelay by int("NextBacktrackDelay", 0, 0..10000) { mode == "Modern" }
-    private val maxDelay: Value<Int> = int("MaxDelay", 80, 0..10000).onChange { _, new ->
-        new.coerceAtLeast(minDelay.get())
-    }
-    private val minDelay: Value<Int> = int("MinDelay", 80, 0..10000) {
-        mode == "Modern"
-    }.onChange { _, new ->
-        new.coerceAtMost(maxDelay.get())
-    }
+    private val maxDelay: Value<Int> = int("MaxDelay", 80, 0..10000) { mode == "Modern" }
+        .onChange { _, new -> new.coerceAtLeast(minDelay.get()) }
+    private val minDelay: Value<Int> = int("MinDelay", 80, 0..10000) { mode == "Modern" }
+        .onChange { _, new -> new.coerceAtMost(maxDelay.get()) }
 
     val mode by choices("Mode", arrayOf("Legacy", "Modern"), "Modern").onChanged {
         clearPackets()
@@ -59,9 +55,7 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
     }
 
     // Legacy
-    private val legacyPos by choices(
-        "Caching mode", arrayOf("ClientPos", "ServerPos"), "ClientPos"
-    ) { mode == "Legacy" }
+    private val legacyPos by choices("Caching mode", arrayOf("ClientPos", "ServerPos"), "ClientPos") { mode == "Legacy" }
 
     // Modern
     private val style by choices("Style", arrayOf("Pulse", "Smooth"), "Smooth") { mode == "Modern" }
@@ -69,15 +63,11 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
     private val smart by boolean("Smart", true) { mode == "Modern" }
 
     // ESP
-    private val espMode by choices(
-        "ESP-Mode",
-        arrayOf("None", "Box", "Model", "Wireframe"),
-        "Box"
-    ) { mode == "Modern" }.subjective()
+    private val espMode by choices("ESP-Mode", arrayOf("None", "Box", "Model", "Wireframe"), "Box") { mode == "Modern" }
+        .subjective()
     private val wireframeWidth by float("WireFrame-Width", 1f, 0.5f..8f) { espMode == "WireFrame" }
-
-    private val espColor =
-        ColorSettingsInteger(this, "ESPColor") { espMode != "Model" && mode == "Modern" }.with(0, 255, 0)
+    private val espColor = ColorSettingsInteger(this, "ESPColor") { espMode != "Model" && mode == "Modern" }
+        .with(0, 255, 0)
 
     private val packetQueue = ConcurrentLinkedQueue<QueueData>()
     private val positions = ConcurrentLinkedQueue<Pair<Vec3, Long>>()
@@ -125,19 +115,10 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                 when (packet) {
                     // Check if packet is a spawn player packet
                     is S0CPacketSpawnPlayer -> {
-                        // Insert first backtrack data
-                        addBacktrackData(
-                            packet.player, packet.realX, packet.realY, packet.realZ, System.currentTimeMillis()
-                        )
+                        addBacktrackData(packet.player, packet.realX, packet.realY, packet.realZ, System.currentTimeMillis())
                     }
-
                     is S14PacketEntity, is S18PacketEntityTeleport -> if (legacyPos == "ServerPos") {
-                        val id = if (packet is S14PacketEntity) {
-                            packet.entityId
-                        } else {
-                            (packet as S18PacketEntityTeleport).entityId
-                        }
-
+                        val id = if (packet is S14PacketEntity) packet.entityId else (packet as S18PacketEntityTeleport).entityId
                         val entity = mc.theWorld?.getEntityByID(id)
                         val entityMixin = entity as? IMixinEntity
                         if (entityMixin != null) {
@@ -152,7 +133,6 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                     }
                 }
             }
-
             "modern" -> {
                 if (mc.isSingleplayer || mc.currentServerData == null) {
                     clearPackets()
@@ -173,16 +153,13 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                         clearPackets()
                         return@handler
                     }
-
                     is S13PacketDestroyEntities -> if (target != null && target!!.entityId in packet.entityIDs) {
                         clearPackets()
                         reset()
                         return@handler
                     }
-
                     is S1CPacketEntityMetadata -> if (target?.entityId == packet.entityId) {
                         val metadata = packet.func_149376_c() ?: return@handler
-
                         metadata.forEach {
                             if (it.dataValueId == 6) {
                                 val objectValue = it.getObject().toString().toDoubleOrNull()
@@ -193,10 +170,8 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                                 }
                             }
                         }
-
                         return@handler
                     }
-
                     is S19PacketEntityStatus -> if (packet.entityId == target?.entityId) return@handler
                 }
 
@@ -208,14 +183,12 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                                 positions += Pair(Vec3(trueX, trueY, trueZ), System.currentTimeMillis())
                             }
                         }
-
                         is S18PacketEntityTeleport -> if (packet.entityId == target?.entityId) {
                             (target as? IMixinEntity)?.run {
                                 positions += Pair(Vec3(trueX, trueY, trueZ), System.currentTimeMillis())
                             }
                         }
                     }
-
                     event.cancelEvent()
                     packetQueue += QueueData(packet, System.currentTimeMillis())
                 }
@@ -243,12 +216,8 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                     val trueDist = mc.thePlayer.getDistance(targetMixin.trueX, targetMixin.trueY, targetMixin.trueZ)
                     val dist = mc.thePlayer.getDistance(target.posX, target.posY, target.posZ)
 
-                    if (trueDist <= 6f && (!smart || trueDist >= dist) && (style == "Smooth" || !globalTimer.hasTimePassed(
-                            supposedDelay
-                        ))
-                    ) {
+                    if (trueDist <= 6f && (!smart || trueDist >= dist) && (style == "Smooth" || !globalTimer.hasTimePassed(supposedDelay))) {
                         shouldRender = true
-
                         if (mc.thePlayer.getDistanceToEntityBox(target) in distance) {
                             handlePackets()
                         } else {
@@ -328,57 +297,57 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                     }
                 }
             }
-
             "modern" -> {
                 if (!shouldBacktrack() || !shouldRender) return@handler
 
                 target?.run {
                     val targetEntity = target as IMixinEntity
-
                     val (x, y, z) = targetEntity.interpolatedPosition - manager.renderPos
 
                     if (targetEntity.truePos) {
                         when (espMode.lowercase()) {
                             "box" -> {
                                 val axisAlignedBB = entityBoundingBox.offset(-currPos + Vec3(x, y, z))
-
                                 drawBacktrackBox(axisAlignedBB, color)
                             }
-
                             "model" -> {
                                 glPushMatrix()
                                 glPushAttrib(GL_ALL_ATTRIB_BITS)
 
-                                color(0.6f, 0.6f, 0.6f, 1f)
+                                glEnable(GL_BLEND)
+                                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+                                glDisable(GL_CULL_FACE) 
+                                glEnable(GL_TEXTURE_2D)
+                                GlStateManager.resetColor() 
+                                GlStateManager.enableAlpha()
+                                GlStateManager.enableLighting()
+
+                                glTranslated(x, y, z)
+
                                 manager.doRenderEntity(
                                     this,
-                                    x,
-                                    y,
-                                    z,
+                                    0.0, 
+                                    0.0,
+                                    0.0,
                                     prevRotationYaw + (rotationYaw - prevRotationYaw) * event.partialTicks,
                                     event.partialTicks,
-                                    true
+                                    false 
                                 )
 
                                 glPopAttrib()
                                 glPopMatrix()
                             }
-
                             "wireframe" -> {
                                 glPushMatrix()
                                 glPushAttrib(GL_ALL_ATTRIB_BITS)
-
                                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
                                 glDisable(GL_TEXTURE_2D)
                                 glDisable(GL_LIGHTING)
                                 glDisable(GL_DEPTH_TEST)
                                 glEnable(GL_LINE_SMOOTH)
-
                                 glEnable(GL_BLEND)
                                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
                                 glLineWidth(wireframeWidth)
-
                                 glColor(color)
                                 manager.doRenderEntity(
                                     this,
@@ -399,7 +368,6 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                                     event.partialTicks,
                                     true
                                 )
-
                                 glPopAttrib()
                                 glPopMatrix()
                             }
@@ -445,61 +413,46 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
                 true
             } else false
         }
-
         positions.removeAll { (_, timestamp) -> timestamp < System.currentTimeMillis() - supposedDelay }
     }
 
     private fun handlePacketsRange() {
         val time = getRangeTime()
-
         if (time == -1L) {
             clearPackets()
             return
         }
-
         packetQueue.removeAll { (packet, timestamp) ->
             if (timestamp <= time) {
                 PacketUtils.schedulePacketProcess(packet)
                 true
             } else false
         }
-
         positions.removeAll { (_, timestamp) -> timestamp < time }
     }
 
     private fun getRangeTime(): Long {
         val target = this.target ?: return 0L
-
         var time = 0L
         var found = false
-
         for (data in positions) {
             time = data.second
-
             val targetPos = target.currPos
-
             val targetBox = target.hitBox.offset(data.first - targetPos)
-
             if (mc.thePlayer.getDistanceToBox(targetBox) in distance) {
                 found = true
                 break
             }
         }
-
         return if (found) time else -1L
     }
 
     private fun clearPackets(handlePackets: Boolean = true, stopRendering: Boolean = true) {
         packetQueue.removeAll {
-            if (handlePackets) {
-                PacketUtils.schedulePacketProcess(it.packet)
-            }
-
+            if (handlePackets) PacketUtils.schedulePacketProcess(it.packet)
             true
         }
-
         positions.clear()
-
         if (stopRendering) {
             shouldRender = false
             ignoreWholeTick = true
@@ -512,13 +465,7 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
 
         // Check if there is already data of the player
         if (backtrackData != null) {
-            // Check if there is already enough data of the player
-            if (backtrackData.size >= maximumCachedPositions) {
-                // Remove first data
-                backtrackData.removeFirst()
-            }
-
-            // Insert new data
+            if (backtrackData.size >= maximumCachedPositions) backtrackData.removeFirst()
             backtrackData += BacktrackData(x, y, z, time)
         } else {
             // Create new list
@@ -535,17 +482,11 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
      */
     fun getNearestTrackedDistance(entity: Entity): Double {
         var nearestRange = 0.0
-
         loopThroughBacktrackData(entity) {
             val range = entity.getDistanceToEntityBox(mc.thePlayer)
-
-            if (range < nearestRange || nearestRange == 0.0) {
-                nearestRange = range
-            }
-
+            if (range < nearestRange || nearestRange == 0.0) nearestRange = range
             false
         }
-
         return nearestRange
     }
 
@@ -554,16 +495,13 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
      */
     fun loopThroughBacktrackData(entity: Entity, action: () -> Boolean) {
         if (!state || entity !is EntityPlayer || mode == "Modern") return
-
         val backtrackDataArray = getBacktrackData(entity.uniqueID) ?: return
-
         val currPos = entity.currPos
         val prevPos = entity.prevPos
 
         // This will loop through the backtrack data. We are using reversed() to loop through the data from the newest to the oldest.
         for ((x, y, z, _) in backtrackDataArray.reversed()) {
             entity.setPosAndPrevPos(Vec3(x, y, z))
-
             if (action()) break
         }
 
@@ -572,34 +510,23 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
     }
 
     fun <T> runWithNearestTrackedDistance(entity: Entity, f: () -> T): T {
-        if (entity !is EntityPlayer || !handleEvents() || mode == "Modern") {
-            return f()
-        }
-
+        if (entity !is EntityPlayer || !handleEvents() || mode == "Modern") return f()
         var backtrackDataArray = getBacktrackData(entity.uniqueID)?.toMutableList() ?: return f()
-
         backtrackDataArray = backtrackDataArray.sortedBy { (x, y, z, _) ->
-            runWithSimulatedPosition(entity, Vec3(x, y, z)) {
-                mc.thePlayer.getDistanceToBox(entity.hitBox)
-            }
+            runWithSimulatedPosition(entity, Vec3(x, y, z)) { mc.thePlayer.getDistanceToBox(entity.hitBox) }
         }.toMutableList()
-
         val (x, y, z, _) = backtrackDataArray.first()
-
-        return runWithSimulatedPosition(entity, Vec3(x, y, z)) { f() } ?: f() // Edge case
+        return runWithSimulatedPosition(entity, Vec3(x, y, z)) { f() } ?: f()
     }
 
     fun <T> runWithSimulatedPosition(entity: Entity, vec3: Vec3, f: () -> T?): T? {
         val currPos = entity.currPos
         val prevPos = entity.prevPos
-
         entity.setPosAndPrevPos(vec3)
-
         val result = f()
 
         // Reset position
         entity.setPosAndPrevPos(currPos, prevPos)
-
         return result
     }
 
@@ -611,29 +538,23 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
         val prevRotation = entity.prevRotation
         val bodyYaw = entity.prevRenderYawOffset to entity.renderYawOffset
         val headRotation = entity.prevRotationYawHead to entity.rotationYawHead
-
         entity.prevRotation = rotation
         entity.rotation = rotation
         entity.prevRotationYawHead = rotation.yaw
         entity.rotationYawHead = rotation.yaw
-
         body?.let {
             entity.prevRenderYawOffset = it.first
             entity.renderYawOffset = it.second
         }
-
         val result = f(rotation)
-
         entity.rotation = currRotation
         entity.prevRotation = prevRotation
         entity.rotationYawHead = headRotation.second
         entity.prevRotationYawHead = headRotation.first
-
         body?.let {
             entity.prevRenderYawOffset = bodyYaw.first
             entity.renderYawOffset = bodyYaw.second
         }
-
         return result
     }
 
@@ -641,9 +562,11 @@ object Backtrack : Module("Backtrack", Category.COMBAT) {
         get() = espColor.color()
 
     private fun shouldBacktrack() =
-        mc.thePlayer != null && mc.theWorld != null && target != null && mc.thePlayer.health > 0 && (target!!.health > 0 || target!!.health.isNaN()) && mc.playerController.currentGameType != WorldSettings.GameType.SPECTATOR && System.currentTimeMillis() >= delayForNextBacktrack && target?.let {
-            isSelected(it, true) && (mc.thePlayer?.ticksExisted ?: 0) > 20 && !ignoreWholeTick
-        } == true
+        mc.thePlayer != null && mc.theWorld != null && target != null && mc.thePlayer.health > 0 &&
+                (target!!.health > 0 || target!!.health.isNaN()) &&
+                mc.playerController.currentGameType != WorldSettings.GameType.SPECTATOR &&
+                System.currentTimeMillis() >= delayForNextBacktrack &&
+                target?.let { isSelected(it, true) && (mc.thePlayer?.ticksExisted ?: 0) > 20 && !ignoreWholeTick } == true
 
     private fun reset() {
         target = null
