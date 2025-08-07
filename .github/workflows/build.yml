@@ -17,10 +17,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Java 8 (AdoptOpenJDK)
+      - name: Setup Java 8 (Azul Zulu)
         uses: actions/setup-java@v4
         with:
-          distribution: "adopt"
+          distribution: "zulu"
           java-version: 8
           cache: "gradle"
 
@@ -67,6 +67,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: ${{ needs.build.outputs.lb_version != '' }}
+    permissions:
+      contents: write
     outputs:
       release_url: ${{ steps.create_release.outputs.release_url }}
 
