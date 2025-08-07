@@ -1,12 +1,12 @@
 # RinBounce
 
-![GitHub branch status](https://img.shields.io/github/checks-status/rattermc/rinbounce69/main) ![GitHub commit activity (branch)](https://img.shields.io/github/commit-activity/w/rattermc/rinbounce69/main) ![GitHub contributors](https://img.shields.io/github/contributors/rattermc/rinbounce69)
+![GitHub branch status](https://img.shields.io/github/checks-status/congtygiadinh/rinbounce/main) ![GitHub commit activity (branch)](https://img.shields.io/github/commit-activity/w/congtygiadinh/rinbounce/main) ![GitHub contributors](https://img.shields.io/github/contributors/congtygiadinh/rinbounce)
 
 A Vietnamese community driven fork of [LiquidBounce](https://github.com/CCBlueX/LiquidBounce/tree/legacy), aimed to have bypass for multiple Vietnamese Minecraft servers.
 
 ## Download
 
-- [GitHub Releases](https://github.com/rattermc/rinbounce69/releases/latest)
+- [GitHub Releases](https://github.com/congtygiadinh/rinbounce/releases/latest)
 - [RinBounce Website](https://rinbounce.wtf/download)
 
 ## Installation
@@ -31,20 +31,20 @@ RinBounce is an open-source project under the [GNU General Public License 3.0 Li
 2. Clone the repository:
 
    ```bash
-   git clone https://github.com/rattermc/rinbounce69.git
+   git clone https://github.com/congtygiadinh/rinbounce.git
    ```
 
 3. Use [Gradle](https://gradle.org/install/) to build the project:
 
    ```bash
-   cd rinbounce69
+   cd rinbounce
    ./gradlew setupDevWorkspace
    ```
 
    Or if you're using Windows:
 
     ```bash
-    cd rinbounce69
+    cd rinbounce
     gradlew.bat setupDevWorkspace
     ```
 
