@@ -223,7 +223,9 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             ChineseHat,
             SnakeGame,
             AutoPlace,
-            AutoHitselect,
+            AutoHitselect
+            ViaVersionFixer,
+            PacketFixer
             CombatHelper,
             WaterMark
         )
