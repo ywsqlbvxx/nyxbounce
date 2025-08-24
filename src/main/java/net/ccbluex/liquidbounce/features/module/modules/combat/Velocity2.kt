@@ -631,14 +631,15 @@ object Velocity : Module("Velocity2", Category.COMBAT) {
                 }
 
                 "blocksmc" -> {
-                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
-                        hasReceivedVelocity = true
-                        event.cancelEvent()
-
-                        sendPacket(C0BPacketEntityAction(thePlayer, START_SNEAKING))
-                        sendPacket(C0BPacketEntityAction(thePlayer, STOP_SNEAKING))
-                    }
-                }
+                    if (packet is S12PacketEntityVelocity) {
+            if (!cancelVertical.get()) mc.thePlayer.motionY = packet.getMotionY().toDouble() / 8000.0
+            if (!cancelHorizontal.get()) {
+                mc.thePlayer.motionX = packet.getMotionX().toDouble() / 8000.0
+                mc.thePlayer.motionZ = packet.getMotionZ().toDouble() / 8000.0
+            }
+        }
+    }
+}
 
                 "grimc03" -> {
                     if (thePlayer.isMoving) {
