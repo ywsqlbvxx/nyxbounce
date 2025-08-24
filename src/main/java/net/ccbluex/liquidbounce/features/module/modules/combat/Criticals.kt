@@ -25,12 +25,11 @@ object Criticals : Module("Criticals", Category.COMBAT) {
         "Mode",
         arrayOf(
             "Packet",
-            "VerusLatest",
+            "VerusSafe",
             "NoGround",
             "Jump",
             "LowJump",
             "Grim",
-            "BlocksMC",
             "Visual",
             "Blink"
         ),
@@ -101,7 +100,7 @@ object Criticals : Module("Criticals", Category.COMBAT) {
                     }
                 }
 
-                "VerusLatest" -> {
+                "verussafe" -> {
                     if (thePlayer.ticksExisted % 4 == 0) {
                         sendPackets(
                             C04PacketPlayerPosition(x, y + 0.0001, z, true),
