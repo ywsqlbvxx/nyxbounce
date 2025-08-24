@@ -9,7 +9,7 @@ import net.minecraft.network.play.client.C03PacketPlayer
 
 import kotlin.math.abs
 
-class Matrix663Nofall : NoFallMode("Matrix6.6.3") {
+class Matrix663Nofall : NoFallMode("Verus") {
     private var matrixSend = false
     
     private val matrixSafe = BoolValue("SafeNoFall", true)
