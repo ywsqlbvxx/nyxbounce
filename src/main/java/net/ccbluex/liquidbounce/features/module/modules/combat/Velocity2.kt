@@ -43,14 +43,14 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
-object Velocity : Module("Velocity", Category.COMBAT) {
+object Velocity : Module("Velocityy", Category.COMBAT) {
 
     /**
      * OPTIONS
      */
     private val mode by choices(
         "Mode", arrayOf(
-            "Simple", "AAC", "AACPush", "AACZero", "AACv4",
+            "Cancel", "Simple", "AAC", "AACPush", "AACZero", "AACv4",
             "Reverse", "SmoothReverse", "Jump", "Glitch", "Legit",
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce",
             "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
@@ -263,6 +263,23 @@ object Velocity : Module("Velocity", Category.COMBAT) {
                 }
             }
 
+            "cancel" -> {
+                val cancelHorizontal = BoolValue("CancelHorizontalVelocity", true)
+    val cancelVertical = BoolValue("CancelVerticalVelocity", true)
+    
+    override fun onVelocityPacket(event: PacketEvent) {
+        event.cancelEvent()
+        val packet = event.packet
+        if (packet is S12PacketEntityVelocity) {
+            if (!cancelVertical.get()) mc.thePlayer.motionY = packet.getMotionY().toDouble() / 8000.0
+            if (!cancelHorizontal.get()) {
+                mc.thePlayer.motionX = packet.getMotionX().toDouble() / 8000.0
+                mc.thePlayer.motionZ = packet.getMotionZ().toDouble() / 8000.0
+            }
+        }
+    }
+}
+          
             "aac" -> if (hasReceivedVelocity && velocityTimer.hasTimePassed(80)) {
                 thePlayer.motionX *= horizontal
                 thePlayer.motionZ *= horizontal
