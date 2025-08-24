@@ -207,7 +207,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             TrueSight,
             VehicleOneHit,
             Velocity,
-            Velotity2,
+            Velotityy,
             WallClimb,
             XRay,
             Zoot,
