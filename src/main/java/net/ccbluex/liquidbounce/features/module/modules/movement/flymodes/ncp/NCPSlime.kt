@@ -1,8 +1,7 @@
-package net.ccbluex.liquidbounce.features.module.modules.movement.flys.ncp
-
+package net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.ncp
 import net.ccbluex.liquidbounce.LiquidBounce
 import net.ccbluex.liquidbounce.event.*
-import net.ccbluex.liquidbounce.features.module.modules.movement.flys.FlyMode
+import net.ccbluex.liquidbounce.features.module.modules.movement.flymodes.FlyMode
 import net.ccbluex.liquidbounce.ui.client.hud.element.elements.Notification
 import net.ccbluex.liquidbounce.ui.client.hud.element.elements.NotifyType
 import net.ccbluex.liquidbounce.utils.*
