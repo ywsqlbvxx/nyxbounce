@@ -59,6 +59,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             AutoClicker,
             AutoDisable,
             AutoFish,
+            AutoGapple,
             AutoProjectile,
             AutoPlay,
             AutoLeave,
