@@ -16,33 +16,38 @@ import net.minecraft.item.ItemSword;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement;
 
-@ModuleInfo(name = "ViaVersionFixer",spacedName = "Via Version Fixer",description = "fix some packet issues with ViaVersion", category = ModuleCategory.MISC)
+@ModuleInfo(name = "ViaVersionFix", category = ModuleCategory.MISC)
 public class ViaVersionFix extends Module {
 
-    private BoolValue blocking = new BoolValue("Blocking", false);
-
-    private BoolValue place = new BoolValue("Placement", false);
+    public BoolValue blocking = new BoolValue("Blocking", false);
+    public BoolValue place = new BoolValue("Placement", false);
 
     @EventTarget
-    private void onUpdate(UpdateEvent event) {
-        if (blocking.get()) {
-            if (mc.thePlayer.isBlocking() && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemSword) {
-                PacketWrapper useItem = PacketWrapper.create(29, null, Via.getManager().getConnectionManager().getConnections().iterator().next());
+    public void onUpdate(UpdateEvent event) {
+        if (blocking.get() && mc.thePlayer.isBlocking() && mc.thePlayer.getHeldItem() != null
+                && mc.thePlayer.getHeldItem().getItem() instanceof ItemSword) {
+
+            if (!Via.getManager().getConnectionManager().getConnections().isEmpty()) {
+                PacketWrapper useItem = PacketWrapper.create(
+                        29, null, Via.getManager().getConnectionManager().getConnections().iterator().next()
+                );
                 useItem.write(Type.VAR_INT, 1);
                 PacketUtil.sendToServer(useItem, Protocol1_8TO1_9.class, true, true);
-                mc.getNetHandler().addToSendQueue(new C08PacketPlayerBlockPlacement(mc.thePlayer.inventory.getCurrentItem()));
             }
+
+            mc.getNetHandler().addToSendQueue(new C08PacketPlayerBlockPlacement(mc.thePlayer.inventory.getCurrentItem()));
         }
     }
 
     @EventTarget
-    private void onPacket(PacketEvent event) {
+    public void onPacket(PacketEvent event) {
         if (place.get()) {
-            final Packet<?> packet = event.getPacket();
+            Packet<?> packet = event.getPacket();
             if (packet instanceof C08PacketPlayerBlockPlacement) {
-                ((C08PacketPlayerBlockPlacement) packet).facingX = 0.5F;
-                ((C08PacketPlayerBlockPlacement) packet).facingY = 0.5F;
-                ((C08PacketPlayerBlockPlacement) packet).facingZ = 0.5F;
+                C08PacketPlayerBlockPlacement placement = (C08PacketPlayerBlockPlacement) packet;
+                placement.facingX = 0.5F;
+                placement.facingY = 0.5F;
+                placement.facingZ = 0.5F;
             }
         }
     }
