@@ -50,7 +50,7 @@ object Velocity : Module("Velocity2", Category.COMBAT) {
      */
     private val mode by choices(
         "Mode", arrayOf(
-            "Cancel", "Simple", "AAC", "AACPush", "AACZero", "AACv4",
+            "Simple", "AAC", "AACPush", "AACZero", "AACv4",
             "Reverse", "SmoothReverse", "Jump", "Glitch", "Legit",
             "GhostBlock", "Vulcan", "S32Packet", "MatrixReduce",
             "IntaveReduce", "Delay", "GrimC03", "Hypixel", "HypixelAir",
