@@ -43,7 +43,7 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
-object Velocity : Module("Velocity2", Category.COMBAT) {
+object Velocity : Module("Velocity", Category.COMBAT) {
 
     /**
      * OPTIONS
@@ -263,23 +263,6 @@ object Velocity : Module("Velocity2", Category.COMBAT) {
                 }
             }
 
-            "cancel" -> {
-                val cancelHorizontal = BoolValue("CancelHorizontalVelocity", true)
-    val cancelVertical = BoolValue("CancelVerticalVelocity", true)
-    
-    override fun onVelocityPacket(event: PacketEvent) {
-        event.cancelEvent()
-        val packet = event.packet
-        if (packet is S12PacketEntityVelocity) {
-            if (!cancelVertical.get()) mc.thePlayer.motionY = packet.getMotionY().toDouble() / 8000.0
-            if (!cancelHorizontal.get()) {
-                mc.thePlayer.motionX = packet.getMotionX().toDouble() / 8000.0
-                mc.thePlayer.motionZ = packet.getMotionZ().toDouble() / 8000.0
-            }
-        }
-    }
-}
-          
             "aac" -> if (hasReceivedVelocity && velocityTimer.hasTimePassed(80)) {
                 thePlayer.motionX *= horizontal
                 thePlayer.motionZ *= horizontal
@@ -631,15 +614,14 @@ object Velocity : Module("Velocity2", Category.COMBAT) {
                 }
 
                 "blocksmc" -> {
-                    if (packet is S12PacketEntityVelocity) {
-            if (!cancelVertical.get()) mc.thePlayer.motionY = packet.getMotionY().toDouble() / 8000.0
-            if (!cancelHorizontal.get()) {
-                mc.thePlayer.motionX = packet.getMotionX().toDouble() / 8000.0
-                mc.thePlayer.motionZ = packet.getMotionZ().toDouble() / 8000.0
-            }
-        }
-    }
-}
+                    if (packet is S12PacketEntityVelocity && packet.entityID == thePlayer.entityId) {
+                        hasReceivedVelocity = true
+                        event.cancelEvent()
+
+                        sendPacket(C0BPacketEntityAction(thePlayer, START_SNEAKING))
+                        sendPacket(C0BPacketEntityAction(thePlayer, STOP_SNEAKING))
+                    }
+                }
 
                 "grimc03" -> {
                     if (thePlayer.isMoving) {
