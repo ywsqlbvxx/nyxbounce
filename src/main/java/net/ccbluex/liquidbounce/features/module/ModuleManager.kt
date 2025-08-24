@@ -226,7 +226,7 @@ object ModuleManager : Listenable, Collection<Module> by MODULE_REGISTRY {
             AutoHitselect,
             ViaVersionFixer,
             PacketFixer,
-            StrafeFix,
+            MoveFix,
             TargetStrafe,
             CombatHelper,
             WaterMark
