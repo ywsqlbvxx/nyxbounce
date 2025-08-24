@@ -19,7 +19,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-@ModuleInfo(name = "StrafeFix", category = ModuleCategory.MOVEMENT)
+@ModuleInfo(name = "MoveFix", category = ModuleCategory.MOVEMENT)
 class StrafeFix : Module() {
 
     val silentFixVaule = BoolValue("Silent", true)
